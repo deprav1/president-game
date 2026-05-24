@@ -3,7 +3,7 @@ import { PARAMS } from "./data/params.js";
 import { ADVISORS } from "./data/advisors.js";
 import { CARDS, CRISIS_CARDS, ELECTION_CARD, MONTHS } from "./data/cards.js";
 import { CHAINS, getTriggeredChain } from "./data/chains.js";
-import { getVictoryEnding } from "./data/endings.js";
+import { ENDINGS, getVictoryEnding } from "./data/endings.js";
 import { VEPEAN_CARDS } from "./data/vepeanCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
 
@@ -115,6 +115,9 @@ export default function ThePresident() {
   const [referralCount, setReferralCount] = useState(() => parseInt(localStorage.getItem("varon_refs") || "0", 10));
   const [promoCode, setPromoCode]         = useState(null);
   const [decisionLog, setDecisionLog]     = useState([]);
+  const [unlockedEndings, setUnlockedEndings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("varon_ends") || "[]"); } catch { return []; }
+  });
 
   const touchStart = useRef(null);
   const choosing   = useRef(false);
@@ -175,6 +178,14 @@ export default function ThePresident() {
         else if (score >= 48) setPromoCode({ code: "WARONIA-14", days: 14 });
         else                  setPromoCode({ code: "WARONIA-7",  days: 7  });
         localStorage.removeItem("varon_save");
+        // Сохраняем открытый финал
+        const endObj = getVictoryEnding(stats, score);
+        setUnlockedEndings(prev => {
+          if (prev.includes(endObj.id)) return prev;
+          const next = [...prev, endObj.id];
+          localStorage.setItem("varon_ends", JSON.stringify(next));
+          return next;
+        });
         setPhase("victory");
         return;
       }
@@ -507,28 +518,53 @@ export default function ThePresident() {
                 </div>
               </div>
               <div style={{ padding:"0 20px 12px" }}>
-                <input
-                  type="text"
-                  maxLength={24}
-                  placeholder={presidentName || "Ваше имя (необязательно)"}
-                  value={nameInput}
-                  onChange={e => setNameInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleNameSubmit()}
-                  style={{
-                    width:"100%", marginBottom:10, padding:"10px 14px",
-                    background:"#fdf6e3", border:"1px solid #c9a84c",
-                    borderRadius:8, fontSize:13, fontFamily:"'Playfair Display',Georgia,serif",
-                    color:"#2c1a06", outline:"none",
-                  }}
-                />
-                <button onClick={handleNameSubmit} style={{
-                  width:"100%", background:"linear-gradient(135deg,#8b0000,#6b0000)",
-                  color:"#f5e6c8", border:"1px solid #d4af37", padding:"13px", borderRadius:8,
-                  fontSize:12, fontFamily:"'Special Elite',monospace", letterSpacing:3, cursor:"pointer",
-                  boxShadow:"0 4px 20px rgba(139,0,0,0.4)",
-                }}>
-                  ПРИСТУПИТЬ К ОБЯЗАННОСТЯМ
-                </button>
+                {presidentName ? (
+                  <>
+                    <div style={{ textAlign:"center", fontSize:11, color:"#8b6914", fontFamily:"'Special Elite',monospace", letterSpacing:1, marginBottom:10 }}>
+                      С возвращением, {presidentName}
+                    </div>
+                    <button onClick={() => { haptic("medium"); setPhase("card"); }} style={{
+                      width:"100%", background:"linear-gradient(135deg,#8b0000,#6b0000)",
+                      color:"#f5e6c8", border:"1px solid #d4af37", padding:"13px", borderRadius:8,
+                      fontSize:12, fontFamily:"'Special Elite',monospace", letterSpacing:3, cursor:"pointer",
+                      boxShadow:"0 4px 20px rgba(139,0,0,0.4)", marginBottom:8,
+                    }}>
+                      НОВЫЙ СРОК →
+                    </button>
+                    <button onClick={() => { haptic("light"); setPresidentName(""); localStorage.removeItem("varon_pname"); }} style={{
+                      width:"100%", background:"none", color:"#4b3010",
+                      border:"1px solid #3d2509", padding:"8px", borderRadius:8,
+                      fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:2, cursor:"pointer",
+                    }}>
+                      ИГРАТЬ ЗА ДРУГОГО
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      maxLength={24}
+                      placeholder="Ваше имя (необязательно)"
+                      value={nameInput}
+                      onChange={e => setNameInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleNameSubmit()}
+                      style={{
+                        width:"100%", marginBottom:10, padding:"10px 14px",
+                        background:"#fdf6e3", border:"1px solid #c9a84c",
+                        borderRadius:8, fontSize:13, fontFamily:"'Playfair Display',Georgia,serif",
+                        color:"#2c1a06", outline:"none",
+                      }}
+                    />
+                    <button onClick={handleNameSubmit} style={{
+                      width:"100%", background:"linear-gradient(135deg,#8b0000,#6b0000)",
+                      color:"#f5e6c8", border:"1px solid #d4af37", padding:"13px", borderRadius:8,
+                      fontSize:12, fontFamily:"'Special Elite',monospace", letterSpacing:3, cursor:"pointer",
+                      boxShadow:"0 4px 20px rgba(139,0,0,0.4)",
+                    }}>
+                      ПРИСТУПИТЬ К ОБЯЗАННОСТЯМ
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* ── VEPEAN FOOTER ── */}
@@ -950,6 +986,30 @@ export default function ThePresident() {
                     </div>
                   </div>
                 )}
+
+                {/* Хроника концовок */}
+                <div style={{ background:"#2c1a0611", border:"1px solid #3d2509", borderRadius:10, padding:"10px 14px" }}>
+                  <div style={{ fontSize:9, color:"#6b4c1e", fontFamily:"'Special Elite',monospace", letterSpacing:1, marginBottom:8 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                    {Object.values(ENDINGS).map(e => {
+                      const unlocked = unlockedEndings.includes(e.id);
+                      return (
+                        <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} style={{
+                          padding:"6px 10px", borderRadius:6, display:"flex", alignItems:"center", gap:5,
+                          border:`1px solid ${unlocked ? "#d4af3766" : "#3d2509"}`,
+                          opacity: unlocked ? 1 : 0.28,
+                          background: unlocked ? "#1a0f00" : "transparent",
+                        }}>
+                          <span style={{ fontSize:13 }}>{e.icon}</span>
+                          {unlocked && <span style={{ fontSize:8, color:"#d4af37", fontFamily:"'Special Elite',monospace", letterSpacing:1 }}>{e.title}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize:8, color:"#4b3010", fontFamily:"'Special Elite',monospace", marginTop:6, letterSpacing:0.5 }}>
+                    {unlockedEndings.length} из {Object.keys(ENDINGS).length} финалов открыто
+                  </div>
+                </div>
 
                 {/* Промокод */}
                 <div style={{ background:"linear-gradient(135deg,#1a0f00,#2c1a06)", border:"1px solid #d4af37", borderRadius:10, padding:"14px 16px", textAlign:"center" }}>
