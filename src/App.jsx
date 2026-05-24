@@ -40,7 +40,7 @@ function StatPill({ param, value, flash }) {
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-      <img src={getAsset(param.icon)} style={{ width: 22, height: 22, objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} alt="" />
+      <img src={getAsset(param.icon)} className={`stat-pill-icon ${param.key}`} alt="" />
       <div style={{
         width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden",
         border: isDanger ? "1px solid #c0392b88" : isWarning ? "1px solid #d4872b55" : "1px solid #3d2509",
@@ -1145,10 +1145,35 @@ export default function ThePresident() {
         {phase === "card" && currentCard && (
           <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"8px 16px 12px", overflow:"hidden", background:cardBg }}>
             {/* Превью эффектов (реальные значения 1.2×) */}
-            <div style={{ height:24, display:"flex", justifyContent:"center", gap:10, alignItems:"center", marginBottom:6, flexShrink:0 }}>
+            <div style={{ height: 24, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
               {previewFxReal && PARAMS.map(p => previewFxReal[p.key] !== 0 && (
-                <span key={p.key} style={{ fontSize:12, fontFamily:"'Special Elite',monospace", color:previewFxReal[p.key] > 0 ? "#27ae60" : "#c0392b", animation:"fadeIn 0.2s ease" }}>
-                  {p.icon}{previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
+                <span key={p.key} style={{ 
+                  fontSize: 12, 
+                  fontFamily: "var(--font-sans)", 
+                  color: previewFxReal[p.key] > 0 ? "#27ae60" : "#c0392b", 
+                  animation: "fadeIn 0.2s ease",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "rgba(26, 15, 0, 0.65)",
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  border: `1px solid ${previewFxReal[p.key] > 0 ? "rgba(39, 174, 96, 0.3)" : "rgba(192, 57, 43, 0.3)"}`,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+                }}>
+                  <img 
+                    src={getAsset(p.icon)} 
+                    style={{ 
+                      width: 14, 
+                      height: 14, 
+                      objectFit: "contain",
+                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6)) brightness(1.2)" 
+                    }} 
+                    alt="" 
+                  />
+                  <span style={{ fontWeight: 700 }}>
+                    {previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
+                  </span>
                 </span>
               ))}
             </div>

@@ -563,3 +563,34 @@ html, body {
   color: #8b6914;
   border-color: rgba(139, 105, 20, 0.45);
 }
+
+/* ─── ИКОНКИ ШКАЛ ПАРАМЕТРОВ С ЭФФЕКТОМ СВЕЧЕНИЯ ─── */
+
+.stat-pill-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Свечение и повышение яркости для каждой шкалы отдельно */
+.stat-pill-icon.oligarchs {
+  filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.95)) brightness(1.4) contrast(1.2);
+}
+
+.stat-pill-icon.army {
+  filter: drop-shadow(0 0 5px rgba(192, 57, 43, 0.95)) brightness(1.3) contrast(1.2);
+}
+
+.stat-pill-icon.people {
+  filter: drop-shadow(0 0 5px rgba(39, 174, 96, 0.95)) brightness(1.3) contrast(1.2);
+}
+
+.stat-pill-icon.west {
+  filter: drop-shadow(0 0 5px rgba(41, 128, 185, 0.95)) brightness(1.4) contrast(1.15);
+}
+
+.stat-pill-icon:hover {
+  transform: scale(1.18);
+  filter: brightness(1.6) drop-shadow(0 0 8px #fdf6e3);
+}
