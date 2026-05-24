@@ -507,6 +507,16 @@ export default function ThePresident() {
     else { setCardStyle({ transition:"transform 0.25s ease", transform:"none" }); setTimeout(() => setCardStyle({}), 250); setHovered(null); }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (phase !== "card" || choosing.current) return;
+      if (e.key === "ArrowLeft") choose("left");
+      else if (e.key === "ArrowRight") choose("right");
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [phase, choose]);
+
   const haptic = (type = "light") => {
     try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch(e) {}
   };
