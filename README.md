@@ -30,7 +30,7 @@
 
 - React 19 + Vite 8
 - Telegram Web App SDK
-- Деплой: Vercel → Telegram Mini App
+- Деплой: GitHub Pages (`base: /president-game/`) → Telegram Mini App
 
 ## Запуск
 

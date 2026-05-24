@@ -6,40 +6,27 @@
 ## Root Cause
 В JSX разметке компонента игровой карты (`phase === "card"`) в блоке превью эффектов использовалась переменная `{p.icon}` непосредственно внутри тега `{p.icon}{previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}`. Так как `p.icon` содержит строковый путь к картинке (например, `"/images/icon_oligarchs.png"`), браузер выводил его как обычный текст.
 
-## Solution
-1. В файле [App.jsx](file:///c:/Users/Lenovo/Desktop/PROEKTZ/president-game/president-game/src/App.jsx) блок превью эффектов был полностью переписан. Теперь вместо текстового пути рендерится стильная плашка с маленьким изображением иконки шкал:
-```javascript
-<span key={p.key} style={{ 
-  fontSize: 12, 
-  fontFamily: "var(--font-sans)", 
-  color: previewFxReal[p.key] > 0 ? "#27ae60" : "#c0392b", 
-  animation: "fadeIn 0.2s ease",
-  display: "flex",
-  alignItems: "center",
-  gap: 4,
-  background: "rgba(26, 15, 0, 0.65)",
-  padding: "2px 8px",
-  borderRadius: 6,
-  border: `1px solid ${previewFxReal[p.key] > 0 ? "rgba(39, 174, 96, 0.3)" : "rgba(192, 57, 43, 0.3)"}`,
-  boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-}}>
-  <img 
-    src={getAsset(p.icon)} 
-    style={{ 
-      width: 14, 
-      height: 14, 
-      objectFit: "contain",
-      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6)) brightness(1.2)" 
-    }} 
-    alt="" 
-  />
-  <span style={{ fontWeight: 700 }}>
-    {previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
-  </span>
+## Solution (актуальное состояние кода)
+Блок превью эффектов переписан на инлайновые SVG-иконки через компонент `FactionIcon`. Вместо растрового `<img>` рендерится векторная пиктограмма, которая работает без сетевых запросов и корректно масштабируется:
+
+```jsx
+<FactionIcon type={p.key} className="preview-effect-icon" />
+<span style={{ fontWeight: 700 }}>
+  {previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
 </span>
 ```
-2. Это решение не только убрало раздражающий баг с путями картинок, но и оформило эффекты в красивые информативные плашечки.
+
+Соответствующий CSS-класс в `App.css`:
+```css
+.preview-effect-icon {
+  width: 14px;
+  height: 14px;
+}
+```
+
+Компонент `FactionIcon` определён в `src/App.jsx` и рендерит отдельный SVG-путь для каждого из четырёх параметров (`oligarchs`, `army`, `people`, `west`) и герба (`crest`).
 
 ## Prevention
-- При выводе иконок и параметров в React-компонентах всегда проверять, какой тип данных несет в себе свойство (объект, эмодзи-строка или путь).
-- Использовать `<img>` для отрисовки графических путей, предварительно оборачивая их в функцию `getAsset` для корректного деплоя.
+- При выводе иконок параметров использовать `FactionIcon` — единственный источник истины для всех пиктограмм фракций.
+- Не передавать строковые пути `p.icon` непосредственно в JSX-текст.
+- Для новых мест вывода иконок добавлять CSS-класс с нужным `width`/`height` вместо инлайн-стилей.

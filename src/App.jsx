@@ -13,6 +13,37 @@ const getAsset = (path) => {
   return base + path.replace(/^\//, '');
 };
 
+/** Безопасный parseInt — защита от NaN при мусорном значении в localStorage. */
+const safeInt = (raw, fallback = 0) => {
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/**
+ * Валидирует объект сохранения из localStorage.
+ * Возвращает save если структура корректна, иначе null — это предотвращает
+ * краш при доступе к deck.length или rescueCard.agreeText на повреждённых данных.
+ */
+const validateSave = (save) => {
+  if (!save || typeof save !== "object") return null;
+  if (!Array.isArray(save.deck) || save.deck.length === 0) return null;
+  const s = save.stats;
+  if (!s || typeof s !== "object") return null;
+  const statKeys = ["oligarchs", "army", "people", "west"];
+  if (statKeys.some(k => typeof s[k] !== "number" || s[k] < 0 || s[k] > 100)) return null;
+  if (typeof save.months !== "number" || save.months < 1) return null;
+  if (typeof save.cardIdx !== "number" || save.cardIdx < 0) return null;
+  if (!Array.isArray(save.pendingEvents)) return null;
+  if (save.rescueCard != null) {
+    const rc = save.rescueCard;
+    if (typeof rc.agreeText !== "string" || !rc.agreeText) return null;
+    if (!rc.fx || typeof rc.fx !== "object") return null;
+    if (!rc.targetStats || typeof rc.targetStats !== "object") return null;
+    if (typeof rc.targetMonth !== "number") return null;
+  }
+  return save;
+};
+
 const WOOD_BG   = `url("${getAsset('/images/game_background.png')}") center/cover no-repeat`;
 const FELT_BG   = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`;
 const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
@@ -158,9 +189,10 @@ const ACHIEVEMENTS_DEF = [
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
-  // Восстанавливаем сохранённый ран если есть
+  // Восстанавливаем сохранённый ран если есть; validateSave защищает от краша
+  // при повреждённом или устаревшем сохранении (deck=null, rescueCard без agreeText и т.д.)
   const savedRun = (() => {
-    try { return JSON.parse(localStorage.getItem("varon_save") || "null"); } catch { return null; }
+    try { return validateSave(JSON.parse(localStorage.getItem("varon_save") || "null")); } catch { return null; }
   })();
 
   const [stats, setStats]               = useState(savedRun?.stats || { oligarchs:50, army:50, people:50, west:50 });
@@ -184,8 +216,8 @@ export default function ThePresident() {
     try { return JSON.parse(localStorage.getItem("varon_ach") || "[]"); } catch { return []; }
   });
   const [showHub, setShowHub]             = useState(false);
-  const [bestScore, setBestScore]         = useState(() => parseInt(localStorage.getItem("varon_best") || "0", 10));
-  const [referralCount, setReferralCount] = useState(() => parseInt(localStorage.getItem("varon_refs") || "0", 10));
+  const [bestScore, setBestScore]         = useState(() => safeInt(localStorage.getItem("varon_best")));
+  const [referralCount, setReferralCount] = useState(() => safeInt(localStorage.getItem("varon_refs")));
   const [promoCode, setPromoCode]         = useState(null);
   const [decisionLog, setDecisionLog]     = useState([]);
   const [unlockedEndings, setUnlockedEndings] = useState(() => {
@@ -241,7 +273,7 @@ export default function ThePresident() {
     // Обработка реферального start_param
     const startParam = tg.initDataUnsafe?.start_param || "";
     if (startParam.startsWith("ref_")) {
-      const count = parseInt(localStorage.getItem("varon_refs") || "0", 10) + 1;
+      const count = safeInt(localStorage.getItem("varon_refs")) + 1;
       localStorage.setItem("varon_refs", String(count));
       queueMicrotask(() => setReferralCount(count));
     }
