@@ -1,5 +1,28 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
+/**
+ * ============================================================================
+ * КАРТОЧНАЯ ИГРА «ВАРОНИЯ» (PRESIDENT SIMULATOR) - ВЕРСИЯ 1.0.0
+ * ============================================================================
+ * 
+ * Описание архитектуры:
+ * Это Reigns-like игра, где игрок выступает в роли президента вымышленной страны Варония.
+ * Задача игрока — принимать решения, свайпая карточки влево (Left) или вправо (Right).
+ * У игрока есть 4 ключевые шкалы состояния государственной системы (PARAMS).
+ * Если хотя бы одна шкала упадет до 0% или поднимется до 100% — наступает смерть (GameOver).
+ * 
+ * Структура проекта:
+ * 1. STYLES, WOOD_BG, FELT_BG, CRISIS_BG — CSS-стили и фоновые градиенты (дерево, сукно, кризис).
+ * 2. PARAMS — Конфигурация 4 шкал: Элиты, Армия, Народ, Запад. Содержит тексты смертей.
+ * 3. ADVISORS — Список советников (персонажей), которые предлагают карты.
+ * 4. BASE_CARDS — Огромная база игровых ситуаций (карт) с эффектами для шкал.
+ * 5. CRISIS_CARDS — Специальные кризисные ситуации, запускающиеся раз в 12 месяцев.
+ * 6. CHAINS — Сюжетные цепочки событий (последствия выборов игрока, наступающие через время).
+ * 7. StatPill — Визуальный компонент отдельной шкалы с анимацией опасной зоны.
+ * 8. ThePresident — Главный компонент логики, стейта и рендеринга экранов игры.
+ */
+
+// Глобальные стили игры (шрифты, анимации, базовый сброс стилей)
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,10 +36,21 @@ const STYLES = `
   @keyframes electionPulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.4)} 50%{box-shadow:0 0 0 12px rgba(212,175,55,0)} }
 `;
 
-const WOOD_BG = `linear-gradient(105deg,#2c1a06 0%,#3d2509 15%,#2a1804 30%,#3d2509 45%,#4a2e0c 55%,#2c1a06 70%,#3d2509 85%,#2a1804 100%)`;
-const FELT_BG = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`;
-const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
+// Фоновые текстуры стола
+const WOOD_BG = `linear-gradient(105deg,#2c1a06 0%,#3d2509 15%,#2a1804 30%,#3d2509 45%,#4a2e0c 55%,#2c1a06 70%,#3d2509 85%,#2a1804 100%)`; // Деревянный стол
+const FELT_BG = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`; // Красное сукно (обычная игра)
+const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`; // Темное тревожное сукно (кризис)
 
+/**
+ * ЧЕТЫРЕ КЛЮЧЕВЫХ ПАРАМЕТРА (ШКАЛЫ)
+ * У каждого параметра есть:
+ * - key: Уникальный идентификатор
+ * - label: Отображаемое название
+ * - icon: Иконка шкалы
+ * - color: Цвет заливки
+ * - deathLow: Описание смерти при падении показателя в 0%
+ * - deathHigh: Описание смерти при росте показателя до 100%
+ */
 const PARAMS = [
   { key:"oligarchs", label:"Элиты",  icon:"💎", color:"#d4af37",
     deathLow:"Крупный бизнес перестал вас финансировать. Утром вас нашли отравленным на деловом ужине.",
@@ -32,18 +66,22 @@ const PARAMS = [
     deathHigh:"Вас назвали «марионеткой Вашингтона». Националисты организовали переворот." },
 ];
 
+/**
+ * СПИСОК СОВЕТНИКОВ (ПЕРСОНАЖЕЙ)
+ * Каждый персонаж ассоциируется с картой по индексу (от 0 до 7)
+ */
 const ADVISORS = [
-  { name:"Аркадий Зубов",        role:"Министр финансов",       avatar:"🤵" },
-  { name:"Генерал Громов",        role:"Начальник штаба",         avatar:"🎖️" },
-  { name:"Елена Власова",         role:"Пресс-секретарь",         avatar:"📋" },
-  { name:"Директор Сенин",        role:"Глава спецслужб",         avatar:"🕴️" },
-  { name:"Амбассадор Хартли",     role:"Посол Западной коалиции", avatar:"🏛️" },
-  { name:"Патриарх Варсонофий",   role:"Глава церкви",            avatar:"✝️" },
-  { name:"Ирина Стрельцова",      role:"Лидер оппозиции",         avatar:"✊" },
-  { name:"Борис Хан",             role:"Олигарх №1",              avatar:"💰" },
+  { name:"Аркадий Зубов",        role:"Министр финансов",       avatar:"🤵" }, // Индекс 0
+  { name:"Генерал Громов",        role:"Начальник штаба",         avatar:"🎖️" }, // Индекс 1
+  { name:"Елена Власова",         role:"Пресс-секретарь",         avatar:"📋" }, // Индекс 2
+  { name:"Директор Сенин",        role:"Глава спецслужб",         avatar:"🕴️" }, // Индекс 3
+  { name:"Амбассадор Хартли",     role:"Посол Западной коалиции", avatar:"🏛️" }, // Индекс 4
+  { name:"Патриарх Варсонофий",   role:"Глава церкви",            avatar:"✝️" }, // Индекс 5
+  { name:"Ирина Стрельцова",      role:"Лидер оппозиции",         avatar:"✊" }, // Индекс 6
+  { name:"Борис Хан",             role:"Олигарх №1",              avatar:"💰" }, // Индекс 7
 ];
 
-// ─── BASE CARDS ────────────────────────────────────────
+// ─── БАЗОВАЯ КОЛОДА КАРТ (BASE_CARDS) ────────────────────────────────────────
 const BASE_CARDS = [
   // ЗУБОВ
   {a:0,t:"Дефицит бюджета достиг критического уровня. Нужно либо поднять налоги для бизнеса, либо урезать пенсии.",lL:"Налоги на бизнес",lT:"Пусть платят богатые",lF:{o:-20,m:0,p:15,w:5},rL:"Урезать пенсии",rT:"Бизнес — двигатель",rF:{o:15,m:0,p:-22,w:-5}},
@@ -161,7 +199,8 @@ const BASE_CARDS = [
   {a:0,t:"Крупнейший завод страны сливает токсичные отходы в реку. Завод принадлежит Хану. Экологи бьют тревогу.",lL:"Закрыть завод",lT:"Здоровье граждан важнее",lF:{o:-20,m:0,p:18,w:12},rL:"Штраф и продолжение",rT:"Экономика важна тоже",rF:{o:8,m:0,p:-10,w:-5}},
 ];
 
-// Нормализация карточек
+// ─── НОРМАЛИЗАЦИЯ КАРТОЧЕК (CARDS) ────────────────────────────────────────
+// Превращает сокращенный формат BASE_CARDS в удобную древовидную JS-структуру для React
 const CARDS = BASE_CARDS.map(c=>({
   advisor: c.a,
   text: c.t,
@@ -169,7 +208,8 @@ const CARDS = BASE_CARDS.map(c=>({
   right: { label: c.rL, text: c.rT || c.lT2 || "", fx: { oligarchs: c.rF.o, army: c.rF.m, people: c.rF.p, west: c.rF.w } },
 }));
 
-// ─── CRISIS CARDS ────────────────────────────────────────────
+// ─── КРИЗИСНЫЕ СИТУАЦИИ (CRISIS_CARDS) ─────────────────────────────────────────
+// Особые карты высокой сложности, которые запускаются случайным образом раз в 12 месяцев
 const CRISIS_CARDS = [
   { advisor:1, text:"⚠️ КРИЗИС: Соседнее государство без предупреждения атаковало пограничную заставу. Три солдата погибли. Весь мир следит за вашей реакцией.", left:{label:"Ответный удар",text:"Честь армии требует ответа",fx:{oligarchs:0,army:15,people:10,west:-25}}, right:{label:"Экстренные переговоры",text:"Война — последнее средство",fx:{oligarchs:0,army:-10,people:-5,west:15}} },
   { advisor:3, text:"⚠️ КРИЗИС: Серия терактов в столице. 47 погибших. Сенин требует чрезвычайного положения и временного ограничения прав.", left:{label:"Чрезвычайное положение",text:"Безопасность прежде всего",fx:{oligarchs:5,army:15,people:-20,west:-15}}, right:{label:"Усиленный контроль",text:"Без чрезвычайщины",fx:{oligarchs:0,army:5,people:5,west:5}} },
@@ -179,7 +219,8 @@ const CRISIS_CARDS = [
   { advisor:1, text:"⚠️ КРИЗИС: Военный путч на соседнем острове. Тысячи граждан Варонии застряли там. Громов просит разрешения на эвакуационную операцию.", left:{label:"Провести эвакуацию",text:"Наши граждане — наш приоритет",fx:{oligarchs:0,army:10,people:20,west:5}}, right:{label:"Дипломатические каналы",text:"Военная операция — риск",fx:{oligarchs:0,army:-8,people:-5,west:8}} },
 ];
 
-// ─── ELECTION CARD ───────────────────────────────────────────
+// ─── КАРТА ПРЕЗИДЕНТСКИХ ВЫБОРОВ (ELECTION_CARD) ──────────────────────────────────
+// Срабатывает раз в 48 месяцев (каждые 4 года). Исход зависит от рейтинга НАРОДА (people)
 const ELECTION_CARD = {
   advisor: 2,
   text: "🗳️ ВЫБОРЫ: Пришло время президентских выборов. Ирина Стрельцова — ваш главный соперник. Социологи дают ей 45% при вашем рейтинге у народа.",
@@ -187,8 +228,21 @@ const ELECTION_CARD = {
 
 const MONTHS = ["ЯНВАРЬ","ФЕВРАЛЬ","МАРТ","АПРЕЛЬ","МАЙ","ИЮНЬ","ИЮЛЬ","АВГУСТ","СЕНТЯБРЬ","ОКТЯБРЬ","НОЯБРЬ","ДЕКАБРЬ"];
 
+// Вспомогательная функция тасования колоды Фишера-Йетса (упрощенная)
 const shuffle = a => [...a].sort(()=>Math.random()-0.5);
 
+/**
+ * КОМПОНЕНТ ШКАЛЫ СТАТУСА (StatPill)
+ * 
+ * Параметры:
+ * - param: объект описания шкалы (иконка, название, цвет)
+ * - value: текущее значение шкалы от 0 до 100
+ * - flash: флаг для анимации резкого изменения
+ * 
+ * Логика:
+ * Рассчитывает опасную зону (danger = <=15% или >=85%).
+ * В опасной зоне полоска начинает пульсировать (анимация pulse), предупреждая игрока.
+ */
 function StatPill({ param, value, flash }) {
   const pct = Math.max(0,Math.min(100,value));
   const danger = pct<=15||pct>=85;
@@ -215,27 +269,56 @@ function StatPill({ param, value, flash }) {
 }
 
 export default function ThePresident() {
+  // Эффект инициализации Telegram WebApp.
+  // Вызывается один раз при загрузке игры. Обеспечивает развертывание приложения на весь экран.
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (tg) {
-      tg.ready();
-      tg.expand();
+      tg.ready(); // Уведомляет Telegram, что приложение готово
+      tg.expand(); // Разворачивает WebApp на максимум
       setTimeout(() => tg.expand(), 300);
       setTimeout(() => tg.expand(), 1000);
-      // Try requestFullscreen as fallback
-      try { tg.requestFullscreen?.(); } catch(e) { /* optional API */ }
-      setTimeout(() => { try { tg.requestFullscreen?.(); } catch(e) { /* optional API */ } }, 500);
+      // Попытка войти в полноэкранный режим
+      try { tg.requestFullscreen?.(); } catch(e) { /* Необязательный API */ }
+      setTimeout(() => { try { tg.requestFullscreen?.(); } catch(e) { /* Необязательный API */ } }, 500);
     }
   }, []);
-  const [stats, setStats] = useState({oligarchs:50,army:50,people:50,west:50});
-  const [months, setMonths] = useState(1);
-  const [deck, setDeck] = useState(()=>shuffle(CARDS));
-  const [cardIdx, setCardIdx] = useState(0);
-  const [pendingEvents, setPendingEvents] = useState([]);
-  const [phase, setPhase] = useState("onboarding"); // onboarding | card | election | gameover | victory
 
-  // ─── CHAIN CARDS ─────────────────────────────────────────
-  // triggerKey: уникальный ключ решения. При выборе side добавляется в pendingEvents через delay месяцев
+  // --- СОСТОЯНИЯ ИГРЫ (STATE) ---
+  
+  // Значения четырех шкал (от 0 до 100). Старт на 50%
+  const [stats, setStats] = useState({oligarchs:50,army:50,people:50,west:50});
+  
+  // Количество месяцев у власти (счетчик ходов)
+  const [months, setMonths] = useState(1);
+  
+  // Игровая колода карт (перетасовывается при старте)
+  const [deck, setDeck] = useState(()=>shuffle(CARDS));
+  
+  // Указатель на текущую карту в колоде
+  const [cardIdx, setCardIdx] = useState(0);
+  
+  // Список запланированных отложенных последствий (цепочек событий)
+  const [pendingEvents, setPendingEvents] = useState([]);
+  
+  // Текущая фаза игры: 
+  // 'onboarding' (стартовое меню), 'card' (процесс игры), 
+  // 'election' (выборы), 'gameover' (проигрыш), 'victory' (победа)
+  const [phase, setPhase] = useState("onboarding");
+
+  /**
+   * ─── СЮЖЕТНЫЕ ЦЕПОЧКИ СОБЫТИЙ (CHAINS) ─────────────────────────────────────────
+   * 
+   * Некоторые решения игрока вызывают отложенные во времени последствия.
+   * Например, если игрок разогнал забастовку, то через 4 месяца прилетит карта
+   * с международной реакцией и санкциями.
+   * 
+   * Логика работы:
+   * При выборе ответа с определенным ключевым словом в pendingEvents добавляется объект:
+   * { delay, card, triggerMonth: currentMonth + delay }
+   * В начале каждого хода проверяется, наступил ли triggerMonth для какого-то события.
+   * Если да, это событие «выстреливает» — его карта кладется на самый верх колоды.
+   */
   const CHAINS = {
     // Закрыл телеканал → через 4 мес журналисты уходят в подполье
     close_tv: { delay:4, card:{ advisor:3, text:"Журналисты закрытого «Свободного канала» создали подпольное издание в Telegram. Аудитория растёт быстрее чем раньше.", left:{label:"Заблокировать",text:"Найдём и закроем",fx:{oligarchs:5,army:5,people:-12,west:-15}}, right:{label:"Игнорировать",text:"Запретный плод сладок",fx:{oligarchs:0,army:0,people:5,west:8}} }},
@@ -254,28 +337,56 @@ export default function ThePresident() {
     // Приватизировал медицину → через 4 мес скандал с ценами
     privatized_health: { delay:4, card:{ advisor:2, text:"После приватизации цены на базовые лекарства выросли в три раза. Пенсионеры не могут позволить себе лечение. Скандал в прессе.", left:{label:"Заморозить цены",text:"Рынок зашёл слишком далеко",fx:{oligarchs:-12,army:0,people:15,west:5}}, right:{label:"Рынок сам отрегулирует",text:"Вмешательство создаст дефицит",fx:{oligarchs:8,army:0,people:-18,west:0}} }},
   };
+  // Сообщение о причине поражения (текст выводится на экране GameOver)
   const [deathMsg, setDeathMsg] = useState("");
+  
+  // Объект стилей для анимации свайпа/сдвига карты влево или вправо
   const [cardStyle, setCardStyle] = useState({});
+  
+  // Какая сторона сейчас активна при наведении/свайпе: 'left' | 'right' | null
   const [hovered, setHovered] = useState(null);
+  
+  // Флаги резкого изменения для шкал (для анимации вспышки)
   const [flashParams, setFlashParams] = useState({});
+  
+  // Флаг того, что текущий ход — это кризисная ситуация
   const [isCrisis, setIsCrisis] = useState(false);
+  
+  // Карта текущего кризиса (выбирается случайно раз в 12 месяцев)
   const [crisisCard, setCrisisCard] = useState(null);
+  
+  // Сколько президентских сроков успешно пройдено (победа наступает на 2-м сроке)
   const [termsCompleted, setTermsCompleted] = useState(0);
+  
+  // Координата X начала касания пальцем для обработки мобильных свайпов
   const touchStart = useRef(null);
+  
+  // Блокировка повторных кликов/свайпов во время анимации ухода карты
   const choosing = useRef(false);
 
+  // Выбор текущей карты: если кризис — берем кризисную, иначе следующую из колоды
   const currentCard = isCrisis && crisisCard
     ? crisisCard
     : deck[cardIdx%deck.length];
+    
+  // Советник, который предлагает текущую карту
   const advisor = currentCard ? (ADVISORS[currentCard.advisor]||ADVISORS[0]) : ADVISORS[0];
+  
+  // Рассчитываем текущий год правления (игра начинается в 2024 году)
   const year = 2024+Math.floor((months-1)/12);
+  
+  // Название текущего месяца
   const monthName = MONTHS[(months-1)%12];
 
-  // Shuffle deck when running low
+  // Эффект автодозаполнения колоды: если в колоде осталось менее 20 карт, замешиваем новые
   useEffect(()=>{
     if(deck.length-cardIdx<20) setDeck(d=>[...d,...shuffle(CARDS)]);
   },[cardIdx]);
 
+  /**
+   * ПРОВЕРКА ПОРАЖЕНИЯ (GameOver)
+   * Если хотя бы одна шкала ушла в <=0 или вышла в >=100 — возвращает текст причины смерти.
+   */
   const checkDeath = s=>{
     for(const p of PARAMS){
       if(s[p.key]<=0) return p.deathLow;
@@ -284,6 +395,11 @@ export default function ThePresident() {
     return null;
   };
 
+  /**
+   * РАСЧЕТ ИЗМЕНЕНИЙ ШКАЛ (applyFx)
+   * Умножает базовый эффект карты на коэффициент 1.4 для более динамичной игры,
+   * ограничивает показатели в пределах [0, 100] и включает флаг анимации вспышки.
+   */
   const applyFx = useCallback((fx, currentStats)=>{
     const ns={},fl={};
     PARAMS.forEach(p=>{
@@ -294,37 +410,66 @@ export default function ThePresident() {
     return {ns,fl};
   },[]);
 
+  /**
+   * ПРИНЯТИЕ РЕШЕНИЯ ИГРОКОМ (choose)
+   * Главный игровой метод. Запускается при клике на левую/правую кнопку или по окончании свайпа.
+   * 
+   * Параметры:
+   * - side: 'left' (левое решение) или 'right' (правое решение)
+   */
   const choose = useCallback((side)=>{
     if(choosing.current) return;
+    
+    // --- ЛОГИКА ЭКРАНА ВЫБОРОВ ---
     if(phase==="election"){
-      // Election result depends on people stat
+      // Исход выборов зависит от любви народа (шкала people >= 40%)
       const passed = stats.people>=40;
-      if(!passed){ setDeathMsg("Вы проиграли выборы Ирине Стрельцовой. Страна проголосовала за перемены. Вас выпроводили из дворца вежливо, но непреклонно."); setPhase("gameover"); return; }
+      if(!passed){ 
+        setDeathMsg("Вы проиграли выборы Ирине Стрельцовой. Страна проголосовала за перемены. Вас выпроводили из дворца вежливо, но непреклонно."); 
+        setPhase("gameover"); 
+        return; 
+      }
+      
       const newTerms = termsCompleted+1;
       setTermsCompleted(newTerms);
-      if(newTerms>=2){ setPhase("victory"); return; }
+      
+      // Победа в игре при успешном завершении двух сроков правления!
+      if(newTerms>=2){ 
+        setPhase("victory"); 
+        return; 
+      }
+      
+      // Иначе переходим на следующий срок
       setPhase("card");
       setMonths(m=>m+1);
       setIsCrisis(false);
       return;
     }
+    
     if(phase!=="card"||!currentCard) return;
-    choosing.current=true;
+    choosing.current=true; // Блокируем новые клики во время анимации ухода карты
+    
     const fx=currentCard[side].fx;
+    
+    // Запуск красивой анимации вылета карты со стола влево или вправо
     setCardStyle({
       transition:"transform 0.35s cubic-bezier(0.4,0,1,1),opacity 0.35s ease",
       transform:`translateX(${side==="left"?"-115%":"115%"}) rotate(${side==="left"?"-10deg":"10deg"})`,
       opacity:0,
     });
+    
+    // По завершении анимации вылета (через 350мс) применяем эффекты решения
     setTimeout(()=>{
       const {ns,fl}=applyFx(fx,stats);
-      setFlashParams(fl);
-      setTimeout(()=>setFlashParams({}),600);
-      setStats(ns);
+      setFlashParams(fl); // Запуск анимации мерцания измененных шкал
+      setTimeout(()=>setFlashParams({}),600); // Выключаем мерцание через 600мс
+      setStats(ns); // Обновляем состояние шкал
+      
       const newMonth=months+1;
-      setMonths(newMonth);
+      setMonths(newMonth); // Переходим на следующий месяц (ход)
 
-      // Check chain triggers based on card text keywords
+      // --- ПРОВЕРКА ЗАПУСКА ЦЕПОЧЕК СОБЫТИЙ ---
+      // Ищем ключевые слова в тексте текущей карты для запуска отложенных последствий
       const cardText = currentCard.text;
       const newPending = [...pendingEvents];
       if(cardText.includes("«Свободного канала»")||cardText.includes("Сенин предлагает «решить вопрос»")) {
@@ -337,36 +482,66 @@ export default function ThePresident() {
       if(cardText.includes("климатическое соглашение")&&side==="right") newPending.push({...CHAINS.climate_deal, triggerMonth: newMonth+CHAINS.climate_deal.delay});
       if(cardText.includes("приватизировать систему здравоохранения")&&side==="right") newPending.push({...CHAINS.privatized_health, triggerMonth: newMonth+CHAINS.privatized_health.delay});
 
-      // Check if any pending event fires this month
+      // --- ПРОВЕРКА НАСТУПЛЕНИЯ ОТЛОЖЕННЫХ СОБЫТИЙ ---
       const firedIdx = newPending.findIndex(e=>e.triggerMonth<=newMonth);
       let chainCard = null;
       if(firedIdx>=0){
-        chainCard = newPending[firedIdx].card;
-        newPending.splice(firedIdx,1);
+        chainCard = newPending[firedIdx].card; // Вытаскиваем карту-последствие
+        newPending.splice(firedIdx,1); // Удаляем её из списка ожидания
       }
       setPendingEvents(newPending);
 
+      // Сдвигаем индекс колоды вперед
       setCardIdx(i=>i+1);
-      setCardStyle({});
+      setCardStyle({}); // Сбрасываем стили сдвига для новой карты
       setHovered(null);
       setIsCrisis(false);
       setCrisisCard(null);
-      choosing.current=false;
+      choosing.current=false; // Разблокируем интерфейс
+      
+      // 1. Проверяем поражение (любая шкала упала до 0 или выросла до 100)
       const death=checkDeath(ns);
-      if(death){ setDeathMsg(death); setPhase("gameover"); return; }
-      if(chainCard){ setDeck(d=>[chainCard,...d.slice(cardIdx+1)]); setCardIdx(0); return; }
-      if(newMonth%48===1&&newMonth>1){ setPhase("election"); return; }
-      if(newMonth%12===1&&newMonth>1){ setIsCrisis(true); setCrisisCard(CRISIS_CARDS[Math.floor(Math.random()*CRISIS_CARDS.length)]); }
+      if(death){ 
+        setDeathMsg(death); 
+        setPhase("gameover"); 
+        return; 
+      }
+      
+      // 2. Если «выстрелило» отложенное событие — временно подсовываем его карту в начало колоды
+      if(chainCard){ 
+        setDeck(d=>[chainCard,...d.slice(cardIdx+1)]); 
+        setCardIdx(0); 
+        return; 
+      }
+      
+      // 3. Выборы президента наступают каждые 4 года (48 ходов)
+      if(newMonth%48===1&&newMonth>1){ 
+        setPhase("election"); 
+        return; 
+      }
+      
+      // 4. Запуск случайных кризисов каждый год (12 ходов)
+      if(newMonth%12===1&&newMonth>1){ 
+        setIsCrisis(true); 
+        setCrisisCard(CRISIS_CARDS[Math.floor(Math.random()*CRISIS_CARDS.length)]); 
+      }
     },350);
   },[phase,currentCard,stats,months,applyFx,termsCompleted,pendingEvents,cardIdx]);
 
+  // --- ОБРАБОТКА СВАЙПОВ НА МОБИЛЬНЫХ УСТРОЙСТВАХ ---
+  
+  // Начало касания
   const onTouchStart=e=>{touchStart.current=e.touches[0].clientX;};
+  
+  // Движение пальцем (карта плавно следует за пальцем с поворотом)
   const onTouchMove=e=>{
     if(!touchStart.current) return;
     const dx=e.touches[0].clientX-touchStart.current;
     setCardStyle({transform:`translateX(${dx*0.45}px) rotate(${dx*0.04}deg)`,transition:"none"});
     setHovered(dx<-30?"left":dx>30?"right":null);
   };
+  
+  // Палец отпущен (если свайп сильный — выбираем решение, иначе возвращаем карту назад)
   const onTouchEnd=e=>{
     const dx=e.changedTouches[0].clientX-(touchStart.current||0);
     touchStart.current=null;
@@ -374,11 +549,19 @@ export default function ThePresident() {
     else{setCardStyle({transition:"transform 0.25s ease",transform:"none"});setTimeout(()=>setCardStyle({}),250);setHovered(null);}
   };
 
+  // --- ПЕРЕЗАПУСК ИГРЫ (РЕСТАРТ) ---
   const restart=()=>{
     setStats({oligarchs:50,army:50,people:50,west:50});
-    setMonths(1);setDeck(shuffle(CARDS));setCardIdx(0);
-    setPhase("onboarding");setDeathMsg("");setHovered(null);
-    setCardStyle({});setIsCrisis(false);setCrisisCard(null);setTermsCompleted(0);
+    setMonths(1);
+    setDeck(shuffle(CARDS));
+    setCardIdx(0);
+    setPhase("onboarding");
+    setDeathMsg("");
+    setHovered(null);
+    setCardStyle({});
+    setIsCrisis(false);
+    setCrisisCard(null);
+    setTermsCompleted(0);
     setPendingEvents([]);
     choosing.current=false;
   };
@@ -440,6 +623,7 @@ export default function ThePresident() {
               borderRadius:16,overflow:"hidden",
               boxShadow:"0 16px 48px rgba(0,0,0,0.7),0 0 0 1px rgba(212,175,55,0.3)",
               border:"1px solid #c9a84c",
+              position:"relative", // Для абсолютного позиционирования штампа версии
             }}>
               <div style={{background:"linear-gradient(to right,#8b0000,#6b0000,#8b0000)",padding:"16px 20px",textAlign:"center"}}>
                 <div style={{fontSize:28,marginBottom:4}}>🦅</div>
@@ -458,8 +642,8 @@ export default function ThePresident() {
                     {icon:"🌐",text:"Запад наблюдает — с деньгами и санкциями"},
                   ].map((item,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:10,background:"#2c1a0611",borderRadius:8,padding:"8px 12px",border:"1px solid #c9a84c44"}}>
-                      <span style={{fontSize:16,flexShrink:0}}>{item.icon}</span>
-                      <span style={{fontSize:12,color:"#3d2509",lineHeight:1.4}}>{item.text}</span>
+                       <span style={{fontSize:16,flexShrink:0}}>{item.icon}</span>
+                       <span style={{fontSize:12,color:"#3d2509",lineHeight:1.4}}>{item.text}</span>
                     </div>
                   ))}
                 </div>
@@ -478,6 +662,15 @@ export default function ThePresident() {
                 }}>
                   ПРИСТУПИТЬ К ОБЯЗАННОСТЯМ
                 </button>
+              </div>
+              
+              {/* Архивный штамп версии игры в правом нижнем углу досье */}
+              <div style={{
+                position:"absolute",bottom:4,right:8,
+                fontSize:8,fontFamily:"'Special Elite',monospace",
+                color:"#2c1a0644",letterSpacing:1,pointerEvents:"none"
+              }}>
+                v1.0.0
               </div>
             </div>
           </div>
