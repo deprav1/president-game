@@ -4,7 +4,7 @@ import { ADVISORS } from "./data/advisors.js";
 import { CARDS, CRISIS_CARDS, ELECTION_CARD, MONTHS } from "./data/cards.js";
 import { CHAINS, getTriggeredChain } from "./data/chains.js";
 import { ENDINGS, getVictoryEnding } from "./data/endings.js";
-import { VEPEAN_CARDS } from "./data/vepeanCards.js";
+import { NARUZHU_CARDS } from "./data/naruzhuCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
 
 // ─── СТИЛИ ────────────────────────────────────────────────────────────────────
@@ -21,12 +21,15 @@ const STYLES = `
   @keyframes electionPulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.4)} 50%{box-shadow:0 0 0 12px rgba(212,175,55,0)} }
 `;
 
-const WOOD_BG   = `linear-gradient(105deg,#2c1a06 0%,#3d2509 15%,#2a1804 30%,#3d2509 45%,#4a2e0c 55%,#2c1a06 70%,#3d2509 85%,#2a1804 100%)`;
+const WOOD_BG   = `url("/images/game_background.png") center/cover no-repeat`;
 const FELT_BG   = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`;
 const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
 
-// Собираем общую колоду: базовые + дополнительные + Vepean-карты
-const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...VEPEAN_CARDS];
+// Бренд-цвета «Наружу»: чёрный + неоновый жёлтый
+const NARUZHU_YELLOW = "#FFD60A";
+
+// Собираем общую колоду: базовые + дополнительные + Наружу-карты
+const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
 
 const shuffle = a => [...a].sort(() => Math.random() - 0.5);
 
@@ -45,7 +48,7 @@ function StatPill({ param, value, flash }) {
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-      <div style={{ fontSize:16 }}>{param.icon}</div>
+      <img src={param.icon} style={{ width: 22, height: 22, objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} alt="" />
       <div style={{
         width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden",
         border: isDanger ? "1px solid #c0392b88" : isWarning ? "1px solid #d4872b55" : "1px solid #3d2509",
@@ -71,7 +74,7 @@ const ACHIEVEMENTS_DEF = [
   { id: "survive_48",  icon: "🏅", label: "Первый срок",       desc: "Пережить 48 месяцев у власти"          },
   { id: "win_election",icon: "🗳️", label: "Переизбран",        desc: "Победить на президентских выборах"     },
   { id: "victory",     icon: "🏛️", label: "Легенда Варонии",   desc: "Завершить два полных срока правления"  },
-  { id: "vepean_open", icon: "🔐", label: "Цифровое окно",     desc: "Завершить арк Цифрового суверенитета открытым финалом" },
+  { id: "vepean_open", icon: "🚪", label: "Наружу",            desc: "Завершить арк Цифрового суверенитета открытым финалом" },
 ];
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
@@ -183,9 +186,9 @@ export default function ThePresident() {
         hapticNotify("success");
         const score = months - 1;
         if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
-        if (score >= 96)      setPromoCode({ code: "WARONIA-30", days: 30 });
-        else if (score >= 48) setPromoCode({ code: "WARONIA-14", days: 14 });
-        else                  setPromoCode({ code: "WARONIA-7",  days: 7  });
+        if (score >= 96)      setPromoCode({ code: "WARONIA30", days: 30 });
+        else if (score >= 48) setPromoCode({ code: "WARONIA14", days: 14 });
+        else                  setPromoCode({ code: "WARONIA7",  days: 7  });
         localStorage.removeItem("varon_save");
         // Сохраняем открытый финал
         const endObj = getVictoryEnding(stats, score);
@@ -371,8 +374,8 @@ export default function ThePresident() {
     localStorage.removeItem("varon_save");
   };
 
-  const openVepean = () => {
-    const url = "https://vepean.click/?utm_source=varonia&utm_medium=game&utm_campaign=footer";
+  const openNaruzhu = () => {
+    const url = "https://naruzhu.am/?utm_source=varonia&utm_medium=game&utm_campaign=hub";
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
   };
@@ -413,7 +416,7 @@ export default function ThePresident() {
       high: `Меня назвали марионеткой Вашингтона. Националисты не оценили. ${tenure} мес.`,
     },
   };
-  const PROMO_LINE = `\n🔐 Промокод WARONIA → 7 дней Vepean VPN бесплатно: vepean.click`;
+  const PROMO_LINE = `\n🚪 Промокод WARONIA → 7 дней «Наружу» бесплатно: naruzhu.am`;
   const BOT_LINK   = "t.me/mr_president_gamebot/mr_president";
 
   const shareGameOver = () => {
@@ -468,19 +471,20 @@ export default function ThePresident() {
             {isCrisis  && <span style={{ marginLeft:8, color:"#c0392b", animation:"pulse 1s infinite" }}> ⚠️ КРИЗИС</span>}
             {phase === "election" && <span style={{ marginLeft:8, color:"#d4af37" }}> 🗳️ ВЫБОРЫ</span>}
           </div>
-          {/* Кнопка Vepean Hub */}
+          {/* Кнопка «Наружу» Hub */}
           <button
             onClick={() => { haptic("light"); setShowHub(true); }}
-            title="Vepean Hub"
+            title="Наружу — VPN"
             style={{
               position:"absolute", top:"50%", right:12, transform:"translateY(-50%)",
               background:"none", border:"none", cursor:"pointer",
-              fontSize:16, opacity:0.6, padding:4,
+              fontSize:16, opacity:0.7, padding:4,
+              color: NARUZHU_YELLOW,
               transition:"opacity 0.15s",
             }}
             onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-            onMouseLeave={e => e.currentTarget.style.opacity = "0.6"}
-          >🔐</button>
+            onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}
+          >🚪</button>
         </div>
 
         {/* ── ШКАЛЫ ── */}
@@ -512,13 +516,13 @@ export default function ThePresident() {
                 </p>
                 <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
                   {[
-                    { icon:"💎", text:"Элиты финансируют вас — не разочаруйте их" },
-                    { icon:"⚔️", text:"Армия защищает вас — пока вы её уважаете" },
-                    { icon:"👥", text:"Народ вас избрал — и может свергнуть" },
-                    { icon:"🌐", text:"Запад наблюдает — с деньгами и санкциями" },
+                    { icon:"/images/icon_oligarchs.png", text:"Элиты финансируют вас — не разочаруйте их" },
+                    { icon:"/images/icon_army.png", text:"Армия защищает вас — пока вы её уважаете" },
+                    { icon:"/images/icon_people.png", text:"Народ вас избрал — и может свергнуть" },
+                    { icon:"/images/icon_west.png", text:"Запад наблюдает — с деньгами и санкциями" },
                   ].map((item, i) => (
                     <div key={i} style={{ display:"flex", alignItems:"center", gap:10, background:"#2c1a0611", borderRadius:8, padding:"8px 12px", border:"1px solid #c9a84c44" }}>
-                      <span style={{ fontSize:16, flexShrink:0 }}>{item.icon}</span>
+                      <span style={{ flexShrink:0, width: 20, height: 20 }}><img src={item.icon} style={{ width: "100%", height: "100%", objectFit: "contain" }} alt=""/></span>
                       <span style={{ fontSize:12, color:"#3d2509", lineHeight:1.4 }}>{item.text}</span>
                     </div>
                   ))}
@@ -579,9 +583,9 @@ export default function ThePresident() {
                 )}
               </div>
 
-              {/* ── VEPEAN FOOTER ── */}
+              {/* ── НАРУЖУ FOOTER ── */}
               <div
-                onClick={openVepean}
+                onClick={openNaruzhu}
                 style={{
                   padding:"8px 20px 14px", textAlign:"center", cursor:"pointer",
                   borderTop:"1px solid #c9a84c22",
@@ -590,9 +594,9 @@ export default function ThePresident() {
                 <span style={{
                   fontSize:10, color:"#8b6914", fontFamily:"'Special Elite',monospace",
                   letterSpacing:0.5, textDecoration:"underline", textUnderlineOffset:2,
-                  opacity:0.7,
+                  opacity:0.75,
                 }}>
-                  🔐 Игра предоставлена Vepean — VPN для тех, кто решает сам
+                  🚪 Игра от <b style={{ color: NARUZHU_YELLOW }}>Наружу</b> — надёжный VPN для свободного интернета
                 </span>
               </div>
 
@@ -635,7 +639,7 @@ export default function ThePresident() {
                         {isTooHigh ? "▲ MAX" : "▼ MIN"}
                       </div>
                     )}
-                    <div style={{ fontSize:16 }}>{p.icon}</div>
+                    <img src={p.icon} style={{ width: 24, height: 24, objectFit: "contain" }} alt=""/>
                     <div style={{ fontSize:8, color:isKiller ? "#8b0000" : "#4a3010", fontFamily:"'Special Elite',monospace", letterSpacing:1 }}>{p.label.toUpperCase()}</div>
                     <div style={{ fontSize:20, fontWeight:700, color:isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37" }}>
                       {stats[p.key]}
@@ -721,7 +725,7 @@ export default function ThePresident() {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16, width:"100%", maxWidth:360 }}>
               {PARAMS.map(p => (
                 <div key={p.key} style={{ background:"#0d0800", border:`1px solid ${p.color}44`, borderRadius:8, padding:"10px 12px", boxShadow:`0 0 12px ${p.color}22` }}>
-                  <div style={{ fontSize:16 }}>{p.icon}</div>
+                  <img src={p.icon} style={{ width: 24, height: 24, objectFit: "contain" }} alt=""/>
                   <div style={{ fontSize:8, color:"#4a3010", fontFamily:"'Special Elite',monospace", letterSpacing:1 }}>{p.label.toUpperCase()}</div>
                   <div style={{ fontSize:20, fontWeight:700, color:p.color }}>{stats[p.key]}</div>
                 </div>
@@ -811,7 +815,7 @@ export default function ThePresident() {
                 animation:"electionPulse 2s ease infinite",
               }}>
                 <div style={{ background:"linear-gradient(to right,#4a3800,#2c2200,#4a3800)", padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }}>
-                  <div style={{ width:36, height:36, borderRadius:"50%", background:"#1a0f00", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, border:"2px solid #d4af37" }}>📋</div>
+                  <img src="/images/advisor_vlasova.png" style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", border:"2px solid #d4af37" }} alt="" />
                   <div>
                     <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8" }}>Елена Власова</div>
                     <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace" }}>Пресс-секретарь</div>
@@ -875,9 +879,7 @@ export default function ThePresident() {
               }}>
                 {/* Советник */}
                 <div style={{ background:headerBg, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-                  <div style={{ width:36, height:36, borderRadius:"50%", background:"#1a0f00", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0, border:"2px solid #d4af37", boxShadow:"0 0 8px rgba(212,175,55,0.3)" }}>
-                    {advisor.avatar}
-                  </div>
+                  <img src={advisor.avatar} style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:"2px solid #d4af37", boxShadow:"0 0 8px rgba(212,175,55,0.3)" }} alt="" />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8", lineHeight:1.2 }}>{advisor.name}</div>
                     <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace", letterSpacing:0.5 }}>{advisor.role}</div>
@@ -885,7 +887,8 @@ export default function ThePresident() {
                 </div>
 
                 {/* Текст карты */}
-                <div style={{ flex:1, padding:"16px 18px", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                  <img src={advisor.avatar} style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 12, border: "2px solid #3d2509", marginBottom: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }} alt="" />
                   {hovered && (
                     <div style={{
                       position:"absolute", top:12, left:"50%", transform:`translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,
