@@ -184,7 +184,7 @@ const ACHIEVEMENTS_DEF = [
   { id: "survive_48",  icon: "🏅", label: "Первый срок",       desc: "Пережить 48 месяцев у власти"          },
   { id: "win_election",icon: "🗳️", label: "Переизбран",        desc: "Победить на президентских выборах"     },
   { id: "victory",     icon: "🏛️", label: "Легенда Варонии",   desc: "Завершить два полных срока правления"  },
-  { id: "vepean_open", icon: "🚪", label: "Наружу",            desc: "Завершить арк Цифрового суверенитета открытым финалом" },
+  { id: "naruzhu_open", icon: "🚪", label: "Наружу",            desc: "Завершить арк Цифрового суверенитета открытым финалом" },
 ];
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
@@ -566,7 +566,7 @@ export default function ThePresident() {
       if (chainId && CHAINS[chainId]) {
         newPending.push({ ...CHAINS[chainId], triggerMonth: newMonth + CHAINS[chainId].delay });
       }
-      if (chainId === "ds_arc_4_soft_end") unlockAchievement("vepean_open");
+      if (chainId === "ds_arc_4_soft_end") unlockAchievement("naruzhu_open");
 
       const firedIdx = newPending.findIndex(e => e.triggerMonth <= newMonth);
       let chainCard  = null;
@@ -688,12 +688,6 @@ export default function ThePresident() {
     else window.open(url, "_blank");
   };
 
-  const openVepean = () => {
-    const url = "https://vepean.click/?utm_source=varonia&utm_medium=game&utm_campaign=hub";
-    if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
-    else window.open(url, "_blank");
-  };
-
   const tenure      = months - 1;
   const tenureLabel = tenure < 6 ? "КАТАСТРОФА" : tenure < 24 ? "ПРОВАЛ" : tenure < 48 ? "СЛАБО" : tenure < 96 ? "НЕПЛОХО" : tenure < 144 ? "КРЕПКИЙ ЛИДЕР" : "ЛЕГЕНДА";
   const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
@@ -779,14 +773,14 @@ export default function ThePresident() {
               </div>
             </div>
           </div>
-          {/* Кнопка «Наружу» Hub */}
+          {/* Кнопка «Покинуть Варонию» */}
           <button
             onClick={() => { haptic("light"); setShowHub(true); }}
-            title="Наружу — VPN"
+            title="VPN Наружу — покинуть Варонию"
             className="hub-launch"
           >
             <span className="hub-dot" />
-            <span>VPN</span>
+            <span className="hub-launch-text">ПОКИНУТЬ<br/>ВАРОНИЮ</span>
           </button>
         </header>
 
@@ -1108,7 +1102,7 @@ export default function ThePresident() {
                 {promoCode && (
                   <div className="hub-promo-box" style={{ marginBottom: 14 }}>
                     <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1.5, marginBottom: 4 }}>
-                      🎁 ПОДАРОК ЗА ПОБЕДУ — {promoCode.days} ДНЕЙ VEPEAN VPN
+                      🎁 ПОДАРОК ЗА ПОБЕДУ — {promoCode.days} ДНЕЙ VPN НАРУЖУ
                     </div>
                     <div
                       className="hub-promo-code"
@@ -1117,7 +1111,7 @@ export default function ThePresident() {
                       {promoCode.code}
                     </div>
                     <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e" }}>
-                      Копировать · Активация на vepean.click
+                      Копировать · Активация на naruzhu.am
                     </div>
                   </div>
                 )}
@@ -1322,6 +1316,22 @@ export default function ThePresident() {
                   <p style={{ fontSize:16, lineHeight:1.55, color:cardTextColor, fontWeight:500, textAlign:"center", letterSpacing:0.1 }}>
                     {currentCard.text}
                   </p>
+                  {currentCard.cta === "naruzhu" && (
+                    <button
+                      onClick={e => { e.stopPropagation(); haptic("light"); openNaruzhu(); }}
+                      style={{
+                        display:"flex", alignItems:"center", justifyContent:"center", gap:4,
+                        margin:"8px auto 0", padding:"4px 12px", borderRadius:999,
+                        background:"transparent",
+                        border:`1px solid ${NARUZHU_YELLOW}44`,
+                        cursor:"pointer", color:NARUZHU_YELLOW,
+                        fontSize:11, fontFamily:"var(--font-mono)", letterSpacing:0.5,
+                        fontWeight:600,
+                      }}
+                    >
+                      🌐 VPN Наружу — выйти из Варонии
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ height:1, background:`linear-gradient(to right,transparent,${isCrisis ? "#8b000066" : "#c9a84c66"},transparent)`, margin:"0 16px" }}/>
@@ -1365,21 +1375,27 @@ export default function ThePresident() {
 
         <div className="top-line bottom" />
 
-        {/* ════════ VEPEAN HUB ОВЕРЛЕЙ ════════ */}
+        {/* ════════ VPN НАРУЖУ HUB — ПОКИНУТЬ ВАРОНИЮ ════════ */}
         {showHub && (
           <div className="hub-overlay" onClick={() => setShowHub(false)}>
             <div className="hub-card" onClick={e => e.stopPropagation()}>
-              {/* Hub header */}
+
+              {/* ── Hub header ── */}
               <div className="hub-card-header">
                 <div>
-                  <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: "#d4af37", letterSpacing: 2 }}>🔐 VEPEAN HUB</div>
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 0.5, marginTop: 2 }}>VPN для тех, кто решает сам</div>
+                  <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: NARUZHU_YELLOW, letterSpacing: 2 }}>
+                    🚪 ПОКИНУТЬ ВАРОНИЮ
+                  </div>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 0.5, marginTop: 2 }}>
+                    VPN Наружу — свобода без блокировок
+                  </div>
                 </div>
-                <button onClick={() => setShowHub(false)} style={{ background: "none", border: "none", color: "#6b4c1e", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
+                <button onClick={() => setShowHub(false)} style={{ background:"none", border:"none", color:"#6b4c1e", fontSize:16, cursor:"pointer", padding:4 }}>✕</button>
               </div>
 
               <div className="hub-card-body">
-                {/* Лучший результат */}
+
+                {/* ── Рекорд ── */}
                 <div className="hub-stats-panel">
                   <div>
                     <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
@@ -1388,7 +1404,7 @@ export default function ThePresident() {
                   <div style={{ fontSize: 24 }}>🏆</div>
                 </div>
 
-                {/* Достижения */}
+                {/* ── Достижения ── */}
                 {achievements.length > 0 && (
                   <div className="hub-section">
                     <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1 }}>ДОСТИЖЕНИЯ</div>
@@ -1396,7 +1412,7 @@ export default function ThePresident() {
                       {ACHIEVEMENTS_DEF.map(a => {
                         const hasAch = achievements.includes(a.id);
                         return (
-                          <div key={a.id} title={a.desc} className={`hub-grid-item ${hasAch ? 'active' : 'inactive'}`}>
+                          <div key={a.id} title={a.desc} className={`hub-grid-item ${hasAch ? "active" : "inactive"}`}>
                             <span style={{ fontSize: 12 }}>{a.icon}</span>
                             {hasAch && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>}
                           </div>
@@ -1406,14 +1422,14 @@ export default function ThePresident() {
                   </div>
                 )}
 
-                {/* Хроника концовок */}
+                {/* ── Хроника финалов ── */}
                 <div className="hub-section">
                   <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
                   <div className="hub-grid">
                     {Object.values(ENDINGS).map(e => {
                       const unlocked = unlockedEndings.includes(e.id);
                       return (
-                        <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} className={`hub-grid-item ${unlocked ? 'active' : 'inactive'}`}>
+                        <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} className={`hub-grid-item ${unlocked ? "active" : "inactive"}`}>
                           <span style={{ fontSize: 12 }}>{e.icon}</span>
                           {unlocked && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{e.title}</span>}
                         </div>
@@ -1425,31 +1441,53 @@ export default function ThePresident() {
                   </div>
                 </div>
 
-                {/* Промокод */}
+                {/* ── VPN Наружу — что это ── */}
+                <div className="hub-naruzhu-pitch">
+                  <div className="font-typewriter" style={{ fontSize: 10, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
+                    🔒 VPN НАРУЖУ — РЕАЛЬНЫЙ МИР
+                  </div>
+                  {[
+                    "YouTube, Instagram, Wikipedia без блокировок",
+                    "Без логов — ваш трафик никто не видит",
+                    "60+ стран, до 5 устройств одновременно",
+                    "Работает даже при замедлении Чебунета",
+                  ].map((feat, i) => (
+                    <div key={i} className="hub-feature-row">
+                      <span style={{ color: NARUZHU_YELLOW, fontWeight: 700 }}>▶</span>
+                      <span className="font-typewriter" style={{ fontSize: 11, color: "#c4a882", lineHeight: 1.4 }}>{feat}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Промокод ── */}
                 <div className="hub-promo-box">
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1, marginBottom: 4 }}>ПРОМОКОД — 7 ДНЕЙ БЕСПЛАТНО</div>
-                  <div 
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1, marginBottom: 4 }}>
+                    🎁 ПРОМОКОД — 7 ДНЕЙ БЕСПЛАТНО
+                  </div>
+                  <div
                     className="hub-promo-code"
                     onClick={() => { navigator.clipboard?.writeText("WARONIA"); haptic("light"); }}
                   >
                     WARONIA
                   </div>
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e" }}>Нажмите для копирования</div>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e" }}>
+                    Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>naruzhu.am</span>
+                  </div>
                 </div>
 
-                {/* Реферальный счётчик */}
+                {/* ── Реферальный счётчик ── */}
                 {referralCount > 0 && (
                   <div className="font-typewriter" style={{ fontSize: 11, color: "#6b4c1e", textAlign: "center", letterSpacing: 0.5 }}>
                     👥 Вы привели {referralCount} {referralCount === 1 ? "игрока" : "игроков"}
                   </div>
                 )}
 
-                {/* CTA кнопка */}
-                <button onClick={openVepean} className="btn-hub-cta">
-                  🌐 ОТКРЫТЬ VEPEAN.CLICK →
+                {/* ── CTA кнопка ── */}
+                <button onClick={openNaruzhu} className="btn-hub-cta">
+                  🌐 ОТКРЫТЬ VPN НАРУЖУ →
                 </button>
 
-                {/* Реферальная ссылка */}
+                {/* ── Реферальная ссылка ── */}
                 <button onClick={() => {
                   const tg = window.Telegram?.WebApp;
                   const userId = tg?.initDataUnsafe?.user?.id || "guest";

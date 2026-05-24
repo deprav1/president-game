@@ -295,13 +295,13 @@ em, i { font-style: normal; }
 
 .hub-launch {
   flex: 0 0 auto;
-  height: 32px;
+  min-height: 32px;
   min-width: 58px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 0 10px;
+  padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 214, 10, 0.42);
   color: var(--color-naruzhu-yellow);
@@ -313,6 +313,15 @@ em, i { font-style: normal; }
   letter-spacing: 1px;
   cursor: pointer;
   transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.hub-launch-text {
+  font-family: var(--font-sans);
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .hub-launch:hover {
@@ -810,7 +819,7 @@ em, i { font-style: normal; }
     padding-inline: 8px;
   }
 
-  .hub-launch span:last-child {
+  .hub-launch-text {
     display: none;
   }
 
@@ -949,7 +958,7 @@ em, i { font-style: normal; }
   color: #a00000;
 }
 
-/* ─── VEPEAN HUB & GLASSMORPHISM OVERLAY ─── */
+/* ─── VPN НАРУЖУ HUB & GLASSMORPHISM OVERLAY ─── */
 
 .hub-overlay {
   position: absolute;
@@ -1119,4 +1128,22 @@ em, i { font-style: normal; }
   background: rgba(61, 37, 9, 0.12);
   color: #8b6914;
   border-color: rgba(139, 105, 20, 0.45);
+}
+
+/* VPN Наружу — питч-блок в Hub */
+.hub-naruzhu-pitch {
+  background: linear-gradient(135deg, #0d0a00, #150f00);
+  border: 1px solid rgba(255, 214, 10, 0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hub-feature-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 3px 0;
 }
