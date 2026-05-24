@@ -1,14 +1,16 @@
 /**
  * Список советников — персонажей, которые предлагают карты игроку.
  * Индекс в массиве соответствует полю advisor в карточках.
+ * Мы адаптировали их под реальные российские политические фигуры для узнаваемости.
  */
 export const ADVISORS = [
-  { name: "Аркадий Зубов",      role: "Министр финансов",       avatar: "/images/advisor_zubov.png"  }, // 0
-  { name: "Генерал Громов",     role: "Начальник штаба",        avatar: "/images/advisor_gromov.png" }, // 1
-  { name: "Елена Власова",      role: "Пресс-секретарь",        avatar: "/images/advisor_vlasova.png"  }, // 2
-  { name: "Директор Сенин",     role: "Глава спецслужб",        avatar: "/images/advisor_senin.png" }, // 3
-  { name: "Амбассадор Хартли",  role: "Посол Западной коалиции", avatar: "/images/advisor_ambassador.png" }, // 4
-  { name: "Патриарх Варсонофий", role: "Глава церкви",           avatar: "/images/advisor_patriarch.png" }, // 5
-  { name: "Ирина Стрельцова",   role: "Лидер оппозиции",        avatar: "/images/advisor_streltsova.png"  }, // 6
-  { name: "Борис Хан",          role: "Олигарх №1",             avatar: "/images/advisor_khan.png"  }, // 7
+  { name: "Эльвира Сахипзадовна", role: "Глава Центробанка",       avatar: "/images/advisor_zubov.png"  }, // 0 (Финансовый блок, таргетирование инфляции)
+  { name: "Генерал Валерий Громов", role: "Глава Генерального штаба", avatar: "/images/advisor_gromov.png" }, // 1 (Военное ведомство, контракты, снаряды)
+  { name: "Дмитрий Песков",      role: "Пресс-секретарь президента", avatar: "/images/advisor_vlasova.png"  }, // 2 (Пресс-служба, усы, озабоченность)
+  { name: "Николай Патрушев",    role: "Секретарь Совета Безопасности", avatar: "/images/advisor_senin.png" }, // 3 (Спецслужбы, теории заговоров, боевые гуси)
+  { name: "Посол Линн Трейси",   role: "Посол Коллективного Запада", avatar: "/images/advisor_ambassador.png" }, // 4 (Представитель Запада, санкции)
+  { name: "Патриарх Варсонофий", role: "Глава Церкви",           avatar: "/images/advisor_patriarch.png" }, // 5 (Церковный клир, традиционные ценности, иконы)
+  { name: "Юлия Стрельцова",     role: "Лидер оппозиции в изгнании", avatar: "/images/advisor_streltsova.png"  }, // 6 (Оппозиция, Вильнюс, расследования)
+  { name: "Борис Усманов",       role: "Олигарх №1",             avatar: "/images/advisor_khan.png"  }, // 7 (Олигархический конгломерат, яхты, VK)
 ];
+
