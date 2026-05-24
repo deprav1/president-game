@@ -109,14 +109,16 @@ export default function ThePresident() {
   const [deck, setDeck]                 = useState(() => savedRun ? savedRun.deck : shuffle(ALL_CARDS));
   const [cardIdx, setCardIdx]           = useState(savedRun?.cardIdx || 0);
   const [pendingEvents, setPendingEvents] = useState(savedRun?.pendingEvents || []);
-  const [phase, setPhase]               = useState(savedRun ? "card" : "onboarding");
+  const [phase, setPhase]               = useState(savedRun ? (savedRun.phase || "card") : "onboarding");
   const [deathMsg, setDeathMsg]         = useState("");
   const [cardStyle, setCardStyle]       = useState({});
   const [hovered, setHovered]           = useState(null);
   const [flashParams, setFlashParams]   = useState({});
   const [isCrisis, setIsCrisis]         = useState(false);
   const [crisisCard, setCrisisCard]     = useState(null);
-  const [termsCompleted, setTermsCompleted] = useState(0);
+  const [termsCompleted, setTermsCompleted] = useState(savedRun?.termsCompleted || 0);
+  const [hasUsedSecondChance, setHasUsedSecondChance] = useState(() => savedRun?.hasUsedSecondChance || false);
+  const [rescueCard, setRescueCard]     = useState(() => savedRun?.rescueCard || null);
   const [presidentName, setPresidentName] = useState(() => localStorage.getItem("varon_pname") || "");
   const [nameInput, setNameInput]         = useState("");
   const [achievements, setAchievements]   = useState(() => {
@@ -147,11 +149,11 @@ export default function ThePresident() {
     for (const p of PARAMS) {
       if (s[p.key] <= 0) {
         const msgs = Array.isArray(p.deathLow) ? p.deathLow : [p.deathLow];
-        return msgs[Math.floor(Math.random() * msgs.length)];
+        return { key: p.key, low: true, msg: msgs[Math.floor(Math.random() * msgs.length)] };
       }
       if (s[p.key] >= 100) {
         const msgs = Array.isArray(p.deathHigh) ? p.deathHigh : [p.deathHigh];
-        return msgs[Math.floor(Math.random() * msgs.length)];
+        return { key: p.key, low: false, msg: msgs[Math.floor(Math.random() * msgs.length)] };
       }
     }
     return null;
@@ -160,38 +162,210 @@ export default function ThePresident() {
   const applyFx = useCallback((fx, currentStats) => {
     const ns = {}, fl = {};
     PARAMS.forEach(p => {
-      const scaled = Math.round((fx[p.key] || 0) * 1.4);
+      const scaled = Math.round((fx[p.key] || 0) * 1.2);
       ns[p.key] = Math.max(0, Math.min(100, currentStats[p.key] + scaled));
       if (scaled !== 0) fl[p.key] = true;
     });
     return { ns, fl };
   }, []);
 
+  const handleDeathOrRescue = useCallback((death, nextStats, nextMonth) => {
+    hapticNotify("error");
+    const score = nextMonth - 1;
+
+    if (hasUsedSecondChance) {
+      setDeathMsg(death.msg);
+      if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
+      localStorage.removeItem("varon_save");
+      setPhase("gameover");
+    } else {
+      const paramKey = death.key;
+      const isLow = death.low;
+      let rescueText = "";
+      let agreeText = "";
+      let rescueFx = {};
+      let advisorId = 0; // Кто спасает
+
+      if (paramKey === "people") {
+        if (isLow) {
+          advisorId = 1; // Громов
+          rescueText = "🚨 ВТОРОЙ ШАНС (Восстание): Разъярённая толпа окружила дворец. Генерал Громов предлагает ввести танки и объявить комендантский час. «Мы зачистим улицы, господин президент, но Запад и народ вам этого не простят».";
+          agreeText = "Ввести танки (Силовики +20, Народ +25, Запад -30)";
+          rescueFx = { army: 20, oligarchs: 0, people: 25, west: -30 };
+        } else {
+          advisorId = 1; // Громов
+          rescueText = "🚨 ВТОРОЙ ШАНС (Народная диктатура): Ваша популярность пугает элиты. Громов предупреждает, что генералы готовят заговор, чтобы вас сместить. Он предлагает устроить показательные аресты оппозиции, чтобы успокоить силовиков.";
+          agreeText = "Арестовать оппозицию (Народ -25, Силовики +15, Запад -15)";
+          rescueFx = { army: 15, oligarchs: 0, people: -25, west: -15 };
+        }
+      } else if (paramKey === "oligarchs") {
+        if (isLow) {
+          advisorId = 7; // Хан
+          rescueText = "🚨 ВТОРОЙ ШАНС (Саботаж бизнеса): Крупный бизнес прекратил инвестиции и объявил локаут. Страна на грани коллапса. Хан предлагает передать ему управление морским портом в обмен на экстренное финансирование.";
+          agreeText = "Передать порты Хану (Олигархи +25, Запад -15, Силовики -10)";
+          rescueFx = { oligarchs: 25, army: -10, people: 0, west: -15 };
+        } else {
+          advisorId = 0; // Зубов
+          rescueText = "🚨 ВТОРОЙ ШАНС (Засилье бизнеса): Олигархи скупили все ключевые ведомства и диктуют свои законы. Зубов предлагает провести принудительную национализацию части активов Хана ради спасения суверенитета.";
+          agreeText = "Национализировать активы (Олигархи -25, Народ +15, Запад -10)";
+          rescueFx = { oligarchs: -25, army: 0, people: 15, west: -10 };
+        }
+      } else if (paramKey === "army") {
+        if (isLow) {
+          advisorId = 3; // Сенин
+          rescueText = "🚨 ВТОРОЙ ШАНС (Бунт силовиков): Армия развалена, офицеры дезертируют, Громов потерял контроль. Сенин предлагает передать спецслужбам КГБ полный контроль над границами и базами снабжения.";
+          agreeText = "Отдать контроль КГБ (Силовики +25, Олигархи -15, Народ -10)";
+          rescueFx = { army: 25, oligarchs: -15, people: -10, west: 0 };
+        } else {
+          advisorId = 6; // Стрельцова
+          rescueText = "🚨 ВТОРОЙ ШАНС (Военная хунта): Генерал Громов фактически контролирует все министерства и готовит приказ о вашем аресте. Стрельцова требует немедленно отстранить верхушку генералитета и начать расследования.";
+          agreeText = "Уволить генералов (Силовики -25, Народ -15, Запад -10)";
+          rescueFx = { army: -25, oligarchs: 0, people: -15, west: -10 };
+        }
+      } else if (paramKey === "west") {
+        if (isLow) {
+          advisorId = 4; // Хартли
+          rescueText = "🚨 ВТОРОЙ ШАНС (Полная изоляция): Экономика задушена западными санкциями, резервы заморожены. Хартли предлагает экстренно подписать кабальное соглашение об ассоциации в обмен на финансовую помощь МВФ.";
+          agreeText = "Подписать соглашение (Запад +25, Народ +10, Силовики -15)";
+          rescueFx = { west: 25, army: -15, people: 10, oligarchs: 0 };
+        } else {
+          advisorId = 3; // Сенин
+          rescueText = "🚨 ВТОРОЙ ШАНС (Потеря суверенитета): Западные советники диктуют состав правительства. Варония теряет независимость. Сенин предлагает ввести санкционный мораторий и выслать западных кураторов.";
+          agreeText = "Выслать кураторов (Запад -25, Силовики +15, Народ -10)";
+          rescueFx = { west: -25, army: 15, people: -10, oligarchs: 0 };
+        }
+      }
+
+      setRescueCard({
+        advisor: advisorId,
+        text: rescueText,
+        agreeText: agreeText,
+        fx: rescueFx,
+        targetStats: nextStats,
+        targetMonth: nextMonth
+      });
+      setPhase("second_chance");
+
+      try {
+        localStorage.setItem("varon_save", JSON.stringify({
+          stats: nextStats,
+          months: nextMonth,
+          deck,
+          cardIdx,
+          pendingEvents,
+          hasUsedSecondChance: false,
+          rescueCard: {
+            advisor: advisorId,
+            text: rescueText,
+            agreeText: agreeText,
+            fx: rescueFx,
+            targetStats: nextStats,
+            targetMonth: nextMonth
+          },
+          termsCompleted,
+          phase: "second_chance"
+        }));
+      } catch {}
+    }
+  }, [hasUsedSecondChance, bestScore, deck, cardIdx, pendingEvents, termsCompleted]);
+
   const choose = useCallback((side) => {
     if (choosing.current) return;
 
-    if (phase === "election") {
-      const passed = stats.people >= 40;
-      if (!passed) {
+    if (phase === "second_chance" && rescueCard) {
+      if (side === "agree") {
+        hapticNotify("success");
+        const { ns, fl } = applyFx(rescueCard.fx, rescueCard.targetStats);
+        setFlashParams(fl);
+        setTimeout(() => setFlashParams({}), 600);
+        setStats(ns);
+        setHasUsedSecondChance(true);
+        setPhase("card");
+        setRescueCard(null);
+        setIsCrisis(false);
+
+        try {
+          localStorage.setItem("varon_save", JSON.stringify({
+            stats: ns,
+            months: rescueCard.targetMonth,
+            deck,
+            cardIdx,
+            pendingEvents,
+            hasUsedSecondChance: true,
+            rescueCard: null,
+            termsCompleted,
+            phase: "card"
+          }));
+        } catch {}
+      } else {
         hapticNotify("error");
-        setDeathMsg("Вы проиграли выборы Ирине Стрельцовой. Страна проголосовала за перемены. Вас выпроводили из дворца вежливо, но непреклонно.");
+        setDeathMsg("Вы отказались от сделки по спасению власти и предпочли с честью сложить полномочия.");
+        const score = rescueCard.targetMonth - 1;
+        if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
+        localStorage.removeItem("varon_save");
+        setPhase("gameover");
+      }
+      return;
+    }
+
+    if (phase === "election") {
+      let fx = { oligarchs: 0, army: 0, people: 0, west: 0 };
+      let tacticLabel = "";
+      if (side === "honest") {
+        if (stats.people < 40) return;
+        fx = { oligarchs: 0, army: 0, people: 10, west: 10 };
+        tacticLabel = "Честные выборы";
+      } else if (side === "admin") {
+        fx = { oligarchs: 5, army: 15, people: -18, west: -22 };
+        tacticLabel = "Административный ресурс";
+      } else if (side === "sponsor") {
+        fx = { oligarchs: 18, army: 0, people: -10, west: -8 };
+        tacticLabel = "Сделка с олигархами";
+      } else {
+        hapticNotify("error");
+        setDeathMsg("Вы отказались от участия в выборах и добровольно ушли на покой. В Варонии наступила новая эпоха.");
+        const score = months - 1;
+        if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
+        localStorage.removeItem("varon_save");
         setPhase("gameover");
         return;
       }
+
       hapticNotify("success");
       unlockAchievement("win_election");
+
+      const { ns, fl } = applyFx(fx, stats);
+      setFlashParams(fl);
+      setTimeout(() => setFlashParams({}), 600);
+      setStats(ns);
+
+      const newMonth = months + 1;
+      setMonths(newMonth);
+
+      setDecisionLog(prev => [...prev.slice(-6), {
+        month: months,
+        label: tacticLabel,
+      }]);
+
       const newTerms = termsCompleted + 1;
       setTermsCompleted(newTerms);
+
+      const death = checkDeath(ns);
+      if (death) {
+        handleDeathOrRescue(death, ns, newMonth);
+        return;
+      }
+
       if (newTerms >= 2) {
         hapticNotify("success");
-        const score = months - 1;
+        const score = newMonth - 1;
         if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
         if (score >= 96)      setPromoCode({ code: "WARONIA30", days: 30 });
         else if (score >= 48) setPromoCode({ code: "WARONIA14", days: 14 });
         else                  setPromoCode({ code: "WARONIA7",  days: 7  });
         localStorage.removeItem("varon_save");
-        // Сохраняем открытый финал
-        const endObj = getVictoryEnding(stats, score);
+        
+        const endObj = getVictoryEnding(ns, score);
         setUnlockedEndings(prev => {
           if (prev.includes(endObj.id)) return prev;
           const next = [...prev, endObj.id];
@@ -201,9 +375,23 @@ export default function ThePresident() {
         setPhase("victory");
         return;
       }
+
       setPhase("card");
-      setMonths(m => m + 1);
       setIsCrisis(false);
+
+      try {
+        localStorage.setItem("varon_save", JSON.stringify({
+          stats: ns,
+          months: newMonth,
+          deck,
+          cardIdx,
+          pendingEvents,
+          hasUsedSecondChance,
+          rescueCard,
+          termsCompleted: newTerms,
+          phase: "card"
+        }));
+      } catch {}
       return;
     }
 
@@ -226,22 +414,18 @@ export default function ThePresident() {
       const newMonth   = months + 1;
       setMonths(newMonth);
 
-      // Логируем решение (последние 7)
       setDecisionLog(prev => [...prev.slice(-6), {
         month: months,
         label: currentCard[side].label,
       }]);
 
-      // ── Проверка и добавление цепочек (исправленная логика) ──
       const chainId    = getTriggeredChain(currentCard.text, side);
       const newPending = [...pendingEvents];
       if (chainId && CHAINS[chainId]) {
         newPending.push({ ...CHAINS[chainId], triggerMonth: newMonth + CHAINS[chainId].delay });
       }
-      // Достижение за финал мягкой ветки арка
       if (chainId === "ds_arc_4_soft_end") unlockAchievement("vepean_open");
 
-      // ── Проверка наступления отложенных событий ──
       const firedIdx = newPending.findIndex(e => e.triggerMonth <= newMonth);
       let chainCard  = null;
       if (firedIdx >= 0) {
@@ -251,7 +435,6 @@ export default function ThePresident() {
       setPendingEvents(newPending);
 
       setCardIdx(i => {
-        // Авто-сохранение текущего рана
         const nextIdx = i + 1;
         try {
           localStorage.setItem("varon_save", JSON.stringify({
@@ -260,6 +443,10 @@ export default function ThePresident() {
             deck,
             cardIdx: nextIdx,
             pendingEvents: newPending,
+            hasUsedSecondChance,
+            rescueCard,
+            termsCompleted,
+            phase: "card"
           }));
         } catch {}
         return nextIdx;
@@ -272,12 +459,7 @@ export default function ThePresident() {
 
       const death = checkDeath(ns);
       if (death) {
-        hapticNotify("error");
-        setDeathMsg(death);
-        const score = newMonth - 1;
-        if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
-        localStorage.removeItem("varon_save");
-        setPhase("gameover");
+        handleDeathOrRescue(death, ns, newMonth);
         return;
       }
 
@@ -295,7 +477,7 @@ export default function ThePresident() {
         setCrisisCard(CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)]);
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, rescueCard, handleDeathOrRescue, bestScore, deck]);
 
   const onTouchStart = e => { touchStart.current = e.touches[0].clientX; };
   const swipeTriggered = useRef(false);
@@ -370,6 +552,8 @@ export default function ThePresident() {
     setTermsCompleted(0);
     setPendingEvents([]);
     setDecisionLog([]);
+    setHasUsedSecondChance(false);
+    setRescueCard(null);
     choosing.current = false;
     localStorage.removeItem("varon_save");
   };
@@ -392,9 +576,9 @@ export default function ThePresident() {
     ? "linear-gradient(to right,#4a0000,#3a0000,#4a0000)"
     : "linear-gradient(to right,#8b0000,#6b0000,#8b0000)";
 
-  // Превью с реальным масштабом (1.4×)
+  // Превью с реальным масштабом (1.2×)
   const previewFxReal = hovered && currentCard
-    ? Object.fromEntries(PARAMS.map(p => [p.key, Math.round((currentCard[hovered].fx[p.key] || 0) * 1.4)]))
+    ? Object.fromEntries(PARAMS.map(p => [p.key, Math.round((currentCard[hovered].fx[p.key] || 0) * 1.2)]))
     : null;
 
   // ─── SHARE-ТЕКСТЫ ─────────────────────────────────────────────────────────
@@ -821,31 +1005,139 @@ export default function ThePresident() {
                     <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace" }}>Пресс-секретарь</div>
                   </div>
                 </div>
-                <div style={{ padding:"20px 18px", position:"relative" }}>
-                  <p style={{ fontSize:17, lineHeight:1.85, color:"#2c1a06", fontStyle:"italic", textAlign:"center" }}>
+                <div style={{ padding:"16px 18px 8px", position:"relative" }}>
+                  <p style={{ fontSize:16, lineHeight:1.75, color:"#2c1a06", fontStyle:"italic", textAlign:"center" }}>
                     {ELECTION_CARD.text}
                   </p>
-                  <div style={{ marginTop:16, padding:"12px", background:"#2c1a0622", borderRadius:8, border:"1px solid #c9a84c55" }}>
-                    <div style={{ fontSize:11, fontFamily:"'Special Elite',monospace", color:"#6b4c1e", textAlign:"center", letterSpacing:1, marginBottom:8 }}>
+                  <div style={{ marginTop:10, padding:"8px 12px", background:"#2c1a0622", borderRadius:8, border:"1px solid #c9a84c55" }}>
+                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", color:"#6b4c1e", textAlign:"center", letterSpacing:1, marginBottom:4 }}>
                       ВАШ РЕЙТИНГ У НАРОДА
                     </div>
-                    <div style={{ height:8, background:"#d4c4a8", borderRadius:4, overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${stats.people}%`, background:stats.people >= 40 ? "#27ae60" : "#c0392b", borderRadius:4, transition:"width 0.5s ease" }}/>
+                    <div style={{ height:6, background:"#d4c4a8", borderRadius:3, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${stats.people}%`, background:stats.people >= 40 ? "#27ae60" : "#c0392b", borderRadius:3, transition:"width 0.5s ease" }}/>
                     </div>
-                    <div style={{ textAlign:"center", marginTop:6, fontSize:14, fontWeight:700, color:stats.people >= 40 ? "#27ae60" : "#c0392b", fontFamily:"'Special Elite',monospace" }}>
-                      {stats.people}% {stats.people >= 40 ? "— ПОБЕДА" : "— ПОРАЖЕНИЕ"}
+                    <div style={{ textAlign:"center", marginTop:4, fontSize:12, fontWeight:700, color:stats.people >= 40 ? "#27ae60" : "#c0392b", fontFamily:"'Special Elite',monospace" }}>
+                      {stats.people}% {stats.people >= 40 ? "— ДОСТАТОЧЕН ДЛЯ ЧЕСТНЫХ ВЫБОРОВ" : "— НЕДОСТАТОЧЕН ДЛЯ ЧЕСТНЫХ ВЫБОРОВ"}
                     </div>
                   </div>
                 </div>
                 <div style={{ height:1, background:"linear-gradient(to right,transparent,#c9a84c66,transparent)", margin:"0 16px" }}/>
-                <div style={{ padding:"12px" }}>
-                  <button onClick={() => choose("right")} style={{
-                    width:"100%", background:stats.people >= 40 ? "linear-gradient(135deg,#1a4a1a,#0d2e0d)" : "linear-gradient(135deg,#4a1a1a,#2e0d0d)",
-                    color:"#f5e6c8", border:`1px solid ${stats.people >= 40 ? "#27ae60" : "#c0392b"}`,
-                    padding:"14px", borderRadius:8, fontSize:13, fontFamily:"'Special Elite',monospace",
-                    letterSpacing:3, cursor:"pointer",
+                <div style={{ padding:"12px", display:"flex", flexDirection:"column", gap:8 }}>
+                  <button
+                    disabled={stats.people < 40}
+                    onClick={() => choose("honest")}
+                    style={{
+                      width:"100%", background:stats.people >= 40 ? "linear-gradient(135deg,#1a4a1a,#0d2e0d)" : "#2c1a061a",
+                      color:stats.people >= 40 ? "#f5e6c8" : "#6b4c1e55", border:`1px solid ${stats.people >= 40 ? "#27ae60" : "#3d250922"}`,
+                      padding:"10px 8px", borderRadius:8, cursor:stats.people >= 40 ? "pointer" : "not-allowed",
+                      transition:"all 0.15s ease", textShadow:stats.people >= 40 ? "0 1px 3px rgba(0,0,0,0.5)" : "none",
+                      textAlign:"center",
+                    }}
+                  >
+                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:1.5, color:stats.people >= 40 ? "#27ae60" : "#6b4c1e77", fontWeight:700 }}>🗳️ ЧЕСТНАЯ КАМПАНИЯ</div>
+                    <div style={{ fontSize:9, marginTop:2 }}>Народ +12 · Запад +12 (Требует: рейтинг народа от 40%)</div>
+                  </button>
+
+                  <button
+                    onClick={() => choose("admin")}
+                    style={{
+                      width:"100%", background:"linear-gradient(135deg,#2c1a06,#1a0f00)",
+                      color:"#c4a882", border:"1px solid #3d2509",
+                      padding:"10px 8px", borderRadius:8, cursor:"pointer",
+                      transition:"all 0.15s ease", textAlign:"center",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg,#8b0000,#6b0000)"; e.currentTarget.style.color = "#f5e6c8"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg,#2c1a06,#1a0f00)"; e.currentTarget.style.color = "#c4a882"; }}
+                  >
+                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:1.5, color:"#c0392b", fontWeight:700 }}>👮 АДМИНИСТРАТИВНЫЙ РЕСУРС</div>
+                    <div style={{ fontSize:9, marginTop:2 }}>Народ -22 · Запад -26 · Силовики +18 · Олигархи +6</div>
+                  </button>
+
+                  <button
+                    onClick={() => choose("sponsor")}
+                    style={{
+                      width:"100%", background:"linear-gradient(135deg,#2c1a06,#1a0f00)",
+                      color:"#c4a882", border:"1px solid #3d2509",
+                      padding:"10px 8px", borderRadius:8, cursor:"pointer",
+                      transition:"all 0.15s ease", textAlign:"center",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg,#8b0000,#6b0000)"; e.currentTarget.style.color = "#f5e6c8"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg,#2c1a06,#1a0f00)"; e.currentTarget.style.color = "#c4a882"; }}
+                  >
+                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:1.5, color:"#d4af37", fontWeight:700 }}>💎 СДЕЛКА С ОЛИГАРХАМИ</div>
+                    <div style={{ fontSize:9, marginTop:2 }}>Олигархи +22 · Народ -12 · Запад -10</div>
+                  </button>
+
+                  <div style={{ height:1, background:"linear-gradient(to right,transparent,#c9a84c33,transparent)", margin:"4px 0" }}/>
+
+                  <button
+                    onClick={() => choose("giveup")}
+                    style={{
+                      width:"100%", background:"none",
+                      color:"#8b0000", border:"1px solid #8b000044",
+                      padding:"8px", borderRadius:8, cursor:"pointer",
+                      fontSize:9, fontFamily:"'Special Elite',monospace", letterSpacing:2,
+                    }}
+                  >
+                    ☠️ ПРИНЯТЬ ПОРАЖЕНИЕ (СДАТЬСЯ)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════ ВТОРОЙ ШАНС ════════════════════════════════ */}
+        {phase === "second_chance" && rescueCard && (
+          <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"12px 16px 16px", background:FELT_BG, overflow:"hidden" }}>
+            <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center" }}>
+              <div style={{
+                background:"linear-gradient(160deg,#fdf6e3,#f5e8c8,#ede0b0)",
+                borderRadius:12, padding:0, overflow:"hidden",
+                boxShadow:"0 12px 40px rgba(0,0,0,0.85),0 0 0 1px rgba(139,0,0,0.4)",
+                border:"2px solid #8b0000",
+                animation:"electionPulse 1.5s ease infinite",
+              }}>
+                <div style={{ background:"linear-gradient(to right,#8b0000,#5b0000,#8b0000)", padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }}>
+                  <img src={ADVISORS[rescueCard.advisor]?.avatar || "/images/advisor_zubov.png"} style={{ width:38, height:38, borderRadius:"50%", objectFit:"cover", border:"2px solid #d4af37" }} alt="" />
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8" }}>{ADVISORS[rescueCard.advisor]?.name || "Советник"}</div>
+                    <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace" }}>{ADVISORS[rescueCard.advisor]?.role || "Куратор"}</div>
+                  </div>
+                </div>
+                <div style={{ padding:"22px 20px" }}>
+                  <p style={{ fontSize:16, lineHeight:1.85, color:"#2c1a06", fontStyle:"italic", textAlign:"center", fontWeight:600 }}>
+                    {rescueCard.text}
+                  </p>
+                  
+                  <div style={{ marginTop:16, background:"#8b000011", border:"1px solid #8b000022", borderRadius:8, padding:"10px 14px", textAlign:"center" }}>
+                    <p style={{ fontSize:11, color:"#8b0000", fontStyle:"italic", lineHeight:1.5 }}>
+                      ⚠️ Внимание: это ваш единственный «Второй шанс» за игру. Любой следующий перекос шкал приведет к окончательному поражению.
+                    </p>
+                  </div>
+                </div>
+                
+                <div style={{ height:1, background:"linear-gradient(to right,transparent,#8b000033,transparent)", margin:"0 16px" }}/>
+                
+                <div style={{ padding:"12px", display:"flex", flexDirection:"column", gap:8 }}>
+                  <button onClick={() => choose("agree")} style={{
+                    width:"100%", background:"linear-gradient(135deg,#1a4a1a,#0d2e0d)",
+                    color:"#f5e6c8", border:"1px solid #27ae60",
+                    padding:"14px", borderRadius:8, fontSize:12, fontFamily:"'Special Elite',monospace",
+                    letterSpacing:1.5, cursor:"pointer", fontWeight:700,
+                    boxShadow:"0 4px 12px rgba(39,174,96,0.3)",
+                    textAlign:"center",
                   }}>
-                    {stats.people >= 40 ? "🗳️ ПЕРЕИЗБРАТЬСЯ" : "☠️ ПРИНЯТЬ ПОРАЖЕНИЕ"}
+                    🤝 {rescueCard.agreeText.toUpperCase()}
+                  </button>
+                  <button onClick={() => choose("deny")} style={{
+                    width:"100%", background:"none",
+                    color:"#8b0000", border:"1px solid #8b000066",
+                    padding:"10px", borderRadius:8, cursor:"pointer",
+                    fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:2,
+                    textAlign:"center",
+                  }}>
+                    ☠️ ОТКЛОНИТЬ И СЛОЖИТЬ ПОЛНОМОЧИЯ
                   </button>
                 </div>
               </div>
@@ -856,7 +1148,7 @@ export default function ThePresident() {
         {/* ════════════════════════════════ ИГРОВАЯ КАРТА ════════════════════════════════ */}
         {phase === "card" && currentCard && (
           <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"8px 16px 12px", overflow:"hidden", background:cardBg }}>
-            {/* Превью эффектов (реальные значения 1.4×) */}
+            {/* Превью эффектов (реальные значения 1.2×) */}
             <div style={{ height:24, display:"flex", justifyContent:"center", gap:10, alignItems:"center", marginBottom:6, flexShrink:0 }}>
               {previewFxReal && PARAMS.map(p => previewFxReal[p.key] !== 0 && (
                 <span key={p.key} style={{ fontSize:12, fontFamily:"'Special Elite',monospace", color:previewFxReal[p.key] > 0 ? "#27ae60" : "#c0392b", animation:"fadeIn 0.2s ease" }}>
