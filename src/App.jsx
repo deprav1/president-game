@@ -24,22 +24,22 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 // Глобальные стили игры (шрифты, анимации, базовый сброс стилей)
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; background: #1a0f00; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   @keyframes cardIn { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
-  @keyframes flashStat { 0%{opacity:1} 40%{opacity:0.1} 100%{opacity:1} }
+  @keyframes flashStat { 0%{opacity:1} 15%{opacity:0.1; filter: drop-shadow(0 0 10px red);} 30%{opacity:1} 45%{opacity:0.1; filter: drop-shadow(0 0 10px red);} 100%{opacity:1} }
   @keyframes crisisShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
   @keyframes electionPulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.4)} 50%{box-shadow:0 0 0 12px rgba(212,175,55,0)} }
 `;
 
 // Фоновые текстуры стола
-const WOOD_BG = `linear-gradient(105deg,#2c1a06 0%,#3d2509 15%,#2a1804 30%,#3d2509 45%,#4a2e0c 55%,#2c1a06 70%,#3d2509 85%,#2a1804 100%)`; // Деревянный стол
-const FELT_BG = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`; // Красное сукно (обычная игра)
-const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`; // Темное тревожное сукно (кризис)
+const WOOD_BG = `radial-gradient(circle at 50% 50%, transparent 20%, rgba(26,15,0,0.85) 120%), linear-gradient(105deg,#2c1a06 0%,#3d2509 15%,#2a1804 30%,#3d2509 45%,#4a2e0c 55%,#2c1a06 70%,#3d2509 85%,#2a1804 100%)`; // Деревянный стол с виньеткой
+const FELT_BG = `radial-gradient(circle at 50% 50%, transparent 20%, rgba(58,0,0,0.85) 120%), linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`; // Красное сукно (обычная игра)
+const CRISIS_BG = `radial-gradient(circle at 50% 50%, transparent 20%, rgba(0,0,0,0.9) 120%), linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`; // Темное тревожное сукно (кризис)
 
 /**
  * ЧЕТЫРЕ КЛЮЧЕВЫХ ПАРАМЕТРА (ШКАЛЫ)
@@ -584,7 +584,7 @@ export default function ThePresident() {
       <style>{STYLES}</style>
       <div style={{
         height:"var(--tg-viewport-stable-height, 100dvh)",display:"flex",flexDirection:"column",
-        background:WOOD_BG,fontFamily:"'Playfair Display',Georgia,serif",
+        background:WOOD_BG,fontFamily:"'Inter',sans-serif",
         color:"#f5e6c8",overflow:"hidden",
       }}>
         <div style={{height:3,background:"linear-gradient(to right,transparent,#d4af37,#f5e6a0,#d4af37,transparent)",flexShrink:0}}/>
@@ -592,8 +592,10 @@ export default function ThePresident() {
         {/* Header */}
         <div style={{
           flexShrink:0,textAlign:"center",padding:"8px 16px 6px",
-          borderBottom:"1px solid #3d2509",
-          background:"linear-gradient(to bottom,#1a0f00cc,transparent)",
+          borderBottom:"1px solid rgba(212,175,55,0.2)",
+          background:"rgba(26,15,0,0.7)",
+          backdropFilter:"blur(12px)",
+          WebkitBackdropFilter:"blur(12px)",
         }}>
           <div style={{fontSize:20,marginBottom:1}}>🦅</div>
           <div style={{fontSize:20,fontWeight:700,letterSpacing:6,color:"#d4af37",textShadow:"0 0 20px #d4af3766"}}>
@@ -702,7 +704,7 @@ export default function ThePresident() {
                       {isTooHigh?"▲ MAX":"▼ MIN"}
                     </div>}
                     <div style={{fontSize:16}}>{p.icon}</div>
-                    <div style={{fontSize:8,color:isKiller?"#8b0000":"#4a3010",fontFamily:"'Special Elite',monospace",letterSpacing:1}}>{p.label.toUpperCase()}</div>
+                    <div style={{fontSize:9,color:isKiller?"#ff4d4d":"#c9a84c",fontFamily:"'Special Elite',monospace",letterSpacing:1,opacity:0.8}}>{p.label.toUpperCase()}</div>
                     <div style={{fontSize:20,fontWeight:700,color:isKiller?"#c0392b":stats[p.key]>65?"#27ae60":"#d4af37"}}>
                       {stats[p.key]}
                     </div>
@@ -774,7 +776,7 @@ export default function ThePresident() {
               {PARAMS.map(p=>(
                 <div key={p.key} style={{background:"#0d0800",border:`1px solid ${p.color}44`,borderRadius:8,padding:"10px 12px",boxShadow:`0 0 12px ${p.color}22`}}>
                   <div style={{fontSize:16}}>{p.icon}</div>
-                  <div style={{fontSize:8,color:"#4a3010",fontFamily:"'Special Elite',monospace",letterSpacing:1}}>{p.label.toUpperCase()}</div>
+                  <div style={{fontSize:9,color:"#c9a84c",fontFamily:"'Special Elite',monospace",letterSpacing:1,opacity:0.8}}>{p.label.toUpperCase()}</div>
                   <div style={{fontSize:20,fontWeight:700,color:p.color}}>{stats[p.key]}</div>
                 </div>
               ))}
@@ -907,7 +909,7 @@ export default function ThePresident() {
                       {hovered==="left"?currentCard.left.label.toUpperCase():currentCard.right.label.toUpperCase()}
                     </div>
                   )}
-                  <p style={{fontSize:17,lineHeight:1.85,color:cardTextColor,fontStyle:"italic",textAlign:"center"}}>
+                  <p style={{fontSize:18,lineHeight:1.6,fontWeight:500,color:cardTextColor,textAlign:"center",padding:"0 8px"}}>
                     {currentCard.text}
                   </p>
                 </div>
