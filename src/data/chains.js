@@ -155,9 +155,10 @@ export const CHAINS = {
     delay: 3,
     card: {
       advisor: 3, // Патрушев
-      text: "DS_ARC_3_HARD Патрушев докладывает: блокировка Наружу провалена. Миллионы граждан перешли на новые VPN. Екатерина Пиздулина требует Чебунет.",
+      text: "Патрушев докладывает: блокировка Наружу провалена. Миллионы граждан перешли на новые VPN. Екатерина Пиздулина требует Чебунет.",
       left:  { label: "Полное отключение от WWW", text: "Цифровой занавес и суверенный интернет",         fx: { oligarchs: 5,  army: 10, people: -25, west: -25 } },
       right: { label: "Только мониторинг и штрафы", text: "Будем медленно душить трафик", fx: { oligarchs: 0,  army: 5,  people: -8,  west: -10 } },
+      chain: { right: "ds_arc_4_hard_end" },
     },
   },
 
@@ -167,9 +168,10 @@ export const CHAINS = {
     delay: 3,
     card: {
       advisor: 4, // Линн Трейси
-      text: "DS_ARC_3_SOFT Трейси: свободный интернет в Варонии привлек западных инвесторов. Арсрамление Лебеда предлагает открыть IT-хаб.",
+      text: "Трейси: свободный интернет в Варонии привлек западных инвесторов. Арсрамление Лебеда предлагает открыть IT-хаб.",
       left:  { label: "Открыть IT-хаб для Запада", text: "Цифровое окно в глобальный мир",       fx: { oligarchs: 8,  army: -8, people: 10,  west: 20 } },
       right: { label: "Ограничить западные фирмы",  text: "Цифровой суверенитет превыше всего",        fx: { oligarchs: -5, army: 5,  people: -5,  west: -8 } },
+      chain: { left: "ds_arc_4_soft_end" },
     },
   },
 
@@ -272,15 +274,15 @@ export const CHAIN_TRIGGERS = [
       ? "naslednik_arc_exile"
       : null,
 
-  // Арк "Цифровой суверенитет": блокировка Наружу запускает цепочку
+  // Арк "Цифровой суверенитет": стартовая карта Наружу запускает цепочку
   (text, side) =>
-    side === "left" && (text.includes("VPN-сервиса Наружу") || text.includes("VPN-сервиса Vepean"))
+    side === "left" && (text.includes("число скачиваний VPN-сервиса Наружу") || text.includes("число скачиваний VPN-сервиса Vepean"))
       ? "ds_arc_2_blockade"
       : null,
 
   // Арк: не вмешиваться — запускает мягкую ветку
   (text, side) =>
-    side === "right" && (text.includes("VPN-сервиса Наружу") || text.includes("VPN-сервиса Vepean"))
+    side === "right" && (text.includes("число скачиваний VPN-сервиса Наружу") || text.includes("число скачиваний VPN-сервиса Vepean"))
       ? "ds_arc_2_open"
       : null,
 
@@ -299,8 +301,14 @@ export const CHAIN_TRIGGERS = [
 
 /**
  * Возвращает идентификатор цепочки, которую нужно запустить, или null.
+ * Новые карты объявляют цепочки явно через `chain`, а текстовые триггеры
+ * оставлены как совместимость со старыми сохранениями.
  */
-export const getTriggeredChain = (cardText, side) => {
+export const getTriggeredChain = (cardOrText, side) => {
+  const card = typeof cardOrText === "string" ? { text: cardOrText } : (cardOrText || {});
+  if (card.chain?.[side]) return card.chain[side];
+
+  const cardText = card.text || "";
   for (const trigger of CHAIN_TRIGGERS) {
     const id = trigger(cardText, side);
     if (id) return id;

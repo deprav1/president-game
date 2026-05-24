@@ -23,7 +23,14 @@ const NARUZHU_YELLOW = "#FFD60A";
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
 
-const shuffle = a => [...a].sort(() => Math.random() - 0.5);
+const shuffle = a => {
+  const copy = [...a];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
 
 // ─── КОМПОНЕНТ ШКАЛЫ ──────────────────────────────────────────────────────────
 function StatPill({ param, value, flash }) {
@@ -42,7 +49,7 @@ function StatPill({ param, value, flash }) {
     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
       <img src={getAsset(param.icon)} className={`stat-pill-icon ${param.key}`} alt="" />
       <div style={{
-        width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden",
+        width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden", position:"relative",
         border: isDanger ? "1px solid #c0392b88" : isWarning ? "1px solid #d4872b55" : "1px solid #3d2509",
         boxShadow: isCritical ? "0 0 12px #c0392b99" : isDanger ? `0 0 8px ${param.color}55` : "none",
       }}>
@@ -51,11 +58,34 @@ function StatPill({ param, value, flash }) {
           transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",
           animation:flash ? "flashStat 0.5s ease" : isCritical ? "pulse 0.7s infinite" : isDanger ? "pulse 1.5s infinite" : "none",
         }}/>
+        <div style={{
+          position:"absolute", left:"50%", top:0, bottom:0, width:1,
+          background:"rgba(245,230,200,0.45)", transform:"translateX(-50%)",
+        }}/>
       </div>
       <div style={{ fontSize:8, fontFamily:"var(--font-sans)", letterSpacing:0.5, fontWeight:600,
         color: isDanger ? "#c0392b" : isWarning ? "#d4872b" : "#6b4c1e" }}>
         {param.label.toUpperCase()}{isCritical ? "!" : ""}
       </div>
+    </div>
+  );
+}
+
+function ChoiceEffectRow({ fx }) {
+  const entries = PARAMS
+    .map(p => ({ param: p, value: Math.round((fx[p.key] || 0) * 1.2) }))
+    .filter(item => item.value !== 0);
+
+  if (!entries.length) return null;
+
+  return (
+    <div className="choice-effect-row">
+      {entries.map(({ param, value }) => (
+        <span key={param.key} className={`choice-effect-chip ${value > 0 ? "positive" : "negative"}`}>
+          <img src={getAsset(param.icon)} alt="" />
+          <span>{value > 0 ? "+" : ""}{value}</span>
+        </span>
+      ))}
     </div>
   );
 }
@@ -71,26 +101,6 @@ const ACHIEVEMENTS_DEF = [
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
-  useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      setTimeout(() => tg.expand(), 300);
-      setTimeout(() => tg.expand(), 1000);
-      try { tg.requestFullscreen?.(); } catch(e) {}
-      setTimeout(() => { try { tg.requestFullscreen?.(); } catch(e) {} }, 500);
-
-      // Обработка реферального start_param
-      const startParam = tg.initDataUnsafe?.start_param || "";
-      if (startParam.startsWith("ref_")) {
-        const count = parseInt(localStorage.getItem("varon_refs") || "0", 10) + 1;
-        localStorage.setItem("varon_refs", String(count));
-        setReferralCount(count);
-      }
-    }
-  }, []);
-
   // Восстанавливаем сохранённый ран если есть
   const savedRun = (() => {
     try { return JSON.parse(localStorage.getItem("varon_save") || "null"); } catch { return null; }
@@ -127,15 +137,59 @@ export default function ThePresident() {
 
   const touchStart = useRef(null);
   const choosing   = useRef(false);
+  const swipeTriggered = useRef(false);
+
+  const haptic = useCallback((type = "light") => {
+    try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch { /* Telegram haptics are optional outside Mini App. */ }
+  }, []);
+
+  const hapticNotify = useCallback((type = "success") => {
+    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(type); } catch { /* Telegram haptics are optional outside Mini App. */ }
+  }, []);
+
+  const unlockAchievement = useCallback((id) => {
+    setAchievements(prev => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      localStorage.setItem("varon_ach", JSON.stringify(next));
+      hapticNotify("success");
+      return next;
+    });
+  }, [hapticNotify]);
+
+  const unlockSurvivalAchievements = useCallback((nextMonth) => {
+    if (nextMonth >= 13) unlockAchievement("survive_12");
+    if (nextMonth >= 49) unlockAchievement("survive_48");
+  }, [unlockAchievement]);
+
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return;
+
+    tg.ready();
+    tg.expand();
+    setTimeout(() => tg.expand(), 300);
+    setTimeout(() => tg.expand(), 1000);
+    if (typeof tg.requestFullscreen === "function") {
+      try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
+      setTimeout(() => {
+        try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
+      }, 500);
+    }
+
+    // Обработка реферального start_param
+    const startParam = tg.initDataUnsafe?.start_param || "";
+    if (startParam.startsWith("ref_")) {
+      const count = parseInt(localStorage.getItem("varon_refs") || "0", 10) + 1;
+      localStorage.setItem("varon_refs", String(count));
+      queueMicrotask(() => setReferralCount(count));
+    }
+  }, []);
 
   const currentCard = isCrisis && crisisCard ? crisisCard : deck[cardIdx % deck.length];
   const advisor     = currentCard ? (ADVISORS[currentCard.advisor] || ADVISORS[0]) : ADVISORS[0];
   const year        = 2024 + Math.floor((months - 1) / 12);
   const monthName   = MONTHS[(months - 1) % 12];
-
-  useEffect(() => {
-    if (deck.length - cardIdx < 20) setDeck(d => [...d, ...shuffle(ALL_CARDS)]);
-  }, [cardIdx]);
 
   const checkDeath = s => {
     for (const p of PARAMS) {
@@ -161,7 +215,7 @@ export default function ThePresident() {
     return { ns, fl };
   }, []);
 
-  const handleDeathOrRescue = useCallback((death, nextStats, nextMonth) => {
+  const handleDeathOrRescue = useCallback((death, nextStats, nextMonth, nextPendingEvents = pendingEvents) => {
     hapticNotify("error");
     const score = nextMonth - 1;
 
@@ -244,7 +298,7 @@ export default function ThePresident() {
           months: nextMonth,
           deck,
           cardIdx,
-          pendingEvents,
+          pendingEvents: nextPendingEvents,
           hasUsedSecondChance: false,
           rescueCard: {
             advisor: advisorId,
@@ -257,9 +311,9 @@ export default function ThePresident() {
           termsCompleted,
           phase: "second_chance"
         }));
-      } catch {}
+      } catch { /* Save failure should not interrupt the current run. */ }
     }
-  }, [hasUsedSecondChance, bestScore, deck, cardIdx, pendingEvents, termsCompleted]);
+  }, [hasUsedSecondChance, bestScore, deck, cardIdx, pendingEvents, termsCompleted, hapticNotify]);
 
   const choose = useCallback((side) => {
     if (choosing.current) return;
@@ -288,7 +342,7 @@ export default function ThePresident() {
             termsCompleted,
             phase: "card"
           }));
-        } catch {}
+        } catch { /* Save failure should not interrupt the current run. */ }
       } else {
         hapticNotify("error");
         setDeathMsg("Вы отказались от сделки по спасению власти и предпочли с честью сложить полномочия.");
@@ -333,6 +387,7 @@ export default function ThePresident() {
 
       const newMonth = months + 1;
       setMonths(newMonth);
+      unlockSurvivalAchievements(newMonth);
 
       setDecisionLog(prev => [...prev.slice(-6), {
         month: months,
@@ -364,6 +419,7 @@ export default function ThePresident() {
           localStorage.setItem("varon_ends", JSON.stringify(next));
           return next;
         });
+        unlockAchievement("victory");
         setPhase("victory");
         return;
       }
@@ -383,7 +439,7 @@ export default function ThePresident() {
           termsCompleted: newTerms,
           phase: "card"
         }));
-      } catch {}
+      } catch { /* Save failure should not interrupt the current run. */ }
       return;
     }
 
@@ -405,13 +461,14 @@ export default function ThePresident() {
 
       const newMonth   = months + 1;
       setMonths(newMonth);
+      unlockSurvivalAchievements(newMonth);
 
       setDecisionLog(prev => [...prev.slice(-6), {
         month: months,
         label: currentCard[side].label,
       }]);
 
-      const chainId    = getTriggeredChain(currentCard.text, side);
+      const chainId    = getTriggeredChain(currentCard, side);
       const newPending = [...pendingEvents];
       if (chainId && CHAINS[chainId]) {
         newPending.push({ ...CHAINS[chainId], triggerMonth: newMonth + CHAINS[chainId].delay });
@@ -425,24 +482,6 @@ export default function ThePresident() {
         newPending.splice(firedIdx, 1);
       }
       setPendingEvents(newPending);
-
-      setCardIdx(i => {
-        const nextIdx = i + 1;
-        try {
-          localStorage.setItem("varon_save", JSON.stringify({
-            stats: ns,
-            months: newMonth,
-            deck,
-            cardIdx: nextIdx,
-            pendingEvents: newPending,
-            hasUsedSecondChance,
-            rescueCard,
-            termsCompleted,
-            phase: "card"
-          }));
-        } catch {}
-        return nextIdx;
-      });
       setCardStyle({});
       setHovered(null);
       setIsCrisis(false);
@@ -451,13 +490,31 @@ export default function ThePresident() {
 
       const death = checkDeath(ns);
       if (death) {
-        handleDeathOrRescue(death, ns, newMonth);
+        handleDeathOrRescue(death, ns, newMonth, newPending);
         return;
       }
 
+      const nextIdx = cardIdx + 1;
+      const nextDeck = chainCard ? [chainCard, ...deck.slice(nextIdx)] : deck;
+      const nextCardIdx = chainCard ? 0 : nextIdx;
+      if (chainCard) setDeck(nextDeck);
+      setCardIdx(nextCardIdx);
+
+      try {
+        localStorage.setItem("varon_save", JSON.stringify({
+          stats: ns,
+          months: newMonth,
+          deck: nextDeck,
+          cardIdx: nextCardIdx,
+          pendingEvents: newPending,
+          hasUsedSecondChance,
+          rescueCard,
+          termsCompleted,
+          phase: "card"
+        }));
+      } catch { /* Save failure should not interrupt the current run. */ }
+
       if (chainCard) {
-        setDeck(d => [chainCard, ...d.slice(cardIdx + 1)]);
-        setCardIdx(0);
         return;
       }
 
@@ -469,10 +526,9 @@ export default function ThePresident() {
         setCrisisCard(CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)]);
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, rescueCard, handleDeathOrRescue, bestScore, deck]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements]);
 
   const onTouchStart = e => { touchStart.current = e.touches[0].clientX; };
-  const swipeTriggered = useRef(false);
   const onTouchMove  = e => {
     if (!touchStart.current) return;
     const dx = e.touches[0].clientX - touchStart.current;
@@ -503,33 +559,6 @@ export default function ThePresident() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [phase, choose]);
-
-  const haptic = (type = "light") => {
-    try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch(e) {}
-  };
-  const hapticNotify = (type = "success") => {
-    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(type); } catch(e) {}
-  };
-
-  const unlockAchievement = useCallback((id) => {
-    setAchievements(prev => {
-      if (prev.includes(id)) return prev;
-      const next = [...prev, id];
-      localStorage.setItem("varon_ach", JSON.stringify(next));
-      hapticNotify("success");
-      return next;
-    });
-  }, []);
-
-  // Проверяем достижения при каждом изменении месяца и фазы
-  useEffect(() => {
-    if (months >= 13)  unlockAchievement("survive_12");
-    if (months >= 49)  unlockAchievement("survive_48");
-  }, [months, unlockAchievement]);
-
-  useEffect(() => {
-    if (phase === "victory") unlockAchievement("victory");
-  }, [phase, unlockAchievement]);
 
   const handleNameSubmit = () => {
     const name = nameInput.trim() || "Президент";
@@ -1238,19 +1267,22 @@ export default function ThePresident() {
                         transform:hovered === side ? "translateY(-2px)" : "none",
                         boxShadow:hovered === side ? "0 6px 16px rgba(0,0,0,0.5),0 0 8px rgba(212,175,55,0.2)" : "none",
                         fontFamily:"var(--font-sans)",
+                        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"space-between",
+                        minHeight:92,
                       }}
                     >
-                      <div style={{ fontSize:9, fontFamily:"var(--font-sans)", letterSpacing:1.5, color:hovered === side ? "#d4af37" : "#6b4c1e", marginBottom:4, fontWeight:700 }}>
+                      <div style={{ fontSize:10, fontFamily:"var(--font-sans)", letterSpacing:1.2, color:hovered === side ? "#d4af37" : "#8b6914", marginBottom:4, fontWeight:700 }}>
                         {currentCard[side].label.toUpperCase()}
                       </div>
-                      <div style={{ fontSize:11, lineHeight:1.4 }}>{currentCard[side].text}</div>
+                      <div style={{ fontSize:12, lineHeight:1.35 }}>{currentCard[side].text}</div>
+                      <ChoiceEffectRow fx={currentCard[side].fx} />
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div style={{ textAlign:"center", marginTop:8, flexShrink:0, fontSize:9, color:"#6b000055", fontFamily:"'Special Elite',monospace", letterSpacing:2 }}>
+            <div style={{ textAlign:"center", marginTop:8, flexShrink:0, fontSize:9, color:"#d4af3788", fontFamily:"'Special Elite',monospace", letterSpacing:2 }}>
               ← СВАЙП ИЛИ ТАП →
             </div>
           </div>

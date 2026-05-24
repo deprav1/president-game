@@ -5,6 +5,7 @@
 export const NARUZHU_CARDS = [
   // ─── Карта 1: Массовый VPN-трафик ───
   {
+    id: "naruzhu_vpn_traffic",
     advisor: 3, // Патрушев
     text: "Патрушев докладывает: после замедления YouTube число скачиваний VPN-сервиса Наружу достигло 3 миллионов. Граждане массово обходят блокировки.",
     left: {
@@ -17,6 +18,7 @@ export const NARUZHU_CARDS = [
       text: "Бороться со свободным трафиком бесполезно",
       fx: { oligarchs: 0, army: -5, people: 12, west: 8 },
     },
+    chain: { left: "ds_arc_2_blockade", right: "ds_arc_2_open" },
   },
 
   // ─── Карта 2: Утечка через VPN-канал ───
