@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=PT+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap');
 
 :root {
   /* Дизайн-токены (цвета) */
@@ -25,17 +25,50 @@
   --gradient-paper: linear-gradient(160deg, #fdf6e3 0%, #f5e8c8 50%, #ede0b0 100%);
   --gradient-crisis-paper: linear-gradient(160deg, #1a0000 0%, #2a0000 50%, #1a0000 100%);
   --gradient-wood-header: linear-gradient(to right, #4a3800, #2c2200, #4a3800);
-  
+
   /* Тени и размытия */
   --shadow-premium: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(212, 175, 55, 0.2);
   --shadow-crisis: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(192, 57, 43, 0.35);
   --glass-bg: rgba(13, 8, 0, 0.85);
   --glass-border: 1px solid rgba(212, 175, 55, 0.25);
 
-  /* Шрифты */
-  --font-serif: 'Playfair Display', Georgia, serif;
-  --font-typewriter: 'PT Mono', 'Courier New', monospace;
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* ─── ШРИФТЫ (единая система) ─────────────────────────────────────────
+     Inter — основной текст, UI, заголовки (отличная читаемость на кириллице)
+     JetBrains Mono — акцентные подписи/чипы (моно для эстетики "досье")
+     Playfair Display — ТОЛЬКО для логотипа "ВАРОНИЯ"
+  */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-text:    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+
+  /* Алиасы для обратной совместимости (постепенно удалить) */
+  --font-serif:      var(--font-text);
+  --font-sans:       var(--font-text);
+  --font-typewriter: var(--font-mono);
+
+  /* ─── ТИПОГРАФИЧЕСКАЯ ШКАЛА ───────────────────────────────────────────
+     Минимум 11px — всё что меньше нечитаемо на мобильном
+  */
+  --text-xs:   11px;   /* мелкие подписи, лейблы */
+  --text-sm:   12px;   /* вторичный текст */
+  --text-base: 14px;   /* основной текст */
+  --text-md:   16px;   /* важный текст, текст карт */
+  --text-lg:   18px;   /* подзаголовки */
+  --text-xl:   22px;   /* бренд */
+  --text-2xl:  28px;   /* крупные заголовки */
+  --text-3xl:  36px;   /* финальные экраны */
+
+  /* Высоты строк */
+  --lh-tight:  1.25;
+  --lh-snug:   1.45;
+  --lh-normal: 1.6;
+  --lh-relaxed:1.75;
+
+  /* Letter-spacing для UPPERCASE */
+  --ls-normal: 0;
+  --ls-wide:   0.08em;   /* кнопки, лейблы */
+  --ls-wider:  0.16em;   /* секционные заголовки */
+  --ls-brand:  0.32em;   /* "ВАРОНИЯ" */
 }
 
 /* Сбросы и базовые анимации */
@@ -91,17 +124,28 @@ html, body {
 }
 
 /* Шрифтовые хелперы */
-.font-serif {
-  font-family: var(--font-serif);
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: var(--ls-brand);
 }
 
-.font-typewriter {
-  font-family: var(--font-typewriter);
+.font-text {
+  font-family: var(--font-text);
 }
 
-.font-sans {
-  font-family: var(--font-sans);
+.font-mono {
+  font-family: var(--font-mono);
+  letter-spacing: var(--ls-wide);
 }
+
+/* Алиасы (старые имена → новые) */
+.font-serif       { font-family: var(--font-text); }
+.font-sans        { font-family: var(--font-text); }
+.font-typewriter  { font-family: var(--font-mono); letter-spacing: var(--ls-wide); }
+
+/* Отключаем курсив глобально — используем normal-style текст с увеличенным line-height */
+em, i { font-style: normal; }
+.no-italic { font-style: normal !important; }
 
 .app-shell {
   height: var(--tg-viewport-stable-height, 100dvh);
@@ -111,7 +155,11 @@ html, body {
   overflow: hidden;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  font-family: var(--font-serif);
+  font-family: var(--font-text);
+  font-size: var(--text-base);
+  line-height: var(--lh-snug);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   position: relative;
   isolation: isolate;
 }
@@ -194,10 +242,11 @@ html, body {
 }
 
 .brand-title {
-  font-size: 22px;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
   line-height: 1;
-  font-weight: 700;
-  letter-spacing: 6px;
+  font-weight: 900;
+  letter-spacing: var(--ls-brand);
   color: var(--color-gold);
   text-shadow: 0 0 18px rgba(212, 175, 55, 0.35), 0 2px 0 rgba(0, 0, 0, 0.55);
 }
@@ -207,11 +256,12 @@ html, body {
   align-items: center;
   gap: 7px;
   margin-top: 4px;
-  font-family: var(--font-typewriter);
-  font-size: 9px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
   line-height: 1.2;
-  letter-spacing: 1.5px;
-  color: rgba(212, 175, 55, 0.62);
+  letter-spacing: var(--ls-wide);
+  color: rgba(212, 175, 55, 0.7);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -390,11 +440,12 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-sans);
-  font-size: 8px;
+  font-family: var(--font-text);
+  font-size: 10px;
   line-height: 1;
-  letter-spacing: 0.45px;
-  font-weight: 800;
+  letter-spacing: var(--ls-wide);
+  font-weight: 700;
+  text-transform: uppercase;
   color: var(--status-color);
 }
 

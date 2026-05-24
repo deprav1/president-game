@@ -161,7 +161,7 @@ function StatPill({ param, value, flash }) {
 
 function ChoiceEffectRow({ fx }) {
   const entries = PARAMS
-    .map(p => ({ param: p, value: Math.round((fx[p.key] || 0) * 1.2) }))
+    .map(p => ({ param: p, value: fx[p.key] || 0 }))
     .filter(item => item.value !== 0);
 
   if (!entries.length) return null;
@@ -171,7 +171,7 @@ function ChoiceEffectRow({ fx }) {
       {entries.map(({ param, value }) => (
         <span key={param.key} className={`choice-effect-chip ${value > 0 ? "positive" : "negative"}`}>
           <FactionIcon type={param.key} className="choice-effect-icon" />
-          <span>{value > 0 ? "+" : ""}{value}</span>
+          <span>{value > 0 ? "+" : "−"}</span>
         </span>
       ))}
     </div>
@@ -801,8 +801,8 @@ export default function ThePresident() {
             <div className="card-paper-container">
               <div className="card-header-bar">
                 <FactionIcon type="crest" className="dossier-brand-mark" />
-                <div className="font-typewriter" style={{ fontSize: 16, fontWeight: 700, color: "#f5e6c8", letterSpacing: 4 }}>ВАРОНИЯ</div>
-                <div className="font-typewriter" style={{ fontSize: 8, color: "#d4af3799", letterSpacing: 2, marginTop: 2 }}>СЕКРЕТНОЕ ДОСЬЕ • ПРЕЗИДЕНТ</div>
+                <div className="font-display" style={{ fontSize: 20, fontWeight: 900, color: "#f5e6c8" }}>ВАРОНИЯ</div>
+                <div className="font-mono" style={{ fontSize: 10, fontWeight: 500, color: "#d4af37bb", marginTop: 3 }}>СЕКРЕТНОЕ ДОСЬЕ · ПРЕЗИДЕНТ</div>
               </div>
               <div className="card-content-area">
                 {/* Секретное досье (картинка-плейсхолдер) */}
@@ -815,7 +815,7 @@ export default function ThePresident() {
                   />
                 </div>
                 
-                <p style={{ fontSize: 14, lineHeight: 1.7, color: "#2c1a06", fontStyle: "italic", textAlign: "center", marginBottom: 12 }}>
+                <p style={{ fontSize: 15, lineHeight: 1.55, color: "#2c1a06", fontWeight: 600, textAlign: "center", marginBottom: 14, letterSpacing: 0.2 }}>
                   Поздравляем с избранием на пост Президента Республики Варония.
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
@@ -834,7 +834,7 @@ export default function ThePresident() {
                   ))}
                 </div>
                 <div style={{ background: "#8b000011", border: "1px solid #8b000022", borderRadius: 8, padding: "8px 12px", marginBottom: 12, textAlign: "center" }}>
-                  <p style={{ fontSize: 11, color: "#6b0000", fontStyle: "italic", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: "#6b0000", fontWeight: 500, lineHeight: 1.45 }}>
                     Если любая шкала упадёт в 0 или зашкалит до 100 — вас уберут.
                   </p>
                 </div>
@@ -894,7 +894,7 @@ export default function ThePresident() {
 
               <div className="font-typewriter" style={{
                 position: "absolute", bottom: 4, right: 8,
-                fontSize: 8, color: "#2c1a0644", letterSpacing: 1, pointerEvents: "none",
+                fontSize: 10, color: "#2c1a0644", letterSpacing: 1, pointerEvents: "none",
               }}>
                 v1.3.0
               </div>
@@ -909,7 +909,7 @@ export default function ThePresident() {
               <div className="card-header-bar crisis">
                 <div style={{ fontSize: 28, marginBottom: 2 }}>⚰️</div>
                 <div className="font-typewriter" style={{ fontSize: 13, letterSpacing: 4, color: "#c0392b", fontWeight: 700 }}>КОНЕЦ ПРАВЛЕНИЯ</div>
-                <div className="font-typewriter" style={{ fontSize: 9, color: "#8b6914", letterSpacing: 2, marginTop: 2 }}>
+                <div className="font-typewriter" style={{ fontSize: 11, color: "#8b6914", letterSpacing: 2, marginTop: 2 }}>
                   {tenure} МЕС. У ВЛАСТИ — {tenureLabel}
                 </div>
               </div>
@@ -930,7 +930,7 @@ export default function ThePresident() {
                   borderRadius: 12, padding: "14px 18px", marginBottom: 12, 
                   boxShadow: "inset 0 2px 8px #000000bb" 
                 }}>
-                  <p style={{ fontSize: 13, lineHeight: 1.7, fontStyle: "italic", color: "#d4b896", textAlign: "center" }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 400, color: "#e3cba1", textAlign: "center" }}>
                     «{deathMsg}»
                   </p>
                 </div>
@@ -948,7 +948,7 @@ export default function ThePresident() {
                         position: "relative", overflow: "hidden",
                       }}>
                         {isKiller && (
-                          <div className="font-typewriter" style={{ position: "absolute", top: 4, right: 6, fontSize: 8, color: "#c0392b", fontWeight: 700 }}>
+                          <div className="font-typewriter" style={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "#c0392b", fontWeight: 700 }}>
                             {isTooHigh ? "▲ MAX" : "▼ MIN"}
                           </div>
                         )}
@@ -957,7 +957,7 @@ export default function ThePresident() {
                           className="result-vector-icon"
                           style={{ color: isKiller ? "#c0392b" : p.color }}
                         />
-                        <div className="font-typewriter" style={{ fontSize: 8, color: isKiller ? "#c0392b" : "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
+                        <div className="font-typewriter" style={{ fontSize: 10, color: isKiller ? "#c0392b" : "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                         <div style={{ fontSize: 18, fontWeight: 700, color: isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37", marginTop: 1 }}>
                           {stats[p.key]}
                         </div>
@@ -966,13 +966,13 @@ export default function ThePresident() {
                   })}
                 </div>
 
-                <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", marginBottom: 12, letterSpacing: 0.5, textAlign: "center" }}>
+                <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", marginBottom: 12, letterSpacing: 0.5, textAlign: "center" }}>
                   ⚠️ Шкала в 0 или 100 — лишение власти
                 </div>
 
                 {achievements.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ВАШИ ДОСТИЖЕНИЯ</div>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ВАШИ ДОСТИЖЕНИЯ</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
                       {ACHIEVEMENTS_DEF.filter(a => achievements.includes(a.id)).map(a => (
                         <div key={a.id} title={a.desc} style={{
@@ -980,7 +980,7 @@ export default function ThePresident() {
                           padding: "4px 8px", display: "flex", alignItems: "center", gap: 5,
                         }}>
                           <span style={{ fontSize: 11 }}>{a.icon}</span>
-                          <span className="font-typewriter" style={{ fontSize: 8, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>
+                          <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>
                         </div>
                       ))}
                     </div>
@@ -989,12 +989,12 @@ export default function ThePresident() {
 
                 {decisionLog.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       {decisionLog.slice(-4).map((entry, i) => (
                         <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", background: "#0d0800", border: "1px solid #2c1a06", borderRadius: 6, padding: "4px 8px" }}>
-                          <span className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", flexShrink: 0 }}>МЕС {entry.month}</span>
-                          <span style={{ fontSize: 9, color: "#d4b896", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.label}</span>
+                          <span className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", flexShrink: 0 }}>МЕС {entry.month}</span>
+                          <span style={{ fontSize: 11, color: "#d4b896", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.label}</span>
                         </div>
                       ))}
                     </div>
@@ -1021,7 +1021,7 @@ export default function ThePresident() {
               <div className="card-header-bar gold">
                 <div style={{ fontSize: 32, marginBottom: 2 }}>🏛️</div>
                 <div className="font-typewriter" style={{ fontSize: 13, letterSpacing: 4, color: "#d4af37", fontWeight: 700 }}>ВЫ ВОШЛИ В ИСТОРИЮ</div>
-                <div className="font-typewriter" style={{ fontSize: 9, color: "#8b6914", letterSpacing: 2, marginTop: 2 }}>
+                <div className="font-typewriter" style={{ fontSize: 11, color: "#8b6914", letterSpacing: 2, marginTop: 2 }}>
                   {tenure} МЕСЯЦЕВ У ВЛАСТИ
                 </div>
               </div>
@@ -1051,12 +1051,12 @@ export default function ThePresident() {
                         )}
                         <div>
                           <div className="font-typewriter" style={{ fontSize: 12, letterSpacing: 2, color: "#d4af37", fontWeight: 700 }}>{ending.title.toUpperCase()}</div>
-                          <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", letterSpacing: 0.5, marginTop: 1 }}>{ending.subtitle}</div>
+                          <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 0.5, marginTop: 1 }}>{ending.subtitle}</div>
                         </div>
                       </div>
                       
                       {ending.text.split('\n\n').map((para, i, arr) => (
-                        <p key={i} style={{ fontSize: 13, lineHeight: 1.7, color: "#2c1a06", fontStyle: "italic", marginBottom: i < arr.length - 1 ? 8 : 0 }}>
+                        <p key={i} style={{ fontSize: 14, lineHeight: 1.6, color: "#2c1a06", fontWeight: 400, marginBottom: i < arr.length - 1 ? 10 : 0 }}>
                           {para}
                         </p>
                       ))}
@@ -1068,7 +1068,7 @@ export default function ThePresident() {
                   {PARAMS.map(p => (
                     <div key={p.key} style={{ background: "#0d0800", border: `1px solid ${p.color}33`, borderRadius: 8, padding: "8px 10px", boxShadow: `0 0 8px ${p.color}15` }}>
                       <FactionIcon type={p.key} className="result-vector-icon" style={{ color: p.color }} />
-                      <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
+                      <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                       <div style={{ fontSize: 18, fontWeight: 700, color: p.color, marginTop: 1 }}>{stats[p.key]}</div>
                     </div>
                   ))}
@@ -1076,7 +1076,7 @@ export default function ThePresident() {
 
                 {achievements.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ДОСТИЖЕНИЯ</div>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ДОСТИЖЕНИЯ</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
                       {ACHIEVEMENTS_DEF.filter(a => achievements.includes(a.id)).map(a => (
                         <div key={a.id} title={a.desc} style={{
@@ -1084,7 +1084,7 @@ export default function ThePresident() {
                           padding: "4px 8px", display: "flex", alignItems: "center", gap: 5,
                         }}>
                           <span style={{ fontSize: 11 }}>{a.icon}</span>
-                          <span className="font-typewriter" style={{ fontSize: 8, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>
+                          <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>
                         </div>
                       ))}
                     </div>
@@ -1093,12 +1093,12 @@ export default function ThePresident() {
 
                 {decisionLog.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       {decisionLog.slice(-4).map((entry, i) => (
                         <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", background: "#0d0800", border: "1px solid #2c1a06", borderRadius: 6, padding: "4px 8px" }}>
-                          <span className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", flexShrink: 0 }}>МЕС {entry.month}</span>
-                          <span style={{ fontSize: 9, color: "#d4b896", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace:"nowrap" }}>{entry.label}</span>
+                          <span className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", flexShrink: 0 }}>МЕС {entry.month}</span>
+                          <span style={{ fontSize: 11, color: "#d4b896", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace:"nowrap" }}>{entry.label}</span>
                         </div>
                       ))}
                     </div>
@@ -1107,7 +1107,7 @@ export default function ThePresident() {
 
                 {promoCode && (
                   <div className="hub-promo-box" style={{ marginBottom: 14 }}>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 1.5, marginBottom: 4 }}>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1.5, marginBottom: 4 }}>
                       🎁 ПОДАРОК ЗА ПОБЕДУ — {promoCode.days} ДНЕЙ VEPEAN VPN
                     </div>
                     <div
@@ -1116,7 +1116,7 @@ export default function ThePresident() {
                     >
                       {promoCode.code}
                     </div>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e" }}>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e" }}>
                       Копировать · Активация на vepean.click
                     </div>
                   </div>
@@ -1143,7 +1143,7 @@ export default function ThePresident() {
                 <img src={getAsset("/images/advisor_vlasova.png")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>Елена Власова</div>
-                  <div className="font-typewriter" style={{ fontSize: 9, color: "#d4af3799" }}>Пресс-секретарь</div>
+                  <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>Пресс-секретарь</div>
                 </div>
               </div>
               
@@ -1158,12 +1158,12 @@ export default function ThePresident() {
                   />
                 </div>
 
-                <p style={{ fontSize: 15, lineHeight: 1.7, color: "#2c1a06", fontStyle: "italic", textAlign: "center", marginBottom: 12 }}>
+                <p style={{ fontSize: 15, lineHeight: 1.6, color: "#2c1a06", fontWeight: 500, textAlign: "center", marginBottom: 14 }}>
                   {ELECTION_CARD.text}
                 </p>
                 
                 <div style={{ padding: "8px 12px", background: "#2c1a060e", borderRadius: 8, border: "1px solid #c9a84c33", marginBottom: 12 }}>
-                  <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", textAlign: "center", letterSpacing: 1, marginBottom: 4 }}>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", textAlign: "center", letterSpacing: 1, marginBottom: 4 }}>
                     ВАШ РЕЙТИНГ У НАРОДА
                   </div>
                   <div style={{ height: 6, background: "#d4c4a8", borderRadius: 3, overflow: "hidden" }}>
@@ -1186,17 +1186,17 @@ export default function ThePresident() {
                     }}
                   >
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>🗳️ ЧЕСТНАЯ КАМПАНИЯ</div>
-                    <div style={{ fontSize: 8, marginTop: 1, textTransform: "none", fontWeight: 400 }}>Народ +12 · Запад +12 (Рейтинг от 40%)</div>
+                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400 }}>Народ +12 · Запад +12 (Рейтинг от 40%)</div>
                   </button>
 
                   <button onClick={() => choose("admin")} className="btn-velvet" style={{ flexDirection: "column", padding: "8px 12px" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#f5c6c6" }}>👮 АДМИНИСТРАТИВНЫЙ РЕСУРС</div>
-                    <div style={{ fontSize: 8, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Народ -22 · Запад -26 · Силовики +18 · Олигархи +6</div>
+                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Народ -22 · Запад -26 · Силовики +18 · Олигархи +6</div>
                   </button>
 
                   <button onClick={() => choose("sponsor")} className="btn-velvet" style={{ flexDirection: "column", padding: "8px 12px" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#fbe380" }}>💎 СДЕЛКА С ОЛИГАРХАМИ</div>
-                    <div style={{ fontSize: 8, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Олигархи +22 · Народ -12 · Запад -10</div>
+                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Олигархи +22 · Народ -12 · Запад -10</div>
                   </button>
 
                   <button onClick={() => choose("giveup")} className="btn-outline" style={{ marginTop: 4 }}>
@@ -1216,7 +1216,7 @@ export default function ThePresident() {
                 <img src={getAsset(ADVISORS[rescueCard.advisor]?.avatar || "/images/advisor_zubov.png")} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>{ADVISORS[rescueCard.advisor]?.name || "Советник"}</div>
-                  <div className="font-typewriter" style={{ fontSize: 9, color: "#d4af3799" }}>{ADVISORS[rescueCard.advisor]?.role || "Куратор"}</div>
+                  <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>{ADVISORS[rescueCard.advisor]?.role || "Куратор"}</div>
                 </div>
               </div>
               
@@ -1231,12 +1231,12 @@ export default function ThePresident() {
                   />
                 </div>
 
-                <p style={{ fontSize: 15, lineHeight: 1.7, color: "#f5c6c6", fontStyle: "italic", textAlign: "center", fontWeight: 600, marginBottom: 12 }}>
+                <p style={{ fontSize: 15, lineHeight: 1.55, color: "#f5c6c6", textAlign: "center", fontWeight: 600, marginBottom: 14 }}>
                   {rescueCard.text}
                 </p>
-                
+
                 <div style={{ background: "rgba(139, 0, 0, 0.25)", border: "1px solid rgba(139, 0, 0, 0.45)", borderRadius: 8, padding: "10px 14px", marginBottom: 16, textAlign: "center" }}>
-                  <p style={{ fontSize: 11, color: "#f5c6c6", fontStyle: "italic", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: "#f5c6c6", fontWeight: 500, lineHeight: 1.5 }}>
                     ⚠️ Внимание: это ваш единственный «Второй шанс» за игру. Любой следующий перекос шкал приведет к окончательному поражению.
                   </p>
                 </div>
@@ -1276,7 +1276,7 @@ export default function ThePresident() {
                 }}>
                   <FactionIcon type={p.key} className="preview-effect-icon" />
                   <span style={{ fontWeight: 700 }}>
-                    {previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
+                    {previewFxReal[p.key] > 0 ? "+" : "−"}
                   </span>
                 </span>
               ))}
@@ -1319,7 +1319,7 @@ export default function ThePresident() {
                       {hovered === "left" ? currentCard.left.label.toUpperCase() : currentCard.right.label.toUpperCase()}
                     </div>
                   )}
-                  <p style={{ fontSize:17, lineHeight:1.85, color:cardTextColor, fontStyle:"italic", textAlign:"center" }}>
+                  <p style={{ fontSize:16, lineHeight:1.55, color:cardTextColor, fontWeight:500, textAlign:"center", letterSpacing:0.1 }}>
                     {currentCard.text}
                   </p>
                 </div>
@@ -1357,7 +1357,7 @@ export default function ThePresident() {
               </div>
             </div>
 
-            <div style={{ textAlign:"center", marginTop:8, flexShrink:0, fontSize:9, color:"#d4af3788", fontFamily:"var(--font-typewriter)", letterSpacing:2 }}>
+            <div style={{ textAlign:"center", marginTop:8, flexShrink:0, fontSize:11, color:"#d4af3788", fontFamily:"var(--font-mono)", letterSpacing:1.5, fontWeight:500 }}>
               ← СВАЙП ИЛИ ТАП →
             </div>
           </div>
@@ -1373,7 +1373,7 @@ export default function ThePresident() {
               <div className="hub-card-header">
                 <div>
                   <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: "#d4af37", letterSpacing: 2 }}>🔐 VEPEAN HUB</div>
-                  <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 0.5, marginTop: 2 }}>VPN для тех, кто решает сам</div>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 0.5, marginTop: 2 }}>VPN для тех, кто решает сам</div>
                 </div>
                 <button onClick={() => setShowHub(false)} style={{ background: "none", border: "none", color: "#6b4c1e", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
               </div>
@@ -1382,7 +1382,7 @@ export default function ThePresident() {
                 {/* Лучший результат */}
                 <div className="hub-stats-panel">
                   <div>
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
                     <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{bestScore} <span style={{ fontSize: 10 }}>МЕС.</span></div>
                   </div>
                   <div style={{ fontSize: 24 }}>🏆</div>
@@ -1391,14 +1391,14 @@ export default function ThePresident() {
                 {/* Достижения */}
                 {achievements.length > 0 && (
                   <div className="hub-section">
-                    <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", letterSpacing: 1 }}>ДОСТИЖЕНИЯ</div>
+                    <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1 }}>ДОСТИЖЕНИЯ</div>
                     <div className="hub-grid">
                       {ACHIEVEMENTS_DEF.map(a => {
                         const hasAch = achievements.includes(a.id);
                         return (
                           <div key={a.id} title={a.desc} className={`hub-grid-item ${hasAch ? 'active' : 'inactive'}`}>
                             <span style={{ fontSize: 12 }}>{a.icon}</span>
-                            {hasAch && <span className="font-typewriter" style={{ fontSize: 8, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>}
+                            {hasAch && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>}
                           </div>
                         );
                       })}
@@ -1408,38 +1408,38 @@ export default function ThePresident() {
 
                 {/* Хроника концовок */}
                 <div className="hub-section">
-                  <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", letterSpacing: 1 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
                   <div className="hub-grid">
                     {Object.values(ENDINGS).map(e => {
                       const unlocked = unlockedEndings.includes(e.id);
                       return (
                         <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} className={`hub-grid-item ${unlocked ? 'active' : 'inactive'}`}>
                           <span style={{ fontSize: 12 }}>{e.icon}</span>
-                          {unlocked && <span className="font-typewriter" style={{ fontSize: 8, color: "#d4af37", letterSpacing: 0.5 }}>{e.title}</span>}
+                          {unlocked && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{e.title}</span>}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", marginTop: 6, letterSpacing: 0.5 }}>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", marginTop: 6, letterSpacing: 0.5 }}>
                     {unlockedEndings.length} из {Object.keys(ENDINGS).length} финалов открыто
                   </div>
                 </div>
 
                 {/* Промокод */}
                 <div className="hub-promo-box">
-                  <div className="font-typewriter" style={{ fontSize: 8, color: "#8b6914", letterSpacing: 1, marginBottom: 4 }}>ПРОМОКОД — 7 ДНЕЙ БЕСПЛАТНО</div>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#8b6914", letterSpacing: 1, marginBottom: 4 }}>ПРОМОКОД — 7 ДНЕЙ БЕСПЛАТНО</div>
                   <div 
                     className="hub-promo-code"
                     onClick={() => { navigator.clipboard?.writeText("WARONIA"); haptic("light"); }}
                   >
                     WARONIA
                   </div>
-                  <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e" }}>Нажмите для копирования</div>
+                  <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e" }}>Нажмите для копирования</div>
                 </div>
 
                 {/* Реферальный счётчик */}
                 {referralCount > 0 && (
-                  <div className="font-typewriter" style={{ fontSize: 9, color: "#6b4c1e", textAlign: "center", letterSpacing: 0.5 }}>
+                  <div className="font-typewriter" style={{ fontSize: 11, color: "#6b4c1e", textAlign: "center", letterSpacing: 0.5 }}>
                     👥 Вы привели {referralCount} {referralCount === 1 ? "игрока" : "игроков"}
                   </div>
                 )}
