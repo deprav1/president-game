@@ -32,25 +32,34 @@ const shuffle = a => [...a].sort(() => Math.random() - 0.5);
 
 // ─── КОМПОНЕНТ ШКАЛЫ ──────────────────────────────────────────────────────────
 function StatPill({ param, value, flash }) {
-  const pct    = Math.max(0, Math.min(100, value));
-  const danger = pct <= 15 || pct >= 85;
+  const pct        = Math.max(0, Math.min(100, value));
+  const isCritical = pct <= 8  || pct >= 92;
+  const isDanger   = pct <= 15 || pct >= 85;
+  const isWarning  = !isDanger && (pct <= 28 || pct >= 72);
+
+  const barBg = isDanger
+    ? `linear-gradient(to right,#c0392b99,#c0392b)`
+    : isWarning
+    ? `linear-gradient(to right,${param.color}77,#d4872b)`
+    : `linear-gradient(to right,${param.color}99,${param.color})`;
+
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
       <div style={{ fontSize:16 }}>{param.icon}</div>
       <div style={{
         width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden",
-        border:danger ? `1px solid ${param.color}88` : "1px solid #3d2509",
-        boxShadow:danger ? `0 0 8px ${param.color}55` : "none",
+        border: isDanger ? "1px solid #c0392b88" : isWarning ? "1px solid #d4872b55" : "1px solid #3d2509",
+        boxShadow: isCritical ? "0 0 12px #c0392b99" : isDanger ? `0 0 8px ${param.color}55` : "none",
       }}>
         <div style={{
-          height:"100%", width:`${pct}%`,
-          background:`linear-gradient(to right,${param.color}99,${param.color})`,
-          borderRadius:3, transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",
-          animation:flash ? "flashStat 0.5s ease" : danger ? "pulse 1.5s infinite" : "none",
+          height:"100%", width:`${pct}%`, background:barBg, borderRadius:3,
+          transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",
+          animation:flash ? "flashStat 0.5s ease" : isCritical ? "pulse 0.7s infinite" : isDanger ? "pulse 1.5s infinite" : "none",
         }}/>
       </div>
-      <div style={{ fontSize:8, fontFamily:"'Special Elite',monospace", color:danger ? param.color : "#6b4c1e", letterSpacing:0.5 }}>
-        {param.label.toUpperCase()}
+      <div style={{ fontSize:8, fontFamily:"'Special Elite',monospace", letterSpacing:0.5,
+        color: isDanger ? "#c0392b" : isWarning ? "#d4872b" : "#6b4c1e" }}>
+        {param.label.toUpperCase()}{isCritical ? "!" : ""}
       </div>
     </div>
   );
@@ -371,8 +380,6 @@ export default function ThePresident() {
   const tenure      = months - 1;
   const tenureLabel = tenure < 6 ? "КАТАСТРОФА" : tenure < 24 ? "ПРОВАЛ" : tenure < 48 ? "СЛАБО" : tenure < 96 ? "НЕПЛОХО" : tenure < 144 ? "КРЕПКИЙ ЛИДЕР" : "ЛЕГЕНДА";
   const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
-  const previewFx   = hovered && currentCard ? currentCard[hovered].fx : null;
-
   const cardBg      = isCrisis ? CRISIS_BG : FELT_BG;
   const cardPaperBg = isCrisis
     ? "linear-gradient(160deg,#1a0000 0%,#2a0000 50%,#1a0000 100%)"
@@ -381,6 +388,11 @@ export default function ThePresident() {
   const headerBg    = isCrisis
     ? "linear-gradient(to right,#4a0000,#3a0000,#4a0000)"
     : "linear-gradient(to right,#8b0000,#6b0000,#8b0000)";
+
+  // Превью с реальным масштабом (1.4×)
+  const previewFxReal = hovered && currentCard
+    ? Object.fromEntries(PARAMS.map(p => [p.key, Math.round((currentCard[hovered].fx[p.key] || 0) * 1.4)]))
+    : null;
 
   // ─── SHARE-ТЕКСТЫ ─────────────────────────────────────────────────────────
   const SHARE_DEATH = {
@@ -840,11 +852,11 @@ export default function ThePresident() {
         {/* ════════════════════════════════ ИГРОВАЯ КАРТА ════════════════════════════════ */}
         {phase === "card" && currentCard && (
           <div style={{ flex:1, display:"flex", flexDirection:"column", padding:"8px 16px 12px", overflow:"hidden", background:cardBg }}>
-            {/* Превью эффектов */}
+            {/* Превью эффектов (реальные значения 1.4×) */}
             <div style={{ height:24, display:"flex", justifyContent:"center", gap:10, alignItems:"center", marginBottom:6, flexShrink:0 }}>
-              {previewFx && PARAMS.map(p => previewFx[p.key] !== 0 && (
-                <span key={p.key} style={{ fontSize:12, fontFamily:"'Special Elite',monospace", color:previewFx[p.key] > 0 ? "#27ae60" : "#c0392b", animation:"fadeIn 0.2s ease" }}>
-                  {p.icon}{previewFx[p.key] > 0 ? "+" : ""}{previewFx[p.key]}
+              {previewFxReal && PARAMS.map(p => previewFxReal[p.key] !== 0 && (
+                <span key={p.key} style={{ fontSize:12, fontFamily:"'Special Elite',monospace", color:previewFxReal[p.key] > 0 ? "#27ae60" : "#c0392b", animation:"fadeIn 0.2s ease" }}>
+                  {p.icon}{previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
                 </span>
               ))}
             </div>
