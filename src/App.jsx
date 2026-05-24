@@ -1320,13 +1320,14 @@ export default function ThePresident() {
                     <button
                       onClick={e => { e.stopPropagation(); haptic("light"); openNaruzhu(); }}
                       style={{
-                        display:"flex", alignItems:"center", justifyContent:"center", gap:4,
-                        margin:"8px auto 0", padding:"4px 12px", borderRadius:999,
-                        background:"transparent",
-                        border:`1px solid ${NARUZHU_YELLOW}44`,
+                        display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+                        margin:"10px auto 0", padding:"5px 14px", borderRadius:999,
+                        background:"rgba(15,10,0,0.82)",
+                        border:`1px solid ${NARUZHU_YELLOW}88`,
                         cursor:"pointer", color:NARUZHU_YELLOW,
-                        fontSize:11, fontFamily:"var(--font-mono)", letterSpacing:0.5,
-                        fontWeight:600,
+                        fontSize:11, fontFamily:"var(--font-mono)", letterSpacing:0.6,
+                        fontWeight:700,
+                        boxShadow:`0 0 12px ${NARUZHU_YELLOW}22`,
                       }}
                     >
                       🌐 VPN Наружу — выйти из Варонии
