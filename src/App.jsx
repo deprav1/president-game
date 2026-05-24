@@ -32,39 +32,96 @@ const shuffle = a => {
   return copy;
 };
 
+const telegramVersionAtLeast = (tg, version) => (
+  typeof tg?.isVersionAtLeast !== "function" || tg.isVersionAtLeast(version)
+);
+
 // ─── КОМПОНЕНТ ШКАЛЫ ──────────────────────────────────────────────────────────
+function FactionIcon({ type, className = "", style }) {
+  const shared = {
+    className,
+    style,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    "aria-hidden": true,
+    focusable: "false",
+  };
+
+  if (type === "oligarchs") {
+    return (
+      <svg {...shared}>
+        <path d="M12 3.5 19 9l-7 11.5L5 9l7-5.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M5 9h14M8.2 9 12 20.5 15.8 9M9.4 6.2h5.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 3.5 14.6 9H9.4L12 3.5Z" fill="currentColor" opacity="0.22" />
+      </svg>
+    );
+  }
+
+  if (type === "army") {
+    return (
+      <svg {...shared}>
+        <path d="M12 3.4 18.5 6v5.4c0 4.1-2.45 7.15-6.5 9.2-4.05-2.05-6.5-5.1-6.5-9.2V6L12 3.4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M8.7 11.3 11 13.6l4.5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 5.6v12.2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.42" />
+      </svg>
+    );
+  }
+
+  if (type === "people") {
+    return (
+      <svg {...shared}>
+        <path d="M12 11.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.55" />
+        <path d="M6.8 19.2c.55-3.25 2.35-5.05 5.2-5.05s4.65 1.8 5.2 5.05" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" />
+        <path d="M5.9 12.6a2.3 2.3 0 1 0-.1-4.6 2.3 2.3 0 0 0 .1 4.6ZM18.1 12.6a2.3 2.3 0 1 0 .1-4.6 2.3 2.3 0 0 0-.1 4.6Z" stroke="currentColor" strokeWidth="1.35" opacity="0.85" />
+        <path d="M2.9 18.1c.35-2.35 1.6-3.7 3.6-3.85M21.1 18.1c-.35-2.35-1.6-3.7-3.6-3.85" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" opacity="0.85" />
+      </svg>
+    );
+  }
+
+  if (type === "west") {
+    return (
+      <svg {...shared}>
+        <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.65" />
+        <path d="M3.8 12h16.4M12 3.8c2.15 2.15 3.2 4.85 3.2 8.2s-1.05 6.05-3.2 8.2M12 3.8C9.85 5.95 8.8 8.65 8.8 12s1.05 6.05 3.2 8.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        <path d="M5.6 7.2c1.75.8 3.9 1.2 6.4 1.2s4.65-.4 6.4-1.2M5.6 16.8c1.75-.8 3.9-1.2 6.4-1.2s4.65.4 6.4 1.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.58" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...shared}>
+      <path d="M12 3.4 14.35 8l5.05.75-3.7 3.58.88 5.03L12 14.98 7.42 17.36l.88-5.03-3.7-3.58L9.65 8 12 3.4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M7.1 11.4H3.3c1.2 1.55 2.75 2.55 4.65 3M16.9 11.4h3.8c-1.2 1.55-2.75 2.55-4.65 3" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 3.4 13.35 8h-2.7L12 3.4Z" fill="currentColor" opacity="0.25" />
+    </svg>
+  );
+}
+
 function StatPill({ param, value, flash }) {
   const pct        = Math.max(0, Math.min(100, value));
   const isCritical = pct <= 8  || pct >= 92;
   const isDanger   = pct <= 15 || pct >= 85;
   const isWarning  = !isDanger && (pct <= 28 || pct >= 72);
-
-  const barBg = isDanger
-    ? `linear-gradient(to right,#c0392b99,#c0392b)`
-    : isWarning
-    ? `linear-gradient(to right,${param.color}77,#d4872b)`
-    : `linear-gradient(to right,${param.color}99,${param.color})`;
+  const state      = isCritical ? "critical" : isDanger ? "danger" : isWarning ? "warning" : "normal";
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-      <img src={getAsset(param.icon)} className={`stat-pill-icon ${param.key}`} alt="" />
-      <div style={{
-        width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden", position:"relative",
-        border: isDanger ? "1px solid #c0392b88" : isWarning ? "1px solid #d4872b55" : "1px solid #3d2509",
-        boxShadow: isCritical ? "0 0 12px #c0392b99" : isDanger ? `0 0 8px ${param.color}55` : "none",
-      }}>
-        <div style={{
-          height:"100%", width:`${pct}%`, background:barBg, borderRadius:3,
-          transition:"width 0.5s cubic-bezier(0.4,0,0.2,1)",
-          animation:flash ? "flashStat 0.5s ease" : isCritical ? "pulse 0.7s infinite" : isDanger ? "pulse 1.5s infinite" : "none",
-        }}/>
-        <div style={{
-          position:"absolute", left:"50%", top:0, bottom:0, width:1,
-          background:"rgba(245,230,200,0.45)", transform:"translateX(-50%)",
-        }}/>
+    <div className={`stat-pill ${param.key} ${state}`} style={{ "--param-color": param.color }}>
+      <div className="stat-icon-shell">
+        <FactionIcon type={param.key} className="stat-vector-icon" />
       </div>
-      <div style={{ fontSize:8, fontFamily:"var(--font-sans)", letterSpacing:0.5, fontWeight:600,
-        color: isDanger ? "#c0392b" : isWarning ? "#d4872b" : "#6b4c1e" }}>
+      <div className="stat-track">
+        <div className="stat-safe-zone" />
+        <div
+          className="stat-fill"
+          style={{
+            width: `${pct}%`,
+            animation: flash ? "flashStat 0.5s ease" : isCritical ? "pulse 0.7s infinite" : isDanger ? "pulse 1.5s infinite" : "none",
+          }}
+        />
+        <div className="stat-midline" />
+      </div>
+      <div className="stat-label">
         {param.label.toUpperCase()}{isCritical ? "!" : ""}
       </div>
     </div>
@@ -82,7 +139,7 @@ function ChoiceEffectRow({ fx }) {
     <div className="choice-effect-row">
       {entries.map(({ param, value }) => (
         <span key={param.key} className={`choice-effect-chip ${value > 0 ? "positive" : "negative"}`}>
-          <img src={getAsset(param.icon)} alt="" />
+          <FactionIcon type={param.key} className="choice-effect-icon" />
           <span>{value > 0 ? "+" : ""}{value}</span>
         </span>
       ))}
@@ -140,11 +197,15 @@ export default function ThePresident() {
   const swipeTriggered = useRef(false);
 
   const haptic = useCallback((type = "light") => {
-    try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch { /* Telegram haptics are optional outside Mini App. */ }
+    const tg = window.Telegram?.WebApp;
+    if (!telegramVersionAtLeast(tg, "6.1")) return;
+    try { tg?.HapticFeedback?.impactOccurred(type); } catch { /* Telegram haptics are optional outside Mini App. */ }
   }, []);
 
   const hapticNotify = useCallback((type = "success") => {
-    try { window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred(type); } catch { /* Telegram haptics are optional outside Mini App. */ }
+    const tg = window.Telegram?.WebApp;
+    if (!telegramVersionAtLeast(tg, "6.1")) return;
+    try { tg?.HapticFeedback?.notificationOccurred(type); } catch { /* Telegram haptics are optional outside Mini App. */ }
   }, []);
 
   const unlockAchievement = useCallback((id) => {
@@ -170,7 +231,7 @@ export default function ThePresident() {
     tg.expand();
     setTimeout(() => tg.expand(), 300);
     setTimeout(() => tg.expand(), 1000);
-    if (typeof tg.requestFullscreen === "function") {
+    if (typeof tg.requestFullscreen === "function" && telegramVersionAtLeast(tg, "8.0")) {
       try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
       setTimeout(() => {
         try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
@@ -667,53 +728,38 @@ export default function ThePresident() {
   // ─── РЕНДЕР ───────────────────────────────────────────────────────────────
   return (
     <>
-      <div style={{
-        height:"var(--tg-viewport-stable-height, 100dvh)", display:"flex", flexDirection:"column",
-        background:WOOD_BG, fontFamily:"'Playfair Display',Georgia,serif",
-        color:"#f5e6c8", overflow:"hidden",
-        paddingTop: "env(safe-area-inset-top, 0px)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-      }}>
-        <div style={{ height:3, background:"linear-gradient(to right,transparent,#d4af37,#f5e6a0,#d4af37,transparent)", flexShrink:0 }}/>
+      <div className="app-shell" style={{ background: WOOD_BG }}>
+        <div className="top-line" />
 
         {/* ── ХЭДЕР ── */}
-        <div style={{
-          flexShrink:0, textAlign:"center", padding:"8px 16px 6px",
-          borderBottom:"1px solid #3d2509",
-          background:"linear-gradient(to bottom,#1a0f00cc,transparent)",
-          position:"relative",
-        }}>
-          <div style={{ fontSize:20, marginBottom:1 }}>🦅</div>
-          <div style={{ fontSize:20, fontWeight:700, letterSpacing:6, color:"#d4af37", textShadow:"0 0 20px #d4af3766" }}>
-            ВАРОНИЯ
-          </div>
-          <div style={{ fontSize:9, letterSpacing:4, color:"#8b6914", fontFamily:"'Special Elite',monospace", marginTop:1 }}>
-            {presidentName && <span style={{ color:"#d4af3799", marginRight:6 }}>{presidentName} •</span>}
-            {monthName} {year}
-            {isCrisis  && <span style={{ marginLeft:8, color:"#c0392b", animation:"pulse 1s infinite" }}> ⚠️ КРИЗИС</span>}
-            {phase === "election" && <span style={{ marginLeft:8, color:"#d4af37" }}> 🗳️ ВЫБОРЫ</span>}
+        <header className={`game-topbar ${isCrisis ? "crisis" : ""}`}>
+          <div className="brand-lockup">
+            <div className="brand-mark-shell">
+              <FactionIcon type="crest" className="brand-mark" />
+            </div>
+            <div className="brand-copy">
+              <div className="brand-title">ВАРОНИЯ</div>
+              <div className="brand-meta">
+                {presidentName && <span className="brand-president">{presidentName}</span>}
+                <span>{monthName} {year}</span>
+                {isCrisis  && <span className="state-alert">КРИЗИС</span>}
+                {phase === "election" && <span className="state-election">ВЫБОРЫ</span>}
+              </div>
+            </div>
           </div>
           {/* Кнопка «Наружу» Hub */}
           <button
             onClick={() => { haptic("light"); setShowHub(true); }}
             title="Наружу — VPN"
-            style={{
-              position:"absolute", top:"50%", right:18, transform:"translateY(-50%)",
-              background:"none", border:"none", cursor:"pointer",
-              fontSize:16, opacity:0.7, padding:4,
-              color: NARUZHU_YELLOW,
-              transition:"opacity 0.15s",
-            }}
-            onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-            onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}
-          >🚪</button>
-        </div>
+            className="hub-launch"
+          >
+            <span className="hub-dot" />
+            <span>VPN</span>
+          </button>
+        </header>
 
         {/* ── ШКАЛЫ ── */}
-        <div style={{
-          flexShrink:0, padding:"8px 20px 6px", display:"flex", gap:12,
-          borderBottom:"1px solid #2c1a06", background:"#1a0f00aa",
-        }}>
+        <div className="stats-panel">
           {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]}/>)}
         </div>
 
@@ -722,7 +768,7 @@ export default function ThePresident() {
           <div className="screen-scroll-container" style={{ background: FELT_BG }}>
             <div className="card-paper-container">
               <div className="card-header-bar">
-                <div style={{ fontSize: 24, marginBottom: 4 }}>🦅</div>
+                <FactionIcon type="crest" className="dossier-brand-mark" />
                 <div className="font-typewriter" style={{ fontSize: 16, fontWeight: 700, color: "#f5e6c8", letterSpacing: 4 }}>ВАРОНИЯ</div>
                 <div className="font-typewriter" style={{ fontSize: 8, color: "#d4af3799", letterSpacing: 2, marginTop: 2 }}>СЕКРЕТНОЕ ДОСЬЕ • ПРЕЗИДЕНТ</div>
               </div>
@@ -742,13 +788,15 @@ export default function ThePresident() {
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
                   {[
-                    { icon: "/images/icon_oligarchs.png", text: "Элиты финансируют вас — не разочаруйте их" },
-                    { icon: "/images/icon_army.png", text: "Армия защищает вас — пока вы её уважаете" },
-                    { icon: "/images/icon_people.png", text: "Народ вас избрал — и может свергнуть" },
-                    { icon: "/images/icon_west.png", text: "Запад наблюдает — с деньгами и санкциями" },
+                    { key: "oligarchs", text: "Элиты финансируют вас — не разочаруйте их" },
+                    { key: "army", text: "Армия защищает вас — пока вы её уважаете" },
+                    { key: "people", text: "Народ вас избрал — и может свергнуть" },
+                    { key: "west", text: "Запад наблюдает — с деньгами и санкциями" },
                   ].map((item, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "#2c1a060e", borderRadius: 8, padding: "6px 10px", border: "1px solid #c9a84c33" }}>
-                      <span style={{ flexShrink: 0, width: 18, height: 18 }}><img src={getAsset(item.icon)} style={{ width: "100%", height: "100%", objectFit: "contain" }} alt=""/></span>
+                      <span className={`intro-icon-shell ${item.key}`}>
+                        <FactionIcon type={item.key} className="intro-vector-icon" />
+                      </span>
                       <span style={{ fontSize: 11, color: "#3d2509", lineHeight: 1.35 }}>{item.text}</span>
                     </div>
                   ))}
@@ -872,7 +920,11 @@ export default function ThePresident() {
                             {isTooHigh ? "▲ MAX" : "▼ MIN"}
                           </div>
                         )}
-                        <img src={getAsset(p.icon)} style={{ width: 20, height: 20, objectFit: "contain" }} alt=""/>
+                        <FactionIcon
+                          type={p.key}
+                          className="result-vector-icon"
+                          style={{ color: isKiller ? "#c0392b" : p.color }}
+                        />
                         <div className="font-typewriter" style={{ fontSize: 8, color: isKiller ? "#c0392b" : "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                         <div style={{ fontSize: 18, fontWeight: 700, color: isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37", marginTop: 1 }}>
                           {stats[p.key]}
@@ -983,7 +1035,7 @@ export default function ThePresident() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "14px 0 12px" }}>
                   {PARAMS.map(p => (
                     <div key={p.key} style={{ background: "#0d0800", border: `1px solid ${p.color}33`, borderRadius: 8, padding: "8px 10px", boxShadow: `0 0 8px ${p.color}15` }}>
-                      <img src={getAsset(p.icon)} style={{ width: 20, height: 20, objectFit: "contain" }} alt=""/>
+                      <FactionIcon type={p.key} className="result-vector-icon" style={{ color: p.color }} />
                       <div className="font-typewriter" style={{ fontSize: 8, color: "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                       <div style={{ fontSize: 18, fontWeight: 700, color: p.color, marginTop: 1 }}>{stats[p.key]}</div>
                     </div>
@@ -1190,16 +1242,7 @@ export default function ThePresident() {
                   border: `1px solid ${previewFxReal[p.key] > 0 ? "rgba(39, 174, 96, 0.3)" : "rgba(192, 57, 43, 0.3)"}`,
                   boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
                 }}>
-                  <img 
-                    src={getAsset(p.icon)} 
-                    style={{ 
-                      width: 14, 
-                      height: 14, 
-                      objectFit: "contain",
-                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6)) brightness(1.2)" 
-                    }} 
-                    alt="" 
-                  />
+                  <FactionIcon type={p.key} className="preview-effect-icon" />
                   <span style={{ fontWeight: 700 }}>
                     {previewFxReal[p.key] > 0 ? "+" : ""}{previewFxReal[p.key]}
                   </span>
@@ -1224,7 +1267,7 @@ export default function ThePresident() {
                   <img src={getAsset(advisor.avatar)} style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:"2px solid #d4af37", boxShadow:"0 0 8px rgba(212,175,55,0.3)" }} alt="" />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8", lineHeight:1.2 }}>{advisor.name}</div>
-                    <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace", letterSpacing:0.5 }}>{advisor.role}</div>
+                    <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"var(--font-typewriter)", letterSpacing:0.5 }}>{advisor.role}</div>
                   </div>
                 </div>
 
@@ -1282,13 +1325,13 @@ export default function ThePresident() {
               </div>
             </div>
 
-            <div style={{ textAlign:"center", marginTop:8, flexShrink:0, fontSize:9, color:"#d4af3788", fontFamily:"'Special Elite',monospace", letterSpacing:2 }}>
+            <div style={{ textAlign:"center", marginTop:8, flexShrink:0, fontSize:9, color:"#d4af3788", fontFamily:"var(--font-typewriter)", letterSpacing:2 }}>
               ← СВАЙП ИЛИ ТАП →
             </div>
           </div>
         )}
 
-        <div style={{ height:2, background:"linear-gradient(to right,transparent,#d4af37,#f5e6a0,#d4af37,transparent)", flexShrink:0 }}/>
+        <div className="top-line bottom" />
 
         {/* ════════ VEPEAN HUB ОВЕРЛЕЙ ════════ */}
         {showHub && (
