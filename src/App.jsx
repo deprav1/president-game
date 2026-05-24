@@ -3,6 +3,7 @@ import { PARAMS } from "./data/params.js";
 import { ADVISORS } from "./data/advisors.js";
 import { CARDS, CRISIS_CARDS, ELECTION_CARD, MONTHS } from "./data/cards.js";
 import { CHAINS, getTriggeredChain } from "./data/chains.js";
+import { getVictoryEnding } from "./data/endings.js";
 import { VEPEAN_CARDS } from "./data/vepeanCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
 
@@ -86,12 +87,17 @@ export default function ThePresident() {
     }
   }, []);
 
-  const [stats, setStats]               = useState({ oligarchs:50, army:50, people:50, west:50 });
-  const [months, setMonths]             = useState(1);
-  const [deck, setDeck]                 = useState(() => shuffle(ALL_CARDS));
-  const [cardIdx, setCardIdx]           = useState(0);
-  const [pendingEvents, setPendingEvents] = useState([]);
-  const [phase, setPhase]               = useState("onboarding");
+  // Восстанавливаем сохранённый ран если есть
+  const savedRun = (() => {
+    try { return JSON.parse(localStorage.getItem("varon_save") || "null"); } catch { return null; }
+  })();
+
+  const [stats, setStats]               = useState(savedRun?.stats || { oligarchs:50, army:50, people:50, west:50 });
+  const [months, setMonths]             = useState(savedRun?.months || 1);
+  const [deck, setDeck]                 = useState(() => savedRun ? savedRun.deck : shuffle(ALL_CARDS));
+  const [cardIdx, setCardIdx]           = useState(savedRun?.cardIdx || 0);
+  const [pendingEvents, setPendingEvents] = useState(savedRun?.pendingEvents || []);
+  const [phase, setPhase]               = useState(savedRun ? "card" : "onboarding");
   const [deathMsg, setDeathMsg]         = useState("");
   const [cardStyle, setCardStyle]       = useState({});
   const [hovered, setHovered]           = useState(null);
@@ -108,6 +114,7 @@ export default function ThePresident() {
   const [bestScore, setBestScore]         = useState(() => parseInt(localStorage.getItem("varon_best") || "0", 10));
   const [referralCount, setReferralCount] = useState(() => parseInt(localStorage.getItem("varon_refs") || "0", 10));
   const [promoCode, setPromoCode]         = useState(null);
+  const [decisionLog, setDecisionLog]     = useState([]);
 
   const touchStart = useRef(null);
   const choosing   = useRef(false);
@@ -123,8 +130,14 @@ export default function ThePresident() {
 
   const checkDeath = s => {
     for (const p of PARAMS) {
-      if (s[p.key] <= 0)   return p.deathLow;
-      if (s[p.key] >= 100) return p.deathHigh;
+      if (s[p.key] <= 0) {
+        const msgs = Array.isArray(p.deathLow) ? p.deathLow : [p.deathLow];
+        return msgs[Math.floor(Math.random() * msgs.length)];
+      }
+      if (s[p.key] >= 100) {
+        const msgs = Array.isArray(p.deathHigh) ? p.deathHigh : [p.deathHigh];
+        return msgs[Math.floor(Math.random() * msgs.length)];
+      }
     }
     return null;
   };
@@ -158,10 +171,10 @@ export default function ThePresident() {
         hapticNotify("success");
         const score = months - 1;
         if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
-        // Промокод зависит от срока правления
         if (score >= 96)      setPromoCode({ code: "WARONIA-30", days: 30 });
         else if (score >= 48) setPromoCode({ code: "WARONIA-14", days: 14 });
         else                  setPromoCode({ code: "WARONIA-7",  days: 7  });
+        localStorage.removeItem("varon_save");
         setPhase("victory");
         return;
       }
@@ -190,6 +203,12 @@ export default function ThePresident() {
       const newMonth   = months + 1;
       setMonths(newMonth);
 
+      // Логируем решение (последние 7)
+      setDecisionLog(prev => [...prev.slice(-6), {
+        month: months,
+        label: currentCard[side].label,
+      }]);
+
       // ── Проверка и добавление цепочек (исправленная логика) ──
       const chainId    = getTriggeredChain(currentCard.text, side);
       const newPending = [...pendingEvents];
@@ -208,7 +227,20 @@ export default function ThePresident() {
       }
       setPendingEvents(newPending);
 
-      setCardIdx(i => i + 1);
+      setCardIdx(i => {
+        // Авто-сохранение текущего рана
+        const nextIdx = i + 1;
+        try {
+          localStorage.setItem("varon_save", JSON.stringify({
+            stats: ns,
+            months: newMonth,
+            deck,
+            cardIdx: nextIdx,
+            pendingEvents: newPending,
+          }));
+        } catch {}
+        return nextIdx;
+      });
       setCardStyle({});
       setHovered(null);
       setIsCrisis(false);
@@ -221,6 +253,7 @@ export default function ThePresident() {
         setDeathMsg(death);
         const score = newMonth - 1;
         if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
+        localStorage.removeItem("varon_save");
         setPhase("gameover");
         return;
       }
@@ -313,7 +346,9 @@ export default function ThePresident() {
     setCrisisCard(null);
     setTermsCompleted(0);
     setPendingEvents([]);
+    setDecisionLog([]);
     choosing.current = false;
+    localStorage.removeItem("varon_save");
   };
 
   const openVepean = () => {
@@ -324,6 +359,7 @@ export default function ThePresident() {
 
   const tenure      = months - 1;
   const tenureLabel = tenure < 6 ? "КАТАСТРОФА" : tenure < 24 ? "ПРОВАЛ" : tenure < 48 ? "СЛАБО" : tenure < 96 ? "НЕПЛОХО" : tenure < 144 ? "КРЕПКИЙ ЛИДЕР" : "ЛЕГЕНДА";
+  const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
   const previewFx   = hovered && currentCard ? currentCard[hovered].fx : null;
 
   const cardBg      = isCrisis ? CRISIS_BG : FELT_BG;
@@ -517,7 +553,7 @@ export default function ThePresident() {
                 fontSize:8, fontFamily:"'Special Elite',monospace",
                 color:"#2c1a0644", letterSpacing:1, pointerEvents:"none",
               }}>
-                v1.2.0
+                v1.3.0
               </div>
             </div>
           </div>
@@ -579,6 +615,20 @@ export default function ThePresident() {
                 </div>
               </div>
             )}
+            {decisionLog.length > 0 && (
+              <div style={{ width:"100%", maxWidth:360, marginBottom:12 }}>
+                <div style={{ fontSize:9, color:"#4b3010", fontFamily:"'Special Elite',monospace", letterSpacing:2, marginBottom:6, textAlign:"center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                  {decisionLog.slice(-5).map((entry, i) => (
+                    <div key={i} style={{ display:"flex", gap:8, alignItems:"center", background:"#0d0800", border:"1px solid #2c1a06", borderRadius:6, padding:"5px 10px" }}>
+                      <span style={{ fontSize:9, color:"#4b3010", fontFamily:"'Special Elite',monospace", flexShrink:0 }}>МЕС {entry.month}</span>
+                      <span style={{ fontSize:10, color:"#d4b896", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{entry.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button onClick={shareGameOver} style={{
               width:"100%", maxWidth:360,
               background:"linear-gradient(135deg,#1a3a1a,#0d2a0d)",
@@ -604,11 +654,22 @@ export default function ThePresident() {
             <div style={{ fontSize:10, color:"#8b6914", fontFamily:"'Special Elite',monospace", marginBottom:16, letterSpacing:2 }}>
               {tenure} МЕСЯЦЕВ У ВЛАСТИ
             </div>
-            <div style={{ background:"#0d0800", border:"1px solid #d4af3744", borderRadius:12, padding:"20px", marginBottom:14, width:"100%", maxWidth:360, boxShadow:"0 0 30px rgba(212,175,55,0.1)" }}>
-              <p style={{ fontSize:15, lineHeight:1.8, color:"#d4b896", textAlign:"center", fontStyle:"italic" }}>
-                «Президент Варонии отслужил два полных срока, сохранив страну и власть. История запомнит это правление.»
-              </p>
-            </div>
+            {ending && (
+              <div style={{ background:"#0d0800", border:"1px solid #d4af3744", borderRadius:12, padding:"20px", marginBottom:14, width:"100%", maxWidth:360, boxShadow:"0 0 30px rgba(212,175,55,0.1)" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+                  <span style={{ fontSize:28 }}>{ending.icon}</span>
+                  <div>
+                    <div style={{ fontSize:13, fontFamily:"'Special Elite',monospace", letterSpacing:3, color:"#d4af37" }}>{ending.title}</div>
+                    <div style={{ fontSize:9, color:"#6b4c1e", fontFamily:"'Special Elite',monospace", letterSpacing:1, marginTop:2 }}>{ending.subtitle}</div>
+                  </div>
+                </div>
+                {ending.text.split('\n\n').map((para, i, arr) => (
+                  <p key={i} style={{ fontSize:13, lineHeight:1.8, color:"#d4b896", fontStyle:"italic", marginBottom: i < arr.length - 1 ? 10 : 0 }}>
+                    {para}
+                  </p>
+                ))}
+              </div>
+            )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16, width:"100%", maxWidth:360 }}>
               {PARAMS.map(p => (
                 <div key={p.key} style={{ background:"#0d0800", border:`1px solid ${p.color}44`, borderRadius:8, padding:"10px 12px", boxShadow:`0 0 12px ${p.color}22` }}>
@@ -634,6 +695,20 @@ export default function ThePresident() {
                 </div>
               </div>
             )}
+            {decisionLog.length > 0 && (
+              <div style={{ width:"100%", maxWidth:360, marginBottom:12 }}>
+                <div style={{ fontSize:9, color:"#8b6914", fontFamily:"'Special Elite',monospace", letterSpacing:2, marginBottom:6, textAlign:"center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                  {decisionLog.slice(-5).map((entry, i) => (
+                    <div key={i} style={{ display:"flex", gap:8, alignItems:"center", background:"#0d0800", border:"1px solid #2c1a06", borderRadius:6, padding:"5px 10px" }}>
+                      <span style={{ fontSize:9, color:"#4b3010", fontFamily:"'Special Elite',monospace", flexShrink:0 }}>МЕС {entry.month}</span>
+                      <span style={{ fontSize:10, color:"#d4b896", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{entry.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {promoCode && (
               <div style={{
                 width:"100%", maxWidth:360, marginBottom:14,
