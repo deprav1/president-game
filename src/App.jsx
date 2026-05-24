@@ -6,20 +6,7 @@ import { CHAINS, getTriggeredChain } from "./data/chains.js";
 import { ENDINGS, getVictoryEnding } from "./data/endings.js";
 import { NARUZHU_CARDS } from "./data/naruzhuCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
-
-// ─── СТИЛИ ────────────────────────────────────────────────────────────────────
-const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; background: #1a0f00; }
-  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  @keyframes cardIn { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
-  @keyframes flashStat { 0%{opacity:1} 40%{opacity:0.1} 100%{opacity:1} }
-  @keyframes crisisShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
-  @keyframes electionPulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.4)} 50%{box-shadow:0 0 0 12px rgba(212,175,55,0)} }
-`;
+import "./App.css";
 
 const getAsset = (path) => {
   const base = import.meta.env.BASE_URL || '/';
@@ -65,7 +52,7 @@ function StatPill({ param, value, flash }) {
           animation:flash ? "flashStat 0.5s ease" : isCritical ? "pulse 0.7s infinite" : isDanger ? "pulse 1.5s infinite" : "none",
         }}/>
       </div>
-      <div style={{ fontSize:8, fontFamily:"'Special Elite',monospace", letterSpacing:0.5,
+      <div style={{ fontSize:8, fontFamily:"var(--font-sans)", letterSpacing:0.5, fontWeight:600,
         color: isDanger ? "#c0392b" : isWarning ? "#d4872b" : "#6b4c1e" }}>
         {param.label.toUpperCase()}{isCritical ? "!" : ""}
       </div>
@@ -645,11 +632,12 @@ export default function ThePresident() {
   // ─── РЕНДЕР ───────────────────────────────────────────────────────────────
   return (
     <>
-      <style>{STYLES}</style>
       <div style={{
         height:"var(--tg-viewport-stable-height, 100dvh)", display:"flex", flexDirection:"column",
         background:WOOD_BG, fontFamily:"'Playfair Display',Georgia,serif",
         color:"#f5e6c8", overflow:"hidden",
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}>
         <div style={{ height:3, background:"linear-gradient(to right,transparent,#d4af37,#f5e6a0,#d4af37,transparent)", flexShrink:0 }}/>
 
@@ -675,7 +663,7 @@ export default function ThePresident() {
             onClick={() => { haptic("light"); setShowHub(true); }}
             title="Наружу — VPN"
             style={{
-              position:"absolute", top:"50%", right:12, transform:"translateY(-50%)",
+              position:"absolute", top:"50%", right:18, transform:"translateY(-50%)",
               background:"none", border:"none", cursor:"pointer",
               fontSize:16, opacity:0.7, padding:4,
               color: NARUZHU_YELLOW,
@@ -1060,8 +1048,8 @@ export default function ThePresident() {
                       textAlign:"center",
                     }}
                   >
-                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:1.5, color:stats.people >= 40 ? "#27ae60" : "#6b4c1e77", fontWeight:700 }}>🗳️ ЧЕСТНАЯ КАМПАНИЯ</div>
-                    <div style={{ fontSize:9, marginTop:2 }}>Народ +12 · Запад +12 (Требует: рейтинг народа от 40%)</div>
+                    <div style={{ fontSize:10, fontFamily:"var(--font-sans)", letterSpacing:1, color:stats.people >= 40 ? "#27ae60" : "#6b4c1e77", fontWeight:700 }}>🗳️ ЧЕСТНАЯ КАМПАНИЯ</div>
+                    <div style={{ fontSize:9, fontFamily:"var(--font-sans)", marginTop:2 }}>Народ +12 · Запад +12 (Требует: рейтинг народа от 40%)</div>
                   </button>
 
                   <button
@@ -1075,8 +1063,8 @@ export default function ThePresident() {
                     onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg,#8b0000,#6b0000)"; e.currentTarget.style.color = "#f5e6c8"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg,#2c1a06,#1a0f00)"; e.currentTarget.style.color = "#c4a882"; }}
                   >
-                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:1.5, color:"#c0392b", fontWeight:700 }}>👮 АДМИНИСТРАТИВНЫЙ РЕСУРС</div>
-                    <div style={{ fontSize:9, marginTop:2 }}>Народ -22 · Запад -26 · Силовики +18 · Олигархи +6</div>
+                    <div style={{ fontSize:10, fontFamily:"var(--font-sans)", letterSpacing:1, color:"#c0392b", fontWeight:700 }}>👮 АДМИНИСТРАТИВНЫЙ РЕСУРС</div>
+                    <div style={{ fontSize:9, fontFamily:"var(--font-sans)", marginTop:2 }}>Народ -22 · Запад -26 · Силовики +18 · Олигархи +6</div>
                   </button>
 
                   <button
@@ -1090,8 +1078,8 @@ export default function ThePresident() {
                     onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg,#8b0000,#6b0000)"; e.currentTarget.style.color = "#f5e6c8"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg,#2c1a06,#1a0f00)"; e.currentTarget.style.color = "#c4a882"; }}
                   >
-                    <div style={{ fontSize:10, fontFamily:"'Special Elite',monospace", letterSpacing:1.5, color:"#d4af37", fontWeight:700 }}>💎 СДЕЛКА С ОЛИГАРХАМИ</div>
-                    <div style={{ fontSize:9, marginTop:2 }}>Олигархи +22 · Народ -12 · Запад -10</div>
+                    <div style={{ fontSize:10, fontFamily:"var(--font-sans)", letterSpacing:1, color:"#d4af37", fontWeight:700 }}>💎 СДЕЛКА С ОЛИГАРХАМИ</div>
+                    <div style={{ fontSize:9, fontFamily:"var(--font-sans)", marginTop:2 }}>Олигархи +22 · Народ -12 · Запад -10</div>
                   </button>
 
                   <div style={{ height:1, background:"linear-gradient(to right,transparent,#c9a84c33,transparent)", margin:"4px 0" }}/>
@@ -1102,7 +1090,7 @@ export default function ThePresident() {
                       width:"100%", background:"none",
                       color:"#8b0000", border:"1px solid #8b000044",
                       padding:"8px", borderRadius:8, cursor:"pointer",
-                      fontSize:9, fontFamily:"'Special Elite',monospace", letterSpacing:2,
+                      fontSize:9, fontFamily:"var(--font-sans)", letterSpacing:1.5,
                     }}
                   >
                     ☠️ ПРИНЯТЬ ПОРАЖЕНИЕ (СДАТЬСЯ)
@@ -1206,14 +1194,14 @@ export default function ThePresident() {
 
                 {/* Текст карты */}
                 <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
-                  <img src={getAsset(advisor.avatar)} style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 12, border: "2px solid #3d2509", marginBottom: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }} alt="" />
+                  <img src={getAsset(advisor.avatar)} className="card-advisor-avatar" alt="" />
                   {hovered && (
                     <div style={{
                       position:"absolute", top:12, left:"50%", transform:`translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,
                       zIndex:10, border:`3px solid ${hovered === "left" ? "#27ae60" : "#c0392b"}`,
                       borderRadius:6, padding:"4px 14px",
                       color:hovered === "left" ? "#27ae60" : "#c0392b",
-                      fontFamily:"'Special Elite',monospace", fontSize:15, letterSpacing:3, fontWeight:700,
+                      fontFamily:"var(--font-sans)", fontSize:15, letterSpacing:1.5, fontWeight:700,
                       opacity:0.93, animation:"fadeIn 0.15s ease", pointerEvents:"none",
                       background:"rgba(255,255,255,0.7)", whiteSpace:"nowrap",
                     }}>
@@ -1242,12 +1230,13 @@ export default function ThePresident() {
                         transition:"all 0.15s ease",
                         transform:hovered === side ? "translateY(-2px)" : "none",
                         boxShadow:hovered === side ? "0 6px 16px rgba(0,0,0,0.5),0 0 8px rgba(212,175,55,0.2)" : "none",
+                        fontFamily:"var(--font-sans)",
                       }}
                     >
-                      <div style={{ fontSize:9, fontFamily:"'Special Elite',monospace", letterSpacing:2, color:hovered === side ? "#d4af37" : "#6b4c1e", marginBottom:4 }}>
+                      <div style={{ fontSize:9, fontFamily:"var(--font-sans)", letterSpacing:1.5, color:hovered === side ? "#d4af37" : "#6b4c1e", marginBottom:4, fontWeight:700 }}>
                         {currentCard[side].label.toUpperCase()}
                       </div>
-                      <div style={{ fontSize:12, lineHeight:1.5 }}>{currentCard[side].text}</div>
+                      <div style={{ fontSize:11, lineHeight:1.4 }}>{currentCard[side].text}</div>
                     </button>
                   ))}
                 </div>
