@@ -21,7 +21,12 @@ const STYLES = `
   @keyframes electionPulse { 0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.4)} 50%{box-shadow:0 0 0 12px rgba(212,175,55,0)} }
 `;
 
-const WOOD_BG   = `url("/images/game_background.png") center/cover no-repeat`;
+const getAsset = (path) => {
+  const base = import.meta.env.BASE_URL || '/';
+  return base + path.replace(/^\//, '');
+};
+
+const WOOD_BG   = `url("${getAsset('/images/game_background.png')}") center/cover no-repeat`;
 const FELT_BG   = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`;
 const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
 
@@ -48,7 +53,7 @@ function StatPill({ param, value, flash }) {
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-      <img src={param.icon} style={{ width: 22, height: 22, objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} alt="" />
+      <img src={getAsset(param.icon)} style={{ width: 22, height: 22, objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }} alt="" />
       <div style={{
         width:"100%", height:6, background:"#1a0f00", borderRadius:3, overflow:"hidden",
         border: isDanger ? "1px solid #c0392b88" : isWarning ? "1px solid #d4872b55" : "1px solid #3d2509",
@@ -706,7 +711,7 @@ export default function ThePresident() {
                     { icon:"/images/icon_west.png", text:"Запад наблюдает — с деньгами и санкциями" },
                   ].map((item, i) => (
                     <div key={i} style={{ display:"flex", alignItems:"center", gap:10, background:"#2c1a0611", borderRadius:8, padding:"8px 12px", border:"1px solid #c9a84c44" }}>
-                      <span style={{ flexShrink:0, width: 20, height: 20 }}><img src={item.icon} style={{ width: "100%", height: "100%", objectFit: "contain" }} alt=""/></span>
+                      <span style={{ flexShrink:0, width: 20, height: 20 }}><img src={getAsset(item.icon)} style={{ width: "100%", height: "100%", objectFit: "contain" }} alt=""/></span>
                       <span style={{ fontSize:12, color:"#3d2509", lineHeight:1.4 }}>{item.text}</span>
                     </div>
                   ))}
@@ -823,7 +828,7 @@ export default function ThePresident() {
                         {isTooHigh ? "▲ MAX" : "▼ MIN"}
                       </div>
                     )}
-                    <img src={p.icon} style={{ width: 24, height: 24, objectFit: "contain" }} alt=""/>
+                    <img src={getAsset(p.icon)} style={{ width: 24, height: 24, objectFit: "contain" }} alt=""/>
                     <div style={{ fontSize:8, color:isKiller ? "#8b0000" : "#4a3010", fontFamily:"'Special Elite',monospace", letterSpacing:1 }}>{p.label.toUpperCase()}</div>
                     <div style={{ fontSize:20, fontWeight:700, color:isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37" }}>
                       {stats[p.key]}
@@ -893,7 +898,7 @@ export default function ThePresident() {
             {ending && (
               <div style={{ background:"#0d0800", border:"1px solid #d4af3744", borderRadius:12, padding:"0", marginBottom:14, width:"100%", maxWidth:360, boxShadow:"0 0 30px rgba(212,175,55,0.1)", overflow:"hidden" }}>
                 {["zastoy", "oprichnina", "kooperativ", "bunker"].includes(ending.id) ? (
-                  <div style={{ width: "100%", height: 160, backgroundImage: `url('/images/ending_${ending.id}.png')`, backgroundSize: "cover", backgroundPosition: "center", borderBottom: "1px solid #d4af3744" }} />
+                  <div style={{ width: "100%", height: 160, backgroundImage: `url('${getAsset(`/images/ending_${ending.id}.png`)}')`, backgroundSize: "cover", backgroundPosition: "center", borderBottom: "1px solid #d4af3744" }} />
                 ) : (
                   <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "center" }}>
                     <span style={{ fontSize:40 }}>{ending.icon}</span>
@@ -920,7 +925,7 @@ export default function ThePresident() {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16, width:"100%", maxWidth:360 }}>
               {PARAMS.map(p => (
                 <div key={p.key} style={{ background:"#0d0800", border:`1px solid ${p.color}44`, borderRadius:8, padding:"10px 12px", boxShadow:`0 0 12px ${p.color}22` }}>
-                  <img src={p.icon} style={{ width: 24, height: 24, objectFit: "contain" }} alt=""/>
+                  <img src={getAsset(p.icon)} style={{ width: 24, height: 24, objectFit: "contain" }} alt=""/>
                   <div style={{ fontSize:8, color:"#4a3010", fontFamily:"'Special Elite',monospace", letterSpacing:1 }}>{p.label.toUpperCase()}</div>
                   <div style={{ fontSize:20, fontWeight:700, color:p.color }}>{stats[p.key]}</div>
                 </div>
@@ -1010,7 +1015,7 @@ export default function ThePresident() {
                 animation:"electionPulse 2s ease infinite",
               }}>
                 <div style={{ background:"linear-gradient(to right,#4a3800,#2c2200,#4a3800)", padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }}>
-                  <img src="/images/advisor_vlasova.png" style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", border:"2px solid #d4af37" }} alt="" />
+                  <img src={getAsset("/images/advisor_vlasova.png")} style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", border:"2px solid #d4af37" }} alt="" />
                   <div>
                     <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8" }}>Елена Власова</div>
                     <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace" }}>Пресс-секретарь</div>
@@ -1110,7 +1115,7 @@ export default function ThePresident() {
                 animation:"electionPulse 1.5s ease infinite",
               }}>
                 <div style={{ background:"linear-gradient(to right,#8b0000,#5b0000,#8b0000)", padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }}>
-                  <img src={ADVISORS[rescueCard.advisor]?.avatar || "/images/advisor_zubov.png"} style={{ width:38, height:38, borderRadius:"50%", objectFit:"cover", border:"2px solid #d4af37" }} alt="" />
+                  <img src={getAsset(ADVISORS[rescueCard.advisor]?.avatar || "/images/advisor_zubov.png")} style={{ width:38, height:38, borderRadius:"50%", objectFit:"cover", border:"2px solid #d4af37" }} alt="" />
                   <div>
                     <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8" }}>{ADVISORS[rescueCard.advisor]?.name || "Советник"}</div>
                     <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace" }}>{ADVISORS[rescueCard.advisor]?.role || "Куратор"}</div>
@@ -1182,7 +1187,7 @@ export default function ThePresident() {
               }}>
                 {/* Советник */}
                 <div style={{ background:headerBg, padding:"10px 16px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-                  <img src={advisor.avatar} style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:"2px solid #d4af37", boxShadow:"0 0 8px rgba(212,175,55,0.3)" }} alt="" />
+                  <img src={getAsset(advisor.avatar)} style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:"2px solid #d4af37", boxShadow:"0 0 8px rgba(212,175,55,0.3)" }} alt="" />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:14, fontWeight:700, color:"#f5e6c8", lineHeight:1.2 }}>{advisor.name}</div>
                     <div style={{ fontSize:10, color:"#d4af3799", fontFamily:"'Special Elite',monospace", letterSpacing:0.5 }}>{advisor.role}</div>
@@ -1191,7 +1196,7 @@ export default function ThePresident() {
 
                 {/* Текст карты */}
                 <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
-                  <img src={advisor.avatar} style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 12, border: "2px solid #3d2509", marginBottom: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }} alt="" />
+                  <img src={getAsset(advisor.avatar)} style={{ width: 130, height: 130, objectFit: "cover", borderRadius: 12, border: "2px solid #3d2509", marginBottom: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }} alt="" />
                   {hovered && (
                     <div style={{
                       position:"absolute", top:12, left:"50%", transform:`translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,
