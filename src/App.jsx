@@ -891,19 +891,30 @@ export default function ThePresident() {
               {tenure} МЕСЯЦЕВ У ВЛАСТИ
             </div>
             {ending && (
-              <div style={{ background:"#0d0800", border:"1px solid #d4af3744", borderRadius:12, padding:"20px", marginBottom:14, width:"100%", maxWidth:360, boxShadow:"0 0 30px rgba(212,175,55,0.1)" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-                  <span style={{ fontSize:28 }}>{ending.icon}</span>
-                  <div>
-                    <div style={{ fontSize:13, fontFamily:"'Special Elite',monospace", letterSpacing:3, color:"#d4af37" }}>{ending.title}</div>
-                    <div style={{ fontSize:9, color:"#6b4c1e", fontFamily:"'Special Elite',monospace", letterSpacing:1, marginTop:2 }}>{ending.subtitle}</div>
+              <div style={{ background:"#0d0800", border:"1px solid #d4af3744", borderRadius:12, padding:"0", marginBottom:14, width:"100%", maxWidth:360, boxShadow:"0 0 30px rgba(212,175,55,0.1)", overflow:"hidden" }}>
+                {["zastoy", "oprichnina", "kooperativ", "bunker"].includes(ending.id) ? (
+                  <div style={{ width: "100%", height: 160, backgroundImage: `url('/images/ending_${ending.id}.png')`, backgroundSize: "cover", backgroundPosition: "center", borderBottom: "1px solid #d4af3744" }} />
+                ) : (
+                  <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "center" }}>
+                    <span style={{ fontSize:40 }}>{ending.icon}</span>
                   </div>
+                )}
+                <div style={{ padding:"20px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+                    {!["zastoy", "oprichnina", "kooperativ", "bunker"].includes(ending.id) && (
+                      <span style={{ fontSize:28 }}>{ending.icon}</span>
+                    )}
+                    <div>
+                      <div style={{ fontSize:13, fontFamily:"'Special Elite',monospace", letterSpacing:3, color:"#d4af37" }}>{ending.title}</div>
+                      <div style={{ fontSize:9, color:"#6b4c1e", fontFamily:"'Special Elite',monospace", letterSpacing:1, marginTop:2 }}>{ending.subtitle}</div>
+                    </div>
+                  </div>
+                  {ending.text.split('\n\n').map((para, i, arr) => (
+                    <p key={i} style={{ fontSize:13, lineHeight:1.8, color:"#d4b896", fontStyle:"italic", marginBottom: i < arr.length - 1 ? 10 : 0 }}>
+                      {para}
+                    </p>
+                  ))}
                 </div>
-                {ending.text.split('\n\n').map((para, i, arr) => (
-                  <p key={i} style={{ fontSize:13, lineHeight:1.8, color:"#d4b896", fontStyle:"italic", marginBottom: i < arr.length - 1 ? 10 : 0 }}>
-                    {para}
-                  </p>
-                ))}
               </div>
             )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16, width:"100%", maxWidth:360 }}>
