@@ -44,6 +44,24 @@ const validateSave = (save) => {
   return save;
 };
 
+/** 
+ * Масштабирует эффект изменения параметра с учетом гейм-дизайнерского баланса.
+ * 1. Снижает общую волатильность шкал (базовый множитель 0.95 вместо 1.2), чтобы увеличить длительность игры.
+ * 2. Усложняет накопление лояльности народа (people): 
+ *    - рост лояльности умножается на 0.7 (народ медленно проникается доверием);
+ *    - падение лояльности умножается на 1.15 (народ быстро разочаровывается и бунтует).
+ */
+const scaleStatEffect = (key, val) => {
+  if (!val) return 0;
+  if (key === "people") {
+    // Асимметричный баланс для Населения
+    const mult = val > 0 ? 0.7 : 1.15;
+    return Math.round(val * mult);
+  }
+  // Базовый сбалансированный множитель для остальных фракций
+  return Math.round(val * 0.95);
+};
+
 const WOOD_BG   = `url("${getAsset('/images/game_background.png')}") center/cover no-repeat`;
 const FELT_BG   = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`;
 const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
@@ -301,7 +319,8 @@ export default function ThePresident() {
   const applyFx = useCallback((fx, currentStats) => {
     const ns = {}, fl = {};
     PARAMS.forEach(p => {
-      const scaled = Math.round((fx[p.key] || 0) * 1.2);
+      const val = fx[p.key] || 0;
+      const scaled = scaleStatEffect(p.key, val);
       ns[p.key] = Math.max(0, Math.min(100, currentStats[p.key] + scaled));
       if (scaled !== 0) fl[p.key] = true;
     });
@@ -329,48 +348,48 @@ export default function ThePresident() {
         if (isLow) {
           advisorId = 1; // Громов
           rescueText = "🚨 ВТОРОЙ ШАНС (Восстание): Разъярённая толпа окружила дворец. Генерал Громов предлагает ввести танки и объявить комендантский час. «Мы зачистим улицы, господин президент, но Запад и народ вам этого не простят».";
-          agreeText = "Ввести танки (Силовики +20, Народ +25, Запад -30)";
+          agreeText = "Ввести танки (Силовики ↑, Народ ↑, Запад ↓)";
           rescueFx = { army: 20, oligarchs: 0, people: 25, west: -30 };
         } else {
           advisorId = 1; // Громов
           rescueText = "🚨 ВТОРОЙ ШАНС (Народная диктатура): Ваша популярность пугает элиты. Громов предупреждает, что генералы готовят заговор, чтобы вас сместить. Он предлагает устроить показательные аресты оппозиции, чтобы успокоить силовиков.";
-          agreeText = "Арестовать оппозицию (Народ -25, Силовики +15, Запад -15)";
+          agreeText = "Арестовать оппозицию (Народ ↓, Силовики ↑, Запад ↓)";
           rescueFx = { army: 15, oligarchs: 0, people: -25, west: -15 };
         }
       } else if (paramKey === "oligarchs") {
         if (isLow) {
           advisorId = 7; // Хан
           rescueText = "🚨 ВТОРОЙ ШАНС (Саботаж бизнеса): Крупный бизнес прекратил инвестиции и объявил локаут. Страна на грани коллапса. Хан предлагает передать ему управление морским портом в обмен на экстренное финансирование.";
-          agreeText = "Передать порты Хану (Олигархи +25, Запад -15, Силовики -10)";
+          agreeText = "Передать порты Хану (Олигархи ↑, Запад ↓, Силовики ↓)";
           rescueFx = { oligarchs: 25, army: -10, people: 0, west: -15 };
         } else {
           advisorId = 0; // Зубов
           rescueText = "🚨 ВТОРОЙ ШАНС (Засилье бизнеса): Олигархи скупили все ключевые ведомства и диктуют свои законы. Зубов предлагает провести принудительную национализацию части активов Хана ради спасения суверенитета.";
-          agreeText = "Национализировать активы (Олигархи -25, Народ +15, Запад -10)";
+          agreeText = "Национализировать активы (Олигархи ↓, Народ ↑, Запад ↓)";
           rescueFx = { oligarchs: -25, army: 0, people: 15, west: -10 };
         }
       } else if (paramKey === "army") {
         if (isLow) {
           advisorId = 3; // Сенин
           rescueText = "🚨 ВТОРОЙ ШАНС (Бунт силовиков): Армия развалена, офицеры дезертируют, Громов потерял контроль. Сенин предлагает передать спецслужбам КГБ полный контроль над границами и базами снабжения.";
-          agreeText = "Отдать контроль КГБ (Силовики +25, Олигархи -15, Народ -10)";
+          agreeText = "Отдать контроль КГБ (Силовики ↑, Олигархи ↓, Народ ↓)";
           rescueFx = { army: 25, oligarchs: -15, people: -10, west: 0 };
         } else {
           advisorId = 6; // Стрельцова
           rescueText = "🚨 ВТОРОЙ ШАНС (Военная хунта): Генерал Громов фактически контролирует все министерства и готовит приказ о вашем аресте. Стрельцова требует немедленно отстранить верхушку генералитета и начать расследования.";
-          agreeText = "Уволить генералов (Силовики -25, Народ -15, Запад -10)";
+          agreeText = "Уволить генералов (Силовики ↓, Народ ↓, Запад ↓)";
           rescueFx = { army: -25, oligarchs: 0, people: -15, west: -10 };
         }
       } else if (paramKey === "west") {
         if (isLow) {
           advisorId = 4; // Хартли
           rescueText = "🚨 ВТОРОЙ ШАНС (Полная изоляция): Экономика задушена западными санкциями, резервы заморожены. Хартли предлагает экстренно подписать кабальное соглашение об ассоциации в обмен на финансовую помощь МВФ.";
-          agreeText = "Подписать соглашение (Запад +25, Народ +10, Силовики -15)";
+          agreeText = "Подписать соглашение (Запад ↑, Народ ↑, Силовики ↓)";
           rescueFx = { west: 25, army: -15, people: 10, oligarchs: 0 };
         } else {
           advisorId = 3; // Сенин
           rescueText = "🚨 ВТОРОЙ ШАНС (Потеря суверенитета): Западные советники диктуют состав правительства. Варония теряет независимость. Сенин предлагает ввести санкционный мораторий и выслать западных кураторов.";
-          agreeText = "Выслать кураторов (Запад -25, Силовики +15, Народ -10)";
+          agreeText = "Выслать кураторов (Запад ↓, Силовики ↑, Народ ↓)";
           rescueFx = { west: -25, army: 15, people: -10, oligarchs: 0 };
         }
       }
@@ -700,9 +719,9 @@ export default function ThePresident() {
     ? "linear-gradient(to right,#4a0000,#3a0000,#4a0000)"
     : "linear-gradient(to right,#8b0000,#6b0000,#8b0000)";
 
-  // Превью с реальным масштабом (1.2×)
+  // Превью с реальным сбалансированным масштабом
   const previewFxReal = hovered && currentCard
-    ? Object.fromEntries(PARAMS.map(p => [p.key, Math.round((currentCard[hovered].fx[p.key] || 0) * 1.2)]))
+    ? Object.fromEntries(PARAMS.map(p => [p.key, scaleStatEffect(p.key, currentCard[hovered].fx[p.key] || 0)]))
     : null;
 
   // ─── SHARE-ТЕКСТЫ ─────────────────────────────────────────────────────────
@@ -1180,17 +1199,17 @@ export default function ThePresident() {
                     }}
                   >
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>🗳️ ЧЕСТНАЯ КАМПАНИЯ</div>
-                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400 }}>Народ +12 · Запад +12 (Рейтинг от 40%)</div>
+                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400 }}>Народ ↑ · Запад ↑ (Рейтинг от 40%)</div>
                   </button>
 
                   <button onClick={() => choose("admin")} className="btn-velvet" style={{ flexDirection: "column", padding: "8px 12px" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#f5c6c6" }}>👮 АДМИНИСТРАТИВНЫЙ РЕСУРС</div>
-                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Народ -22 · Запад -26 · Силовики +18 · Олигархи +6</div>
+                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Народ ↓↓ · Запад ↓↓ · Силовики ↑ · Олигархи ↑</div>
                   </button>
 
                   <button onClick={() => choose("sponsor")} className="btn-velvet" style={{ flexDirection: "column", padding: "8px 12px" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#fbe380" }}>💎 СДЕЛКА С ОЛИГАРХАМИ</div>
-                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Олигархи +22 · Народ -12 · Запад -10</div>
+                    <div style={{ fontSize: 10, marginTop: 1, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Олигархи ↑↑ · Народ ↓ · Запад ↓</div>
                   </button>
 
                   <button onClick={() => choose("giveup")} className="btn-outline" style={{ marginTop: 4 }}>
