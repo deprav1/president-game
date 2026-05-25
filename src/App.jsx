@@ -1042,7 +1042,7 @@ export default function ThePresident() {
               <div className="card-content-area">
                 {ending && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {["zastoy", "oprichnina", "kooperativ", "bunker"].includes(ending.id) ? (
+                    {["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"].includes(ending.id) ? (
                       <div className="story-image-frame" style={{ height: 150 }}>
                         <img 
                           className="frame-inner-img" 
@@ -1318,7 +1318,15 @@ export default function ThePresident() {
 
                 {/* Текст карты */}
                 <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative" }}>
-                  <img src={getAsset(advisor.avatar)} className="card-advisor-avatar" alt="" />
+                  {currentCard.bgImage && (
+                    <div style={{
+                      position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundImage: `url(${getAsset(currentCard.bgImage)})`,
+                      backgroundSize: "cover", backgroundPosition: "center",
+                      opacity: 0.15, zIndex: 0, pointerEvents: "none"
+                    }} />
+                  )}
+                  <img src={getAsset(advisor.avatar)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} />
                   {hovered && (
                     <div style={{
                       position:"absolute", top:12, left:"50%", transform:`translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,
@@ -1332,7 +1340,7 @@ export default function ThePresident() {
                       {hovered === "left" ? currentCard.left.label.toUpperCase() : currentCard.right.label.toUpperCase()}
                     </div>
                   )}
-                  <p style={{ fontSize:16, lineHeight:1.55, color:cardTextColor, fontWeight:500, textAlign:"center", letterSpacing:0.1 }}>
+                  <p style={{ fontSize:16, lineHeight:1.55, color:cardTextColor, fontWeight:500, textAlign:"center", letterSpacing:0.1, zIndex: 1 }}>
                     {currentCard.text}
                   </p>
                   {currentCard.cta === "naruzhu" && (
