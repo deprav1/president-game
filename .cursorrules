@@ -1,0 +1,11 @@
+# President Game - Cursor Rules and Guidelines
+
+## Core Directives
+1. **Language**: All user-facing text, card events, advisor dialogues, buttons, and visual captions must be written **strictly in Russian**.
+2. **Setting**: The game is set in the fictional country of "Waronia" (Варония), which is a satirical and political analog of **modern Russia** (including its institutions, political figures, media realities, digital sovereignty issues like VPN restrictions, socio-economic dilemmas, and sanctions pressure).
+3. **Visual Style**: Keep the premium tactile look (dark wood, velvet red, aged paper, gold borders). Avoid raw bright neon colors on light paper backgrounds (like neon yellow on beige).
+
+## Technical Requirements
+- Build/Vite commands: Use `npm run build` to verify production builds.
+- Incremental commits: Commit when a logical unit is finished and builds cleanly.
+- Code changes: Keep changes surgical, preserve existing style and design principles.
