@@ -901,7 +901,7 @@ export default function ThePresident() {
                   letterSpacing: 0.5, textDecoration: "underline", textUnderlineOffset: 2,
                   opacity: 0.75,
                 }}>
-                  🚪 Игра от <b style={{ color: NARUZHU_YELLOW }}>Наружу</b> — надёжный VPN для свободного интернета
+                  🚪 Игра от <b style={{ color: "#b45309" }}>Наружу</b> — надёжный VPN для свободного интернета
                 </span>
               </div>
 
