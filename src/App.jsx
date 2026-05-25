@@ -220,7 +220,6 @@ export default function ThePresident() {
   const [pendingEvents, setPendingEvents] = useState(savedRun?.pendingEvents || []);
   const [phase, setPhase]               = useState(savedRun ? (savedRun.phase || "card") : "onboarding");
   const [deathMsg, setDeathMsg]         = useState("");
-  const [cardStyle, setCardStyle]       = useState({});
   const [hovered, setHovered]           = useState(null);
   const [flashParams, setFlashParams]   = useState({});
   const [isCrisis, setIsCrisis]         = useState(false);
@@ -245,6 +244,8 @@ export default function ThePresident() {
   const touchStart = useRef(null);
   const choosing   = useRef(false);
   const swipeTriggered = useRef(false);
+  const cardRef    = useRef(null);
+  const lastDirRef = useRef(null);
 
   const haptic = useCallback((type = "light") => {
     const tg = window.Telegram?.WebApp;
@@ -559,11 +560,12 @@ export default function ThePresident() {
     choosing.current = true;
 
     const fx = currentCard[side].fx;
-    setCardStyle({
-      transition: "transform 0.35s cubic-bezier(0.4,0,1,1),opacity 0.35s ease",
-      transform:  `translateX(${side === "left" ? "-115%" : "115%"}) rotate(${side === "left" ? "-10deg" : "10deg"})`,
-      opacity: 0,
-    });
+    // Анимация вылета карточки — напрямую через DOM
+    if (cardRef.current) {
+      cardRef.current.style.transition = "transform 0.35s cubic-bezier(0.4,0,1,1), opacity 0.35s ease";
+      cardRef.current.style.transform = `translateX(${side === "left" ? "-115%" : "115%"}) rotate(${side === "left" ? "-10deg" : "10deg"})`;
+      cardRef.current.style.opacity = "0";
+    }
 
     setTimeout(() => {
       const { ns, fl } = applyFx(fx, stats);
@@ -594,7 +596,6 @@ export default function ThePresident() {
         newPending.splice(firedIdx, 1);
       }
       setPendingEvents(newPending);
-      setCardStyle({});
       setHovered(null);
       setIsCrisis(false);
       setCrisisCard(null);
@@ -640,13 +641,24 @@ export default function ThePresident() {
     }, 350);
   }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements]);
 
-  const onTouchStart = e => { touchStart.current = e.touches[0].clientX; };
+  const onTouchStart = e => {
+    touchStart.current = e.touches[0].clientX;
+    // Сбрасываем transition сразу — чтобы драг шёл без анимации
+    if (cardRef.current) cardRef.current.style.transition = "none";
+  };
   const onTouchMove  = e => {
-    if (!touchStart.current) return;
+    if (touchStart.current == null) return;
     const dx = e.touches[0].clientX - touchStart.current;
-    setCardStyle({ transform:`translateX(${dx * 0.45}px) rotate(${dx * 0.04}deg)`, transition:"none" });
+    // Прямое обновление DOM — без React-рендера на каждый кадр
+    if (cardRef.current) {
+      cardRef.current.style.transform = `translateX(${dx * 0.45}px) rotate(${dx * 0.04}deg)`;
+    }
     const newDir = dx < -30 ? "left" : dx > 30 ? "right" : null;
-    setHovered(newDir);
+    // setHovered только при смене направления — иначе бесполезный ре-рендер
+    if (newDir !== lastDirRef.current) {
+      lastDirRef.current = newDir;
+      setHovered(newDir);
+    }
     // Лёгкий haptic при достижении порога свайпа (один раз)
     if (Math.abs(dx) > 65 && !swipeTriggered.current) {
       swipeTriggered.current = true;
@@ -658,9 +670,27 @@ export default function ThePresident() {
     const dx = e.changedTouches[0].clientX - (touchStart.current || 0);
     touchStart.current = null;
     swipeTriggered.current = false;
-    if (Math.abs(dx) > 65) choose(dx < 0 ? "left" : "right");
-    else { setCardStyle({ transition:"transform 0.25s ease", transform:"none" }); setTimeout(() => setCardStyle({}), 250); setHovered(null); }
+    lastDirRef.current = null;
+    if (Math.abs(dx) > 65) {
+      choose(dx < 0 ? "left" : "right");
+    } else {
+      // Snap-back через DOM, без React-рендера
+      if (cardRef.current) {
+        cardRef.current.style.transition = "transform 0.25s ease";
+        cardRef.current.style.transform = "";
+      }
+      setHovered(null);
+    }
   };
+
+  // Сброс inline-стилей карточки при смене карты — чтобы новая не наследовала transform/opacity от анимации вылета
+  useEffect(() => {
+    if (cardRef.current) {
+      cardRef.current.style.transform = "";
+      cardRef.current.style.transition = "";
+      cardRef.current.style.opacity = "";
+    }
+  }, [cardIdx, isCrisis]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -689,7 +719,6 @@ export default function ThePresident() {
     setDeathMsg("");
     setNameInput("");
     setHovered(null);
-    setCardStyle({});
     setIsCrisis(false);
     setCrisisCard(null);
     setTermsCompleted(0);
@@ -1296,7 +1325,8 @@ export default function ThePresident() {
             </div>
 
             <div
-              style={{ flex:1, ...cardStyle, animation:cardStyle.transform ? "none" : "cardIn 0.3s ease", position:"relative" }}
+              ref={cardRef}
+              style={{ flex:1, minHeight:0, animation:"cardIn 0.3s ease", position:"relative", touchAction:"pan-y", willChange:"transform" }}
               onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
             >
               <div style={{
