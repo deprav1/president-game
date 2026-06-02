@@ -69,6 +69,26 @@ const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
 // Бренд-цвета «Наружу»: чёрный + неоновый жёлтый
 const NARUZHU_YELLOW = "#FFD60A";
 
+// A/B-тест текста CTA-кнопки «Наружу» на карте. Вариант фиксируется один раз на
+// игрока (localStorage) и прокидывается в UTM (utm_content), чтобы измерять CTR.
+const CTA_VARIANTS = [
+  { id: "exit",     label: "🌐 VPN Наружу — выйти из Варонии" },
+  { id: "download", label: "🌐 Скачать VPN Наружу бесплатно" },
+  { id: "bypass",   label: "🔓 Обойти блокировку — VPN Наружу" },
+];
+const getCtaVariant = () => {
+  try {
+    const saved = localStorage.getItem("varon_cta_ab");
+    const found = CTA_VARIANTS.find(v => v.id === saved);
+    if (found) return found;
+    const pick = CTA_VARIANTS[Math.floor(Math.random() * CTA_VARIANTS.length)];
+    localStorage.setItem("varon_cta_ab", pick.id);
+    return pick;
+  } catch {
+    return CTA_VARIANTS[0];
+  }
+};
+
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
 
@@ -236,6 +256,7 @@ export default function ThePresident() {
   const [bestScore, setBestScore]         = useState(() => safeInt(localStorage.getItem("varon_best")));
   const [referralCount, setReferralCount] = useState(() => safeInt(localStorage.getItem("varon_refs")));
   const [promoCode, setPromoCode]         = useState(null);
+  const [ctaVariant]                      = useState(getCtaVariant);
   const [decisionLog, setDecisionLog]     = useState([]);
   const [unlockedEndings, setUnlockedEndings] = useState(() => {
     try { return JSON.parse(localStorage.getItem("varon_ends") || "[]"); } catch { return []; }
@@ -745,6 +766,7 @@ export default function ThePresident() {
     });
     if (content) params.set("utm_content", content);
     params.set("m", String(Math.max(0, months - 1)));
+    if (ctaVariant?.id) params.set("ab", ctaVariant.id);
     if (promoCode?.code) params.set("promo", promoCode.code);
     const url = `https://naruzhu.am/?${params.toString()}`;
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
@@ -1402,7 +1424,7 @@ export default function ThePresident() {
                         boxShadow:`0 0 12px ${NARUZHU_YELLOW}22`,
                       }}
                     >
-                      🌐 VPN Наружу — выйти из Варонии
+                      {ctaVariant.label}
                     </button>
                   )}
                 </div>
