@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { PARAMS } from "./data/params.js";
 import { ADVISORS } from "./data/advisors.js";
 import { CARDS, CRISIS_CARDS, ELECTION_CARD, MONTHS } from "./data/cards.js";
-import { CHAINS, getTriggeredChain } from "./data/chains.js";
+import { CHAINS, getTriggeredChain, getExtremumEvent } from "./data/chains.js";
 import { ENDINGS, getVictoryEnding } from "./data/endings.js";
 import { NARUZHU_CARDS } from "./data/naruzhuCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
@@ -588,6 +588,10 @@ export default function ThePresident() {
         newPending.push({ ...CHAINS[chainId], triggerMonth: newMonth + CHAINS[chainId].delay });
       }
       if (chainId === "ds_arc_4_soft_end") unlockAchievement("naruzhu_open");
+
+      // Наказание за экстремум: фракция у потолка пытается перехватить власть.
+      const extremum = getExtremumEvent(ns, newPending);
+      if (extremum) newPending.push({ ...extremum, triggerMonth: newMonth + extremum.delay });
 
       const firedIdx = newPending.findIndex(e => e.triggerMonth <= newMonth);
       let chainCard  = null;

@@ -315,3 +315,42 @@ export const getTriggeredChain = (cardOrText, side) => {
   }
   return null;
 };
+
+/**
+ * События-наказания за экстремум: если игрок надолго загоняет фракцию к 100,
+ * она пытается перехватить власть. Раньше высокое значение army/oligarchs было
+ * безопасным — теперь оно создаёт давление, которое нельзя игнорировать.
+ */
+export const EXTREMUM_EVENTS = {
+  army_overreach: {
+    id: "army_overreach",
+    delay: 2,
+    card: {
+      advisor: 1, // Громов
+      text: "Громов докладывает: генералы уверены, что страной должны управлять люди в погонах. В кулуарах Генштаба всё громче звучит слово «хунта».",
+      left:  { label: "Урезать влияние армии", text: "Вернём генералов в казармы",        fx: { oligarchs: 5,  army: -18, people: 8,  west: 5   } },
+      right: { label: "Дать военным больше власти", text: "Пусть порулят, мне спокойнее", fx: { oligarchs: -8, army: 6,   people: -12, west: -10 } },
+    },
+  },
+  oligarch_capture: {
+    id: "oligarch_capture",
+    delay: 2,
+    card: {
+      advisor: 7, // Усманов
+      text: "Усманов уже не просит — он диктует. Олигархат фактически приватизировал правительство, министры отчитываются перед советом директоров, а не перед вами.",
+      left:  { label: "Национализировать активы", text: "Раскулачить зарвавшихся друзей", fx: { oligarchs: -20, army: 5,  people: 12, west: -8 } },
+      right: { label: "Смириться с их властью",   text: "Деньги решают всё, и это их деньги", fx: { oligarchs: 6,   army: -5, people: -12, west: 0 } },
+    },
+  },
+};
+
+/**
+ * Возвращает событие-наказание, если фракция в крайней зоне и такое событие
+ * ещё не стоит в очереди. null — если наказывать не за что.
+ */
+export const getExtremumEvent = (stats, pending) => {
+  const queued = id => pending.some(e => e.id === id);
+  if (stats.army >= 88 && !queued("army_overreach")) return EXTREMUM_EVENTS.army_overreach;
+  if (stats.oligarchs >= 88 && !queued("oligarch_capture")) return EXTREMUM_EVENTS.oligarch_capture;
+  return null;
+};
