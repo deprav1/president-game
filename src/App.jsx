@@ -730,8 +730,19 @@ export default function ThePresident() {
     localStorage.removeItem("varon_save");
   };
 
-  const openNaruzhu = () => {
-    const url = "https://naruzhu.am/?utm_source=varonia&utm_medium=game&utm_campaign=hub";
+  // Открытие лендинга «Наружу» с сегментированной UTM-разметкой,
+  // чтобы различать источник клика (онбординг / карта / хаб), конкретную карту,
+  // прогресс игрока и выданный промокод для атрибуции конверсий.
+  const openNaruzhu = (source = "hub", content = "") => {
+    const params = new URLSearchParams({
+      utm_source: "varonia",
+      utm_medium: "game",
+      utm_campaign: source,
+    });
+    if (content) params.set("utm_content", content);
+    params.set("m", String(Math.max(0, months - 1)));
+    if (promoCode?.code) params.set("promo", promoCode.code);
+    const url = `https://naruzhu.am/?${params.toString()}`;
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
   };
@@ -919,7 +930,7 @@ export default function ThePresident() {
 
               {/* ── НАРУЖУ FOOTER ── */}
               <div
-                onClick={openNaruzhu}
+                onClick={() => openNaruzhu("onboarding")}
                 style={{
                   padding: "8px 20px 12px", textAlign: "center", cursor: "pointer",
                   borderTop: "1px solid #c9a84c22",
@@ -1375,7 +1386,7 @@ export default function ThePresident() {
                   </p>
                   {currentCard.cta === "naruzhu" && (
                     <button
-                      onClick={e => { e.stopPropagation(); haptic("light"); openNaruzhu(); }}
+                      onClick={e => { e.stopPropagation(); haptic("light"); openNaruzhu("card", currentCard?.id || "card"); }}
                       style={{
                         display:"flex", alignItems:"center", justifyContent:"center", gap:5,
                         margin:"10px auto 0", padding:"5px 14px", borderRadius:999,
@@ -1541,7 +1552,7 @@ export default function ThePresident() {
                 )}
 
                 {/* ── CTA кнопка ── */}
-                <button onClick={openNaruzhu} className="btn-hub-cta">
+                <button onClick={() => openNaruzhu("hub")} className="btn-hub-cta">
                   🌐 ОТКРЫТЬ VPN НАРУЖУ →
                 </button>
 
