@@ -55,7 +55,7 @@ const scaleStatEffect = (key, val) => {
   if (!val) return 0;
   if (key === "people") {
     // Асимметричный баланс для Населения
-    const mult = val > 0 ? 0.7 : 1.15;
+    const mult = val > 0 ? 0.75 : 1.08;
     return Math.round(val * mult);
   }
   // Базовый сбалансированный множитель для остальных фракций
@@ -475,10 +475,10 @@ export default function ThePresident() {
         fx = { oligarchs: 0, army: 0, people: 10, west: 10 };
         tacticLabel = "Честные выборы";
       } else if (side === "admin") {
-        fx = { oligarchs: 5, army: 15, people: -18, west: -22 };
+        fx = { oligarchs: 5, army: 15, people: -11, west: -22 };
         tacticLabel = "Административный ресурс";
       } else if (side === "sponsor") {
-        fx = { oligarchs: 18, army: 0, people: -10, west: -8 };
+        fx = { oligarchs: 18, army: 0, people: -6, west: -8 };
         tacticLabel = "Сделка с олигархами";
       } else {
         hapticNotify("error");
