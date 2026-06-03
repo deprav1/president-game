@@ -1,0 +1,12 @@
+# Cloudflare Pages / Netlify заголовки кэширования.
+# Хэшированные ассеты Vite (index-*.js/css) можно кэшировать навсегда.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Картинки меняются редко — кэшируем на 30 дней.
+/images/*
+  Cache-Control: public, max-age=2592000
+
+# HTML не кэшируем агрессивно, чтобы обновления долетали сразу.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

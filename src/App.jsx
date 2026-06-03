@@ -62,7 +62,7 @@ const scaleStatEffect = (key, val) => {
   return Math.round(val * 0.95);
 };
 
-const WOOD_BG   = `url("${getAsset('/images/game_background.png')}") center/cover no-repeat`;
+const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
 const FELT_BG   = `linear-gradient(135deg,#8b0000 0%,#6b0000 40%,#7a0000 60%,#8b0000 100%)`;
 const CRISIS_BG = `linear-gradient(135deg,#1a0000 0%,#2d0000 50%,#1a0000 100%)`;
 
@@ -888,7 +888,7 @@ export default function ThePresident() {
                 <div className="story-image-frame">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/onboarding_dossier.png')} 
+                    src={getAsset('/images/onboarding_dossier.webp')} 
                     alt="Секретное досье" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
@@ -998,7 +998,7 @@ export default function ThePresident() {
                 <div className="story-image-frame crisis ruins">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/palace_ruined.png')} 
+                    src={getAsset('/images/palace_ruined.webp')} 
                     alt="Разрушенный дворец" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
@@ -1112,7 +1112,7 @@ export default function ThePresident() {
                       <div className="story-image-frame" style={{ height: 150 }}>
                         <img 
                           className="frame-inner-img" 
-                          src={getAsset(`/images/ending_${ending.id}.png`)} 
+                          src={getAsset(`/images/ending_${ending.id}.webp`)}
                           alt={ending.title} 
                           onError={e => e.currentTarget.style.display = 'none'} 
                         />
@@ -1219,7 +1219,7 @@ export default function ThePresident() {
           <div className="screen-scroll-container" style={{ background: FELT_BG }}>
             <div className="card-paper-container" style={{ animation: "electionPulse 2.5s ease infinite" }}>
               <div className="card-header-bar gold" style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                <img src={getAsset("/images/advisor_vlasova.png")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
+                <img src={getAsset("/images/advisor_vlasova.webp")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>Елена Власова</div>
                   <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>Пресс-секретарь</div>
@@ -1231,7 +1231,7 @@ export default function ThePresident() {
                 <div className="story-image-frame election">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/election_booth.png')} 
+                    src={getAsset('/images/election_booth.webp')} 
                     alt="Избирательный участок" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
@@ -1292,7 +1292,7 @@ export default function ThePresident() {
           <div className="screen-scroll-container" style={{ background: FELT_BG }}>
             <div className="card-paper-container crisis" style={{ animation: "electionPulse 2s ease infinite" }}>
               <div className="card-header-bar crisis" style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                <img src={getAsset(ADVISORS[rescueCard.advisor]?.avatar || "/images/advisor_zubov.png")} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
+                <img src={getAsset(ADVISORS[rescueCard.advisor]?.avatar || "/images/advisor_zubov.webp")} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>{ADVISORS[rescueCard.advisor]?.name || "Советник"}</div>
                   <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>{ADVISORS[rescueCard.advisor]?.role || "Куратор"}</div>
@@ -1304,7 +1304,7 @@ export default function ThePresident() {
                 <div className="story-image-frame crisis">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/crisis_phone.png')} 
+                    src={getAsset('/images/crisis_phone.webp')} 
                     alt="Кризисный телефон" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />

@@ -7,7 +7,7 @@ export const PARAMS = [
   {
     key: "oligarchs",
     label: "Олигархи",
-    icon: "/images/icon_oligarchs.png",
+    icon: "/images/icon_oligarchs.webp",
     color: "#d4af37",
     deathLow: [
       "Утром пришёл звонок от Бориса Усманова. «Мы закрываем этот стартап», — сказал он. «Стартапом» были вы. К вечеру Госдума проголосовала за лишение вас полномочий. Единогласно.",
@@ -23,7 +23,7 @@ export const PARAMS = [
   {
     key: "army",
     label: "Силовики",
-    icon: "/images/icon_army.png",
+    icon: "/images/icon_army.webp",
     color: "#c0392b",
     deathLow: [
       "Генерал Валерий Громов позвонил в четыре утра. «Господин Президент, армия благодарит вас за службу. Колонны техники уже на МКАДе». Это был вежливый арест.",
@@ -39,7 +39,7 @@ export const PARAMS = [
   {
     key: "people",
     label: "Население",
-    icon: "/images/icon_people.png",
+    icon: "/images/icon_people.webp",
     color: "#27ae60",
     deathLow: [
       "Площадь перед Кремлем заполнилась за полчаса после объявления о повышении пенсионного возраста до 85 лет. К вечеру миллионная толпа смела кордоны Росгвардии.",
@@ -55,7 +55,7 @@ export const PARAMS = [
   {
     key: "west",
     label: "Колл. Запад",
-    icon: "/images/icon_west.png",
+    icon: "/images/icon_west.webp",
     color: "#2980b9",
     deathLow: [
       "Тридцатый пакет санкций оказался не символическим. Импорт полностью встал, из аптек исчезли жизненно важные лекарства. Рунет отключен от мировой сети, наступил дефолт.",
