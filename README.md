@@ -75,13 +75,21 @@ src/
   main.jsx            — точка входа
   index.css           — базовый reset
   data/
-    cards.js          — базовая колода
-    extraCards.js     — дополнительные карты
+    cards.js          — базовая колода (106 карт) + кризисные + выборы
+    extraCards.js      — дополнительные карты (92)
+    naruzhuCards.js    — карты VPN «Наружу» (28)
+    chains.js         — сюжетные цепочки последствий
+    endings.js        — 6 нарративных финалов победы
+    params.js         — шкалы фракций и тексты поражений
     advisors.js       — советники и аватары
 public/
   favicon.svg         — иконка
   icons.svg           — SVG спрайт
-  images/             — игровые изображения и аватары
+  images/             — игровые изображения и аватары (WebP)
+  _headers            — кэш-заголовки (Cloudflare Pages)
+  _redirects          — SPA-fallback (Cloudflare Pages)
 docs/
+  advisor_voices.md   — тон-гайд голосов советников
+  deploy.md           — гайд по деплою и Telegram
   solutions/          — журнал технических решений
 ```
