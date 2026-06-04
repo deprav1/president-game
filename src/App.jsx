@@ -6,65 +6,20 @@ import { CHAINS, getTriggeredChain, getExtremumEvent } from "./data/chains.js";
 import { ENDINGS, getVictoryEnding } from "./data/endings.js";
 import { NARUZHU_CARDS } from "./data/naruzhuCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
+import { getAsset } from "./lib/assets.js";
+import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast } from "./lib/gameHelpers.js";
+import FactionIcon from "./components/FactionIcon.jsx";
+import StatPill from "./components/StatPill.jsx";
+import ChoiceEffectRow from "./components/ChoiceEffectRow.jsx";
+import AchievementsList from "./components/AchievementsList.jsx";
+import DecisionLog from "./components/DecisionLog.jsx";
+import { ACHIEVEMENTS_DEF } from "./data/achievements.js";
+import { telegramStorage } from "./utils/telegramStorage.js";
 import "./App.css";
 
-const getAsset = (path) => {
-  const base = import.meta.env.BASE_URL || '/';
-  return base + path.replace(/^\//, '');
-};
-
-/** Безопасный parseInt — защита от NaN при мусорном значении в localStorage. */
-const safeInt = (raw, fallback = 0) => {
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-/**
- * Валидирует объект сохранения из localStorage.
- * Возвращает save если структура корректна, иначе null — это предотвращает
- * краш при доступе к deck.length или rescueCard.agreeText на повреждённых данных.
- */
-const validateSave = (save) => {
-  if (!save || typeof save !== "object") return null;
-  if (!Array.isArray(save.deck) || save.deck.length === 0) return null;
-  const s = save.stats;
-  if (!s || typeof s !== "object") return null;
-  const statKeys = ["oligarchs", "army", "people", "west"];
-  if (statKeys.some(k => typeof s[k] !== "number" || s[k] < 0 || s[k] > 100)) return null;
-  if (typeof save.months !== "number" || save.months < 1) return null;
-  if (typeof save.cardIdx !== "number" || save.cardIdx < 0) return null;
-  if (!Array.isArray(save.pendingEvents)) return null;
-  if (save.rescueCard != null) {
-    const rc = save.rescueCard;
-    if (typeof rc.agreeText !== "string" || !rc.agreeText) return null;
-    if (!rc.fx || typeof rc.fx !== "object") return null;
-    if (!rc.targetStats || typeof rc.targetStats !== "object") return null;
-    if (typeof rc.targetMonth !== "number") return null;
-  }
-  return save;
-};
-
-/** 
- * Масштабирует эффект изменения параметра с учетом гейм-дизайнерского баланса.
- * 1. Снижает общую волатильность шкал (базовый множитель 0.95 вместо 1.2), чтобы увеличить длительность игры.
- * 2. Усложняет накопление лояльности народа (people): 
- *    - рост лояльности умножается на 0.7 (народ медленно проникается доверием);
- *    - падение лояльности умножается на 1.15 (народ быстро разочаровывается и бунтует).
- */
-const scaleStatEffect = (key, val) => {
-  if (!val) return 0;
-  if (key === "people") {
-    // Асимметричный баланс для Населения
-    const mult = val > 0 ? 0.75 : 1.08;
-    return Math.round(val * mult);
-  }
-  // Базовый сбалансированный множитель для остальных фракций
-  return Math.round(val * 0.95);
-};
-
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
-const FELT_BG   = `radial-gradient(circle at 50% 22%,#2a1208 0%,#160a04 48%,#080402 100%)`;
-const CRISIS_BG = `radial-gradient(circle at 50% 22%,#360404 0%,#1c0303 50%,#0a0202 100%)`;
+const FELT_BG   = `radial-gradient(circle at 50% 22%,#0e0e0e 0%,#080808 48%,#040404 100%)`;
+const CRISIS_BG = `radial-gradient(circle at 50% 22%,#1a0000 0%,#0e0303 50%,#060202 100%)`;
 
 // Бренд-цвета «Наружу»: чёрный + неоновый жёлтый
 const NARUZHU_YELLOW = "#FFD60A";
@@ -78,141 +33,6 @@ const CTA_VARIANTS = [
 
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
-
-const shuffle = a => {
-  const copy = [...a];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-};
-
-const telegramVersionAtLeast = (tg, version) => (
-  typeof tg?.isVersionAtLeast !== "function" || tg.isVersionAtLeast(version)
-);
-
-// ─── КОМПОНЕНТ ШКАЛЫ ──────────────────────────────────────────────────────────
-function FactionIcon({ type, className = "", style }) {
-  const shared = {
-    className,
-    style,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    "aria-hidden": true,
-    focusable: "false",
-  };
-
-  if (type === "oligarchs") {
-    return (
-      <svg {...shared}>
-        <path d="M12 3.5 19 9l-7 11.5L5 9l7-5.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M5 9h14M8.2 9 12 20.5 15.8 9M9.4 6.2h5.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M12 3.5 14.6 9H9.4L12 3.5Z" fill="currentColor" opacity="0.22" />
-      </svg>
-    );
-  }
-
-  if (type === "army") {
-    return (
-      <svg {...shared}>
-        <path d="M12 3.4 18.5 6v5.4c0 4.1-2.45 7.15-6.5 9.2-4.05-2.05-6.5-5.1-6.5-9.2V6L12 3.4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M8.7 11.3 11 13.6l4.5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M12 5.6v12.2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.42" />
-      </svg>
-    );
-  }
-
-  if (type === "people") {
-    return (
-      <svg {...shared}>
-        <path d="M12 11.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.55" />
-        <path d="M6.8 19.2c.55-3.25 2.35-5.05 5.2-5.05s4.65 1.8 5.2 5.05" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" />
-        <path d="M5.9 12.6a2.3 2.3 0 1 0-.1-4.6 2.3 2.3 0 0 0 .1 4.6ZM18.1 12.6a2.3 2.3 0 1 0 .1-4.6 2.3 2.3 0 0 0-.1 4.6Z" stroke="currentColor" strokeWidth="1.35" opacity="0.85" />
-        <path d="M2.9 18.1c.35-2.35 1.6-3.7 3.6-3.85M21.1 18.1c-.35-2.35-1.6-3.7-3.6-3.85" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" opacity="0.85" />
-      </svg>
-    );
-  }
-
-  if (type === "west") {
-    return (
-      <svg {...shared}>
-        <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.65" />
-        <path d="M3.8 12h16.4M12 3.8c2.15 2.15 3.2 4.85 3.2 8.2s-1.05 6.05-3.2 8.2M12 3.8C9.85 5.95 8.8 8.65 8.8 12s1.05 6.05 3.2 8.2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
-        <path d="M5.6 7.2c1.75.8 3.9 1.2 6.4 1.2s4.65-.4 6.4-1.2M5.6 16.8c1.75-.8 3.9-1.2 6.4-1.2s4.65.4 6.4 1.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.58" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg {...shared}>
-      <path d="M12 3.4 14.35 8l5.05.75-3.7 3.58.88 5.03L12 14.98 7.42 17.36l.88-5.03-3.7-3.58L9.65 8 12 3.4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M7.1 11.4H3.3c1.2 1.55 2.75 2.55 4.65 3M16.9 11.4h3.8c-1.2 1.55-2.75 2.55-4.65 3" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 3.4 13.35 8h-2.7L12 3.4Z" fill="currentColor" opacity="0.25" />
-    </svg>
-  );
-}
-
-function StatPill({ param, value, flash }) {
-  const pct        = Math.max(0, Math.min(100, value));
-  const isCritical = pct <= 8  || pct >= 92;
-  const isDanger   = pct <= 15 || pct >= 85;
-  const isWarning  = !isDanger && (pct <= 28 || pct >= 72);
-  const state      = isCritical ? "critical" : isDanger ? "danger" : isWarning ? "warning" : "normal";
-
-  return (
-    <div className={`stat-pill ${param.key} ${state}`} style={{ "--param-color": param.color }}>
-      <div className="stat-icon-shell">
-        <FactionIcon type={param.key} className="stat-vector-icon" />
-      </div>
-      <div className="stat-track">
-        <div className="stat-safe-zone" />
-        <div
-          className="stat-fill"
-          style={{
-            width: `${pct}%`,
-            animation: flash ? "flashStat 0.5s ease" : isCritical ? "pulse 0.7s infinite" : isDanger ? "pulse 1.5s infinite" : "none",
-          }}
-        />
-        <div className="stat-midline" />
-      </div>
-      <div className="stat-label">
-        {param.label.toUpperCase()}{isCritical ? "!" : ""}
-      </div>
-    </div>
-  );
-}
-
-function ChoiceEffectRow({ fx }) {
-  const entries = PARAMS
-    .map(p => ({ param: p, value: fx[p.key] || 0 }))
-    .filter(item => item.value !== 0);
-
-  if (!entries.length) return null;
-
-  return (
-    <div className="choice-effect-row">
-      {entries.map(({ param, value }) => (
-        <span key={param.key} className={`choice-effect-chip ${value > 0 ? "positive" : "negative"}`}>
-          <FactionIcon type={param.key} className="choice-effect-icon" />
-          <span>{value > 0 ? "+" : "−"}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-// ─── ДОСТИЖЕНИЯ ──────────────────────────────────────────────────────────────
-const ACHIEVEMENTS_DEF = [
-  { id: "survive_12",  icon: "📅", label: "Первый год",        desc: "Пережить 12 месяцев у власти"          },
-  { id: "survive_48",  icon: "🏅", label: "Первый срок",       desc: "Пережить 48 месяцев у власти"          },
-  { id: "win_election",icon: "🗳️", label: "Переизбран",        desc: "Победить на президентских выборах"     },
-  { id: "victory",     icon: "🏛️", label: "Легенда Варонии",   desc: "Завершить два полных срока правления"  },
-  { id: "naruzhu_open", icon: "🚪", label: "Наружу",            desc: "Завершить арк Цифрового суверенитета открытым финалом" },
-];
-
-import { telegramStorage } from "./utils/telegramStorage.js";
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
@@ -809,12 +629,12 @@ export default function ThePresident() {
   const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
   const cardBg      = isCrisis ? CRISIS_BG : FELT_BG;
   const cardPaperBg = isCrisis
-    ? "linear-gradient(160deg,#1a0000 0%,#2a0000 50%,#1a0000 100%)"
-    : "linear-gradient(160deg,#16100a 0%,#0f0a05 50%,#0a0603 100%)";
-  const cardTextColor = isCrisis ? "#f5c6c6" : "#ece0c4";
+    ? "linear-gradient(160deg,#140000 0%,#1a0000 50%,#140000 100%)"
+    : "linear-gradient(160deg,#0e0e0e 0%,#0a0a0a 50%,#070707 100%)";
+  const cardTextColor = isCrisis ? "#f0c0c0" : "#e0d8c8";
   const headerBg    = isCrisis
-    ? "linear-gradient(to right,#4a0000,#3a0000,#4a0000)"
-    : "linear-gradient(to right,#2a2008,#1a1404,#2a2008)";
+    ? "linear-gradient(to right,#2a0000,#1a0000,#2a0000)"
+    : "linear-gradient(to right,#141008,#0c0a04,#141008)";
 
   // Превью с реальным сбалансированным масштабом
   const previewFxReal = hovered && currentCard
@@ -925,7 +745,7 @@ export default function ThePresident() {
                   />
                 </div>
                 
-                <p style={{ fontSize: 15, lineHeight: 1.55, color: "#ece0c4", fontWeight: 600, textAlign: "center", marginBottom: 14, letterSpacing: 0.2 }}>
+                <p style={{ fontSize: 15, lineHeight: 1.55, color: "#e0d8c8", fontWeight: 600, textAlign: "center", marginBottom: 14, letterSpacing: 0.2 }}>
                   Поздравляем с избранием на пост Президента Республики Варония.
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
@@ -935,15 +755,15 @@ export default function ThePresident() {
                     { key: "people", text: "Народ вас избрал — и может свергнуть" },
                     { key: "west", text: "Запад наблюдает — с деньгами и санкциями" },
                   ].map((item, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "#ece0c40e", borderRadius: 8, padding: "6px 10px", border: "1px solid #c9a84c33" }}>
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "6px 10px", border: "1px solid rgba(212,175,55,0.12)" }}>
                       <span className={`intro-icon-shell ${item.key}`}>
                         <FactionIcon type={item.key} className="intro-vector-icon" />
                       </span>
-                      <span style={{ fontSize: 11, color: "#d8c8a0", lineHeight: 1.35 }}>{item.text}</span>
+                      <span style={{ fontSize: 11, color: "#b8b0a0", lineHeight: 1.35 }}>{item.text}</span>
                     </div>
                   ))}
                 </div>
-                <div style={{ background: "#8b000011", border: "1px solid #8b000022", borderRadius: 8, padding: "8px 12px", marginBottom: 12, textAlign: "center" }}>
+                <div style={{ background: "rgba(139,0,0,0.08)", border: "1px solid rgba(139,0,0,0.15)", borderRadius: 8, padding: "8px 12px", marginBottom: 12, textAlign: "center" }}>
                   <p style={{ fontSize: 12, color: "#e07a6a", fontWeight: 500, lineHeight: 1.45 }}>
                     Если любая шкала упадёт в 0 или зашкалит до 100 — вас уберут.
                   </p>
@@ -973,9 +793,9 @@ export default function ThePresident() {
                       onKeyDown={e => e.key === "Enter" && handleNameSubmit()}
                       style={{
                         width: "100%", marginBottom: 10, padding: "10px 14px",
-                        background: "#0f0a05", border: "1px solid #c9a84c",
+                        background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.2)",
                         borderRadius: 8, fontSize: 13, fontFamily: "var(--font-serif)",
-                        color: "#ece0c4", outline: "none", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)"
+                        color: "#e0d8c8", outline: "none", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
                       }}
                     />
                     <button onClick={handleNameSubmit} className="btn-velvet">
@@ -1036,11 +856,11 @@ export default function ThePresident() {
                 </div>
 
                 <div style={{ 
-                  background: "#0d0800", border: "1px solid #c9a84c33", 
+                  background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.12)", 
                   borderRadius: 12, padding: "14px 18px", marginBottom: 12, 
-                  boxShadow: "inset 0 2px 8px #000000bb" 
+                  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.6)" 
                 }}>
-                  <p style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 400, color: "#e3cba1", textAlign: "center" }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 400, color: "#d8c8a0", textAlign: "center" }}>
                     «{deathMsg}»
                   </p>
                 </div>
@@ -1051,8 +871,8 @@ export default function ThePresident() {
                     const isTooHigh = stats[p.key] >= 100;
                     return (
                       <div key={p.key} style={{
-                        background: isKiller ? "#1a0000" : "#0d0800",
-                        border: `1px solid ${isKiller ? "#8b0000" : "#c9a84c33"}`,
+                        background: isKiller ? "#140000" : "#0a0a0a",
+                        border: `1px solid ${isKiller ? "#8b0000" : "rgba(212,175,55,0.12)"}`,
                         borderRadius: 8, padding: "8px 10px",
                         boxShadow: isKiller ? "0 0 10px rgba(192, 57, 43, 0.45)" : "none",
                         position: "relative", overflow: "hidden",
@@ -1080,36 +900,9 @@ export default function ThePresident() {
                   ⚠️ Шкала в 0 или 100 — лишение власти
                 </div>
 
-                {achievements.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ВАШИ ДОСТИЖЕНИЯ</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
-                      {ACHIEVEMENTS_DEF.filter(a => achievements.includes(a.id)).map(a => (
-                        <div key={a.id} title={a.desc} style={{
-                          background: "#1a0f00", border: "1px solid #d4af3733", borderRadius: 6,
-                          padding: "4px 8px", display: "flex", alignItems: "center", gap: 5,
-                        }}>
-                          <span style={{ fontSize: 11 }}>{a.icon}</span>
-                          <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <AchievementsList achievements={achievements} title="ВАШИ ДОСТИЖЕНИЯ" />
 
-                {decisionLog.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      {decisionLog.slice(-4).map((entry, i) => (
-                        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", background: "#0d0800", border: "1px solid #c9a84c33", borderRadius: 6, padding: "4px 8px" }}>
-                          <span className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", flexShrink: 0 }}>МЕС {entry.month}</span>
-                          <span style={{ fontSize: 11, color: "#d4b896", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <DecisionLog decisionLog={decisionLog} />
               </div>
 
               <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1139,11 +932,11 @@ export default function ThePresident() {
               <div className="card-content-area">
                 {ending && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"].includes(ending.id) ? (
+                    {ending.image || ["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"].includes(ending.id) ? (
                       <div className="story-image-frame" style={{ height: 150 }}>
                         <img 
                           className="frame-inner-img" 
-                          src={getAsset(`/images/ending_${ending.id}.webp`)}
+                          src={getAsset(ending.image || `/images/ending_${ending.id}.webp`)}
                           alt={ending.title} 
                           onError={e => e.currentTarget.style.display = 'none'} 
                         />
@@ -1166,7 +959,7 @@ export default function ThePresident() {
                       </div>
                       
                       {ending.text.split('\n\n').map((para, i, arr) => (
-                        <p key={i} style={{ fontSize: 14, lineHeight: 1.6, color: "#ece0c4", fontWeight: 400, marginBottom: i < arr.length - 1 ? 10 : 0 }}>
+                        <p key={i} style={{ fontSize: 14, lineHeight: 1.6, color: "#e0d8c8", fontWeight: 400, marginBottom: i < arr.length - 1 ? 10 : 0 }}>
                           {para}
                         </p>
                       ))}
@@ -1176,7 +969,7 @@ export default function ThePresident() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "14px 0 12px" }}>
                   {PARAMS.map(p => (
-                    <div key={p.key} style={{ background: "#0d0800", border: `1px solid ${p.color}33`, borderRadius: 8, padding: "8px 10px", boxShadow: `0 0 8px ${p.color}15` }}>
+                    <div key={p.key} style={{ background: "#0a0a0a", border: `1px solid ${p.color}22`, borderRadius: 8, padding: "8px 10px", boxShadow: `0 0 8px ${p.color}10` }}>
                       <FactionIcon type={p.key} className="result-vector-icon" style={{ color: p.color }} />
                       <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                       <div style={{ fontSize: 18, fontWeight: 700, color: p.color, marginTop: 1 }}>{stats[p.key]}</div>
@@ -1184,36 +977,9 @@ export default function ThePresident() {
                   ))}
                 </div>
 
-                {achievements.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ДОСТИЖЕНИЯ</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
-                      {ACHIEVEMENTS_DEF.filter(a => achievements.includes(a.id)).map(a => (
-                        <div key={a.id} title={a.desc} style={{
-                          background: "#1a0f00", border: "1px solid #d4af3744", borderRadius: 6,
-                          padding: "4px 8px", display: "flex", alignItems: "center", gap: 5,
-                        }}>
-                          <span style={{ fontSize: 11 }}>{a.icon}</span>
-                          <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <AchievementsList achievements={achievements} title="ДОСТИЖЕНИЯ" />
 
-                {decisionLog.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 6, textAlign: "center" }}>ИСТОРИЯ РЕШЕНИЙ</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      {decisionLog.slice(-4).map((entry, i) => (
-                        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", background: "#0d0800", border: "1px solid #c9a84c33", borderRadius: 6, padding: "4px 8px" }}>
-                          <span className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", flexShrink: 0 }}>МЕС {entry.month}</span>
-                          <span style={{ fontSize: 11, color: "#d4b896", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace:"nowrap" }}>{entry.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <DecisionLog decisionLog={decisionLog} />
 
                 {promoCode && (
                   <div className="hub-promo-box" style={{ marginBottom: 14 }}>
@@ -1268,15 +1034,15 @@ export default function ThePresident() {
                   />
                 </div>
 
-                <p style={{ fontSize: 15, lineHeight: 1.6, color: "#ece0c4", fontWeight: 500, textAlign: "center", marginBottom: 14 }}>
+                <p style={{ fontSize: 15, lineHeight: 1.6, color: "#e0d8c8", fontWeight: 500, textAlign: "center", marginBottom: 14 }}>
                   {ELECTION_CARD.text}
                 </p>
                 
-                <div style={{ padding: "8px 12px", background: "#ece0c40e", borderRadius: 8, border: "1px solid #c9a84c33", marginBottom: 12 }}>
+                <div style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(212,175,55,0.12)", marginBottom: 12 }}>
                   <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", textAlign: "center", letterSpacing: 1, marginBottom: 4 }}>
                     ВАШ РЕЙТИНГ У НАРОДА
                   </div>
-                  <div style={{ height: 6, background: "#2a2008", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: 6, background: "#0a0a0a", borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${stats.people}%`, background: stats.people >= 40 ? "#27ae60" : "#c0392b", borderRadius: 3, transition: "width 0.5s ease" }}/>
                   </div>
                   <div className="font-typewriter" style={{ textAlign: "center", marginTop: 4, fontSize: 10, fontWeight: 700, color: stats.people >= 40 ? "#27ae60" : "#c0392b" }}>
@@ -1378,7 +1144,7 @@ export default function ThePresident() {
                   display: "flex",
                   alignItems: "center",
                   gap: 4,
-                  background: "rgba(26, 15, 0, 0.65)",
+                  background: "rgba(10, 5, 0, 0.65)",
                   padding: "2px 8px",
                   borderRadius: 6,
                   border: `1px solid ${previewFxReal[p.key] > 0 ? "rgba(39, 174, 96, 0.3)" : "rgba(192, 57, 43, 0.3)"}`,
@@ -1428,12 +1194,12 @@ export default function ThePresident() {
                   {hovered && (
                     <div style={{
                       position:"absolute", top:12, left:"50%", transform:`translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,
-                      zIndex:10, border:`3px solid ${hovered === "left" ? "#27ae60" : "#c0392b"}`,
+                      zIndex:10, border:`2px solid ${hovered === "left" ? "#4ade80" : "#ff756b"}`,
                       borderRadius:6, padding:"4px 14px",
-                      color:hovered === "left" ? "#27ae60" : "#c0392b",
+                      color:hovered === "left" ? "#4ade80" : "#ff756b",
                       fontFamily:"var(--font-sans)", fontSize:15, letterSpacing:1.5, fontWeight:700,
                       opacity:0.93, animation:"fadeIn 0.15s ease", pointerEvents:"none",
-                      background:"rgba(255,255,255,0.7)", whiteSpace:"nowrap",
+                      background:"rgba(0,0,0,0.75)", whiteSpace:"nowrap",
                     }}>
                       {hovered === "left" ? currentCard.left.label.toUpperCase() : currentCard.right.label.toUpperCase()}
                     </div>
