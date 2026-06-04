@@ -216,7 +216,8 @@ import { telegramStorage } from "./utils/telegramStorage.js";
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
-  const [isInitializing, setIsInitializing] = useState(true);
+  // Значение не читается в UI; оставляем только сеттер (флаг инициализации).
+  const [, setIsInitializing] = useState(true);
 
   const [stats, setStats]               = useState({ oligarchs:50, army:50, people:50, west:50 });
   const [months, setMonths]             = useState(1);
@@ -338,6 +339,15 @@ export default function ThePresident() {
         try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
       }, 500);
     }
+  }, []);
+
+  // Предзагрузка всех портретов и фонов карт на старте — свайп без мерцания.
+  // Картинки в WebP лёгкие (~10-60 КБ), суммарно безопасно для Mini App.
+  useEffect(() => {
+    const urls = new Set();
+    ADVISORS.forEach(a => a?.avatar && urls.add(getAsset(a.avatar)));
+    [...CARDS, ...CRISIS_CARDS].forEach(c => c?.bgImage && urls.add(getAsset(c.bgImage)));
+    urls.forEach(src => { const img = new Image(); img.src = src; });
   }, []);
 
   const currentCard = isCrisis && crisisCard ? crisisCard : deck[cardIdx % deck.length];

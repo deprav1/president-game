@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap');
+/* Шрифты подключены через <link> в index.html (preconnect, без render-blocking @import). */
 
 :root {
   /* Дизайн-токены (цвета) */
@@ -178,8 +178,14 @@ em, i { font-style: normal; }
 /* ─── ДЕСКТОП: рамка «устройства» по центру + имперский фон по бокам ─── */
 @media (min-width: 540px) {
   html, body {
-    background:
-      radial-gradient(circle at 50% 34%, #1a0f06 0%, #0a0603 46%, #040201 100%);
+    background-color: #040201;
+    background-image:
+      radial-gradient(circle at 50% 34%, rgba(20, 12, 5, 0.82) 0%, rgba(10, 6, 3, 0.95) 44%, #040201 100%),
+      url('/images/imperial_eagle_cracked_1780579894115.webp');
+    background-repeat: no-repeat, no-repeat;
+    background-position: center, center top;
+    background-size: cover, min(620px, 60vh);
+    background-attachment: fixed, fixed;
   }
   .app-shell {
     max-width: 460px;

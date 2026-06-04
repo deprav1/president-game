@@ -23,7 +23,10 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // caughtErrors: 'none' — не ругаться на неиспользуемый параметр catch (e).
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', caughtErrors: 'none' }],
+      // Пустой catch допустим: намеренные no-op для старых клиентов Telegram.
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
 ])

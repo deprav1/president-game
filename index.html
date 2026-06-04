@@ -5,7 +5,16 @@
     <link rel="icon" type="image/png" href="/images/favicon_eagle.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Варония</title>
-    
+
+    <!-- Шрифты: preconnect + урезанные веса. Вынесено из CSS @import,
+         чтобы не блокировать парсинг стилей. display=swap убирает FOIT. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Open Graph / Telegram / Social Media -->
     <meta property="og:title" content="Варония — Симулятор Автократа" />
     <meta property="og:description" content="Удержите власть в вымышленном государстве. Балансируйте между армией, олигархами, народом и Западом." />

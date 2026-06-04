@@ -7,4 +7,15 @@ export default defineConfig({
   // Относительный base: один билд работает и с корня домена (Timeweb),
   // и из подпапки. Абсолютный '/president-game/' ломал ассеты на Timeweb.
   base: './',
+  build: {
+    rollupOptions: {
+      output: {
+        // Вендор (node_modules) кэшируется отдельно от кода игры:
+        // при правках логики пользователь не перекачивает React.
+        manualChunks(id) {
+          if (id.includes('node_modules')) return 'vendor';
+        },
+      },
+    },
+  },
 })
