@@ -11,6 +11,8 @@ import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast
 import FactionIcon from "./components/FactionIcon.jsx";
 import Topbar from "./components/Topbar.jsx";
 import OnboardingScreen from "./components/OnboardingScreen.jsx";
+import GameOverScreen from "./components/GameOverScreen.jsx";
+import VictoryScreen from "./components/VictoryScreen.jsx";
 import StatPill from "./components/StatPill.jsx";
 import ChoiceEffectRow from "./components/ChoiceEffectRow.jsx";
 import AchievementsList from "./components/AchievementsList.jsx";
@@ -748,181 +750,31 @@ export default function ThePresident() {
 
         {/* ════════════════════════════════ GAME OVER ════════════════════════════════ */}
         {phase === "gameover" && (
-          <div className="screen-scroll-container">
-            <div className="card-paper-container crisis" style={{ paddingBottom: 16 }}>
-              <div className="card-header-bar crisis">
-                <div style={{ fontSize: 28, marginBottom: 2 }}>⚰️</div>
-                <div className="font-typewriter" style={{ fontSize: 13, letterSpacing: 4, color: "#c0392b", fontWeight: 700 }}>КОНЕЦ ПРАВЛЕНИЯ</div>
-                <div className="font-typewriter" style={{ fontSize: 11, color: "#caa23a", letterSpacing: 2, marginTop: 2 }}>
-                  {tenure} МЕС. У ВЛАСТИ — {tenureLabel}
-                </div>
-              </div>
-              
-              <div className="card-content-area">
-                {/* Разрушенный дворец (картинка-плейсхолдер) */}
-                <div className="story-image-frame crisis ruins">
-                  <img 
-                    className="frame-inner-img" 
-                    src={getAsset('/images/palace_ruined.webp')} 
-                    alt="Разрушенный дворец" 
-                    onError={e => e.currentTarget.style.display = 'none'} 
-                  />
-                </div>
-
-                <div style={{ 
-                  background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.12)", 
-                  borderRadius: 12, padding: "14px 18px", marginBottom: 12, 
-                  boxShadow: "inset 0 2px 8px rgba(0,0,0,0.6)" 
-                }}>
-                  <p style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 400, color: "#d8c8a0", textAlign: "center" }}>
-                    «{deathMsg}»
-                  </p>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                  {PARAMS.map(p => {
-                    const isKiller = stats[p.key] <= 0 || stats[p.key] >= 100;
-                    const isTooHigh = stats[p.key] >= 100;
-                    return (
-                      <div key={p.key} style={{
-                        background: isKiller ? "#140000" : "#0a0a0a",
-                        border: `1px solid ${isKiller ? "#8b0000" : "rgba(212,175,55,0.12)"}`,
-                        borderRadius: 8, padding: "8px 10px",
-                        boxShadow: isKiller ? "0 0 10px rgba(192, 57, 43, 0.45)" : "none",
-                        position: "relative", overflow: "hidden",
-                      }}>
-                        {isKiller && (
-                          <div className="font-typewriter" style={{ position: "absolute", top: 4, right: 6, fontSize: 10, color: "#c0392b", fontWeight: 700 }}>
-                            {isTooHigh ? "▲ MAX" : "▼ MIN"}
-                          </div>
-                        )}
-                        <FactionIcon
-                          type={p.key}
-                          className="result-vector-icon"
-                          style={{ color: isKiller ? "#c0392b" : p.color }}
-                        />
-                        <div className="font-typewriter" style={{ fontSize: 10, color: isKiller ? "#c0392b" : "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37", marginTop: 1 }}>
-                          {stats[p.key]}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginBottom: 12, letterSpacing: 0.5, textAlign: "center" }}>
-                  ⚠️ Шкала в 0 или 100 — лишение власти
-                </div>
-
-                <AchievementsList achievements={achievements} title="ВАШИ ДОСТИЖЕНИЯ" />
-
-                <DecisionLog decisionLog={decisionLog} />
-              </div>
-
-              <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <button onClick={shareGameOver} className="btn-emerald" style={{ width: "100%" }}>
-                  📤 ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ
-                </button>
-                <button onClick={restart} className="btn-velvet" style={{ width: "100%" }}>
-                  НОВЫЙ СРОК
-                </button>
-              </div>
-            </div>
-          </div>
+          <GameOverScreen
+            tenure={tenure}
+            tenureLabel={tenureLabel}
+            deathMsg={deathMsg}
+            stats={stats}
+            achievements={achievements}
+            decisionLog={decisionLog}
+            onShare={shareGameOver}
+            onRestart={restart}
+          />
         )}
 
         {/* ════════════════════════════════ ПОБЕДА ════════════════════════════════ */}
         {phase === "victory" && (
-          <div className="screen-scroll-container">
-            <div className="card-paper-container" style={{ paddingBottom: 16 }}>
-              <div className="card-header-bar gold">
-                <div style={{ fontSize: 32, marginBottom: 2 }}>🏛️</div>
-                <div className="font-typewriter" style={{ fontSize: 13, letterSpacing: 4, color: "#d4af37", fontWeight: 700 }}>ВЫ ВОШЛИ В ИСТОРИЮ</div>
-                <div className="font-typewriter" style={{ fontSize: 11, color: "#caa23a", letterSpacing: 2, marginTop: 2 }}>
-                  {tenure} МЕСЯЦЕВ У ВЛАСТИ
-                </div>
-              </div>
-              
-              <div className="card-content-area">
-                {ending && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {ending.image || ["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"].includes(ending.id) ? (
-                      <div className="story-image-frame" style={{ height: 150 }}>
-                        <img 
-                          className="frame-inner-img" 
-                          src={getAsset(ending.image || `/images/ending_${ending.id}.webp`)}
-                          alt={ending.title} 
-                          onError={e => e.currentTarget.style.display = 'none'} 
-                        />
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", justifyContent: "center", margin: "10px 0" }}>
-                        <span style={{ fontSize: 44 }}>{ending.icon}</span>
-                      </div>
-                    )}
-                    
-                    <div style={{ padding: "0 4px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                        {!["zastoy", "oprichnina", "kooperativ", "bunker"].includes(ending.id) && (
-                          <span style={{ fontSize: 24 }}>{ending.icon}</span>
-                        )}
-                        <div>
-                          <div className="font-typewriter" style={{ fontSize: 12, letterSpacing: 2, color: "#d4af37", fontWeight: 700 }}>{ending.title.toUpperCase()}</div>
-                          <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 0.5, marginTop: 1 }}>{ending.subtitle}</div>
-                        </div>
-                      </div>
-                      
-                      {ending.text.split('\n\n').map((para, i, arr) => (
-                        <p key={i} style={{ fontSize: 14, lineHeight: 1.6, color: "#e0d8c8", fontWeight: 400, marginBottom: i < arr.length - 1 ? 10 : 0 }}>
-                          {para}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "14px 0 12px" }}>
-                  {PARAMS.map(p => (
-                    <div key={p.key} style={{ background: "#0a0a0a", border: `1px solid ${p.color}22`, borderRadius: 8, padding: "8px 10px", boxShadow: `0 0 8px ${p.color}10` }}>
-                      <FactionIcon type={p.key} className="result-vector-icon" style={{ color: p.color }} />
-                      <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: p.color, marginTop: 1 }}>{stats[p.key]}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <AchievementsList achievements={achievements} title="ДОСТИЖЕНИЯ" />
-
-                <DecisionLog decisionLog={decisionLog} />
-
-                {promoCode && (
-                  <div className="hub-promo-box" style={{ marginBottom: 14 }}>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                      🎁 ПОДАРОК ЗА ПОБЕДУ — {promoCode.days} ДНЕЙ VPN НАРУЖУ
-                    </div>
-                    <div
-                      className="hub-promo-code"
-                      onClick={() => { navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
-                    >
-                      {promoCode.code}
-                    </div>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
-                      Копировать · Активация на naruzhu.am
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <button onClick={shareVictory} className="btn-emerald" style={{ width: "100%" }}>
-                  📤 ПОДЕЛИТЬСЯ ПОБЕДОЙ
-                </button>
-                <button onClick={restart} className="btn-gold" style={{ width: "100%" }}>
-                  НОВАЯ ЭПОХА
-                </button>
-              </div>
-            </div>
-          </div>
+          <VictoryScreen
+            tenure={tenure}
+            ending={ending}
+            stats={stats}
+            achievements={achievements}
+            decisionLog={decisionLog}
+            promoCode={promoCode}
+            onCopyPromo={() => { navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
+            onShare={shareVictory}
+            onRestart={restart}
+          />
         )}
 
         {/* ════════════════════════════════ ВЫБОРЫ ════════════════════════════════ */}
