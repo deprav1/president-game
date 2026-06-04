@@ -62,32 +62,19 @@ const scaleStatEffect = (key, val) => {
   return Math.round(val * 0.95);
 };
 
-const WOOD_BG   = `url("${getAsset('/images/game_background.png')}") center/cover no-repeat`;
+const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
 const FELT_BG   = `radial-gradient(circle at 50% 22%,#2a1208 0%,#160a04 48%,#080402 100%)`;
 const CRISIS_BG = `radial-gradient(circle at 50% 22%,#360404 0%,#1c0303 50%,#0a0202 100%)`;
 
 // Бренд-цвета «Наружу»: чёрный + неоновый жёлтый
 const NARUZHU_YELLOW = "#FFD60A";
 
-// A/B-тест текста CTA-кнопки «Наружу» на карте. Вариант фиксируется один раз на
-// игрока (localStorage) и прокидывается в UTM (utm_content), чтобы измерять CTR.
+// A/B-тест текста CTA-кнопки «Наружу» на карте.
 const CTA_VARIANTS = [
   { id: "exit",     label: "🌐 VPN Наружу — выйти из Варонии" },
   { id: "download", label: "🌐 Скачать VPN Наружу бесплатно" },
   { id: "bypass",   label: "🔓 Обойти блокировку — VPN Наружу" },
 ];
-const getCtaVariant = () => {
-  try {
-    const saved = localStorage.getItem("varon_cta_ab");
-    const found = CTA_VARIANTS.find(v => v.id === saved);
-    if (found) return found;
-    const pick = CTA_VARIANTS[Math.floor(Math.random() * CTA_VARIANTS.length)];
-    localStorage.setItem("varon_cta_ab", pick.id);
-    return pick;
-  } catch {
-    return CTA_VARIANTS[0];
-  }
-};
 
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
@@ -225,42 +212,84 @@ const ACHIEVEMENTS_DEF = [
   { id: "naruzhu_open", icon: "🚪", label: "Наружу",            desc: "Завершить арк Цифрового суверенитета открытым финалом" },
 ];
 
+import { telegramStorage } from "./utils/telegramStorage.js";
+
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
-  // Восстанавливаем сохранённый ран если есть; validateSave защищает от краша
-  // при повреждённом или устаревшем сохранении (deck=null, rescueCard без agreeText и т.д.)
-  const savedRun = (() => {
-    try { return validateSave(JSON.parse(localStorage.getItem("varon_save") || "null")); } catch { return null; }
-  })();
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const [stats, setStats]               = useState(savedRun?.stats || { oligarchs:50, army:50, people:50, west:50 });
-  const [months, setMonths]             = useState(savedRun?.months || 1);
-  const [deck, setDeck]                 = useState(() => savedRun ? savedRun.deck : shuffle(ALL_CARDS));
-  const [cardIdx, setCardIdx]           = useState(savedRun?.cardIdx || 0);
-  const [pendingEvents, setPendingEvents] = useState(savedRun?.pendingEvents || []);
-  const [phase, setPhase]               = useState(savedRun ? (savedRun.phase || "card") : "onboarding");
+  const [stats, setStats]               = useState({ oligarchs:50, army:50, people:50, west:50 });
+  const [months, setMonths]             = useState(1);
+  const [deck, setDeck]                 = useState(() => shuffle(ALL_CARDS));
+  const [cardIdx, setCardIdx]           = useState(0);
+  const [pendingEvents, setPendingEvents] = useState([]);
+  const [phase, setPhase]               = useState("onboarding");
   const [deathMsg, setDeathMsg]         = useState("");
   const [hovered, setHovered]           = useState(null);
   const [flashParams, setFlashParams]   = useState({});
   const [isCrisis, setIsCrisis]         = useState(false);
   const [crisisCard, setCrisisCard]     = useState(null);
-  const [termsCompleted, setTermsCompleted] = useState(savedRun?.termsCompleted || 0);
-  const [hasUsedSecondChance, setHasUsedSecondChance] = useState(() => savedRun?.hasUsedSecondChance || false);
-  const [rescueCard, setRescueCard]     = useState(() => savedRun?.rescueCard || null);
-  const [presidentName, setPresidentName] = useState(() => localStorage.getItem("varon_pname") || "");
+  const [termsCompleted, setTermsCompleted] = useState(0);
+  const [hasUsedSecondChance, setHasUsedSecondChance] = useState(false);
+  const [rescueCard, setRescueCard]     = useState(null);
+  const [presidentName, setPresidentName] = useState("");
   const [nameInput, setNameInput]         = useState("");
-  const [achievements, setAchievements]   = useState(() => {
-    try { return JSON.parse(localStorage.getItem("varon_ach") || "[]"); } catch { return []; }
-  });
+  const [achievements, setAchievements]   = useState([]);
   const [showHub, setShowHub]             = useState(false);
-  const [bestScore, setBestScore]         = useState(() => safeInt(localStorage.getItem("varon_best")));
-  const [referralCount, setReferralCount] = useState(() => safeInt(localStorage.getItem("varon_refs")));
+  const [bestScore, setBestScore]         = useState(0);
+  const [referralCount, setReferralCount] = useState(0);
   const [promoCode, setPromoCode]         = useState(null);
-  const [ctaVariant]                      = useState(getCtaVariant);
+  const [ctaVariant, setCtaVariant]       = useState(CTA_VARIANTS[0]);
   const [decisionLog, setDecisionLog]     = useState([]);
-  const [unlockedEndings, setUnlockedEndings] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("varon_ends") || "[]"); } catch { return []; }
-  });
+  const [unlockedEndings, setUnlockedEndings] = useState([]);
+
+  useEffect(() => {
+    async function loadData() {
+      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends"];
+      const data = await telegramStorage.getItems(keys);
+      
+      let savedRun = null;
+      try { savedRun = validateSave(JSON.parse(data["varon_save"] || "null")); } catch {}
+
+      if (savedRun) {
+        setStats(savedRun.stats || { oligarchs:50, army:50, people:50, west:50 });
+        setMonths(savedRun.months || 1);
+        setDeck(savedRun.deck);
+        setCardIdx(savedRun.cardIdx || 0);
+        setPendingEvents(savedRun.pendingEvents || []);
+        setPhase(savedRun.phase || "card");
+        setTermsCompleted(savedRun.termsCompleted || 0);
+        setHasUsedSecondChance(savedRun.hasUsedSecondChance || false);
+        setRescueCard(savedRun.rescueCard || null);
+      }
+
+      setPresidentName(data["varon_pname"] || "");
+      try { setAchievements(JSON.parse(data["varon_ach"] || "[]")); } catch {}
+      setBestScore(safeInt(data["varon_best"]));
+      
+      let refs = safeInt(data["varon_refs"]);
+      const tg = window.Telegram?.WebApp;
+      const startParam = tg?.initDataUnsafe?.start_param || "";
+      if (startParam.startsWith("ref_")) {
+        refs += 1;
+        telegramStorage.setItem("varon_refs", String(refs));
+      }
+      setReferralCount(refs);
+
+      try { setUnlockedEndings(JSON.parse(data["varon_ends"] || "[]")); } catch {}
+
+      let ctaAb = data["varon_cta_ab"];
+      let foundCta = CTA_VARIANTS.find(v => v.id === ctaAb);
+      if (!foundCta) {
+        foundCta = CTA_VARIANTS[Math.floor(Math.random() * CTA_VARIANTS.length)];
+        telegramStorage.setItem("varon_cta_ab", foundCta.id);
+      }
+      setCtaVariant(foundCta);
+
+      setIsInitializing(false);
+    }
+    loadData();
+  }, []);
 
   const touchStart = useRef(null);
   const choosing   = useRef(false);
@@ -284,7 +313,7 @@ export default function ThePresident() {
     setAchievements(prev => {
       if (prev.includes(id)) return prev;
       const next = [...prev, id];
-      localStorage.setItem("varon_ach", JSON.stringify(next));
+      telegramStorage.setItem("varon_ach", JSON.stringify(next));
       hapticNotify("success");
       return next;
     });
@@ -308,14 +337,6 @@ export default function ThePresident() {
       setTimeout(() => {
         try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
       }, 500);
-    }
-
-    // Обработка реферального start_param
-    const startParam = tg.initDataUnsafe?.start_param || "";
-    if (startParam.startsWith("ref_")) {
-      const count = safeInt(localStorage.getItem("varon_refs")) + 1;
-      localStorage.setItem("varon_refs", String(count));
-      queueMicrotask(() => setReferralCount(count));
     }
   }, []);
 
@@ -355,8 +376,8 @@ export default function ThePresident() {
 
     if (hasUsedSecondChance) {
       setDeathMsg(death.msg);
-      if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
-      localStorage.removeItem("varon_save");
+      if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
+      telegramStorage.removeItem("varon_save");
       setPhase("gameover");
     } else {
       const paramKey = death.key;
@@ -427,7 +448,7 @@ export default function ThePresident() {
       setPhase("second_chance");
 
       try {
-        localStorage.setItem("varon_save", JSON.stringify({
+        telegramStorage.setItem("varon_save", JSON.stringify({
           stats: nextStats,
           months: nextMonth,
           deck,
@@ -465,7 +486,7 @@ export default function ThePresident() {
         setIsCrisis(false);
 
         try {
-          localStorage.setItem("varon_save", JSON.stringify({
+          telegramStorage.setItem("varon_save", JSON.stringify({
             stats: ns,
             months: rescueCard.targetMonth,
             deck,
@@ -481,8 +502,8 @@ export default function ThePresident() {
         hapticNotify("error");
         setDeathMsg("Вы отказались от сделки по спасению власти и предпочли с честью сложить полномочия.");
         const score = rescueCard.targetMonth - 1;
-        if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
-        localStorage.removeItem("varon_save");
+        if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
+        telegramStorage.removeItem("varon_save");
         setPhase("gameover");
       }
       return;
@@ -505,8 +526,8 @@ export default function ThePresident() {
         hapticNotify("error");
         setDeathMsg("Вы отказались от участия в выборах и добровольно ушли на покой. В Варонии наступила новая эпоха.");
         const score = months - 1;
-        if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
-        localStorage.removeItem("varon_save");
+        if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
+        telegramStorage.removeItem("varon_save");
         setPhase("gameover");
         return;
       }
@@ -540,17 +561,17 @@ export default function ThePresident() {
       if (newTerms >= 2) {
         hapticNotify("success");
         const score = newMonth - 1;
-        if (score > bestScore) { setBestScore(score); localStorage.setItem("varon_best", String(score)); }
+        if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
         if (score >= 96)      setPromoCode({ code: "WARONIA30", days: 30 });
         else if (score >= 48) setPromoCode({ code: "WARONIA14", days: 14 });
         else                  setPromoCode({ code: "WARONIA7",  days: 7  });
-        localStorage.removeItem("varon_save");
+        telegramStorage.removeItem("varon_save");
         
         const endObj = getVictoryEnding(ns, score);
         setUnlockedEndings(prev => {
           if (prev.includes(endObj.id)) return prev;
           const next = [...prev, endObj.id];
-          localStorage.setItem("varon_ends", JSON.stringify(next));
+          telegramStorage.setItem("varon_ends", JSON.stringify(next));
           return next;
         });
         unlockAchievement("victory");
@@ -562,7 +583,7 @@ export default function ThePresident() {
       setIsCrisis(false);
 
       try {
-        localStorage.setItem("varon_save", JSON.stringify({
+        telegramStorage.setItem("varon_save", JSON.stringify({
           stats: ns,
           months: newMonth,
           deck,
@@ -639,7 +660,7 @@ export default function ThePresident() {
       setCardIdx(nextCardIdx);
 
       try {
-        localStorage.setItem("varon_save", JSON.stringify({
+        telegramStorage.setItem("varon_save", JSON.stringify({
           stats: ns,
           months: newMonth,
           deck: nextDeck,
@@ -730,7 +751,7 @@ export default function ThePresident() {
   const handleNameSubmit = () => {
     const name = nameInput.trim() || "Президент";
     setPresidentName(name);
-    localStorage.setItem("varon_pname", name);
+    telegramStorage.setItem("varon_pname", name);
     setPhase("card");
     haptic("medium");
   };
@@ -752,7 +773,7 @@ export default function ThePresident() {
     setHasUsedSecondChance(false);
     setRescueCard(null);
     choosing.current = false;
-    localStorage.removeItem("varon_save");
+    telegramStorage.removeItem("varon_save");
   };
 
   // Открытие лендинга «Наружу» с сегментированной UTM-разметкой,
@@ -888,7 +909,7 @@ export default function ThePresident() {
                 <div className="story-image-frame">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/onboarding_dossier.png')} 
+                    src={getAsset('/images/onboarding_dossier.webp')} 
                     alt="Секретное досье" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
@@ -927,7 +948,7 @@ export default function ThePresident() {
                     <button onClick={() => { haptic("medium"); setPhase("card"); }} className="btn-velvet" style={{ marginBottom: 8 }}>
                       НОВЫЙ СРОК →
                     </button>
-                    <button onClick={() => { haptic("light"); setPresidentName(""); localStorage.removeItem("varon_pname"); }} className="btn-outline" style={{ width: "100%" }}>
+                    <button onClick={() => { haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }} className="btn-outline" style={{ width: "100%" }}>
                       ИГРАТЬ ЗА ДРУГОГО
                     </button>
                   </>
@@ -998,7 +1019,7 @@ export default function ThePresident() {
                 <div className="story-image-frame crisis ruins">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/palace_ruined.png')} 
+                    src={getAsset('/images/palace_ruined.webp')} 
                     alt="Разрушенный дворец" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
@@ -1112,7 +1133,7 @@ export default function ThePresident() {
                       <div className="story-image-frame" style={{ height: 150 }}>
                         <img 
                           className="frame-inner-img" 
-                          src={getAsset(`/images/ending_${ending.id}.png`)}
+                          src={getAsset(`/images/ending_${ending.id}.webp`)}
                           alt={ending.title} 
                           onError={e => e.currentTarget.style.display = 'none'} 
                         />
@@ -1219,7 +1240,7 @@ export default function ThePresident() {
           <div className="screen-scroll-container" style={{ background: FELT_BG }}>
             <div className="card-paper-container" style={{ animation: "electionPulse 2.5s ease infinite" }}>
               <div className="card-header-bar gold" style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                <img src={getAsset("/images/Vlasova_Press.png")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
+                <img src={getAsset("/images/Vlasova_Press.webp")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>Елена Власова</div>
                   <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>Пресс-секретарь</div>
@@ -1231,7 +1252,7 @@ export default function ThePresident() {
                 <div className="story-image-frame election">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/election_booth.png')} 
+                    src={getAsset('/images/election_booth.webp')} 
                     alt="Избирательный участок" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
@@ -1292,7 +1313,7 @@ export default function ThePresident() {
           <div className="screen-scroll-container" style={{ background: FELT_BG }}>
             <div className="card-paper-container crisis" style={{ animation: "electionPulse 2s ease infinite" }}>
               <div className="card-header-bar crisis" style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-                <img src={getAsset(ADVISORS[rescueCard.advisor]?.avatar || "/images/Zubov_Finance.png")} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
+                <img src={getAsset(ADVISORS[rescueCard.advisor]?.avatar || "/images/Zubov_Finance.webp")} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>{ADVISORS[rescueCard.advisor]?.name || "Советник"}</div>
                   <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>{ADVISORS[rescueCard.advisor]?.role || "Куратор"}</div>
@@ -1304,7 +1325,7 @@ export default function ThePresident() {
                 <div className="story-image-frame crisis">
                   <img 
                     className="frame-inner-img" 
-                    src={getAsset('/images/asset_red_phone.png')} 
+                    src={getAsset('/images/asset_red_phone.webp')} 
                     alt="Кризисный телефон" 
                     onError={e => e.currentTarget.style.display = 'none'} 
                   />
