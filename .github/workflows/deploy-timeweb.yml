@@ -35,5 +35,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          # Папка на сервере Timeweb (обычно /public_html/ внутри папки сайта)
-          # server-dir: /public_html/
+          # Веб-корень Timeweb — папка public_html (см. доку Timeweb).
+          # Для основного сайта: ./public_html/
+          # Для доп. сайта: ./ИМЯ-САЙТА/public_html/
+          server-dir: ./public_html/
