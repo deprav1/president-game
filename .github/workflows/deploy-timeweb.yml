@@ -39,3 +39,6 @@ jobs:
           # Для основного сайта: ./public_html/
           # Для доп. сайта: ./ИМЯ-САЙТА/public_html/
           server-dir: ./public_html/
+          # Чистим public_html перед заливкой, чтобы убрать дефолтную
+          # заглушку Timeweb (index.php/index.html), перебивающую игру.
+          dangerous-clean-slate: true
