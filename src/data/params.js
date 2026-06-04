@@ -7,6 +7,7 @@ export const PARAMS = [
   {
     key: "oligarchs",
     label: "Олигархи",
+    short: "Элиты",
     color: "#d4af37",
     icon: "/images/icon_treasury.webp",
     deathLow: [
@@ -23,6 +24,7 @@ export const PARAMS = [
   {
     key: "army",
     label: "Силовики",
+    short: "Армия",
     color: "#c0392b",
     icon: "/images/icon_loyalty.webp",
     deathLow: [
@@ -39,6 +41,7 @@ export const PARAMS = [
   {
     key: "people",
     label: "Население",
+    short: "Народ",
     color: "#27ae60",
     icon: "/images/icon_stability.webp",
     deathLow: [
@@ -55,6 +58,7 @@ export const PARAMS = [
   {
     key: "west",
     label: "Колл. Запад",
+    short: "Запад",
     color: "#2980b9",
     icon: "/images/icon_reputation.webp",
     deathLow: [

@@ -7,6 +7,12 @@ export default defineConfig({
   // Относительный base: один билд работает и с корня домена (Timeweb),
   // и из подпапки. Абсолютный '/president-game/' ломал ассеты на Timeweb.
   base: './',
+  // Build-id для cache-busting картинок: имена webp стабильны между
+  // перегенерациями, поэтому без версии браузер отдаёт старую картинку.
+  // getAsset() добавляет ?v=__BUILD_ID__ — каждый билд инвалидирует кэш.
+  define: {
+    __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
+  },
   build: {
     rollupOptions: {
       output: {

@@ -489,7 +489,8 @@ em, i { font-style: normal; }
   font-family: var(--font-text);
   font-size: 10px;
   line-height: 1;
-  letter-spacing: var(--ls-wide);
+  /* Узкий трекинг + короткие лейблы (param.short), чтобы влезали без обрезки. */
+  letter-spacing: 0.01em;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--status-color);
@@ -505,14 +506,32 @@ em, i { font-style: normal; }
 
 .intro-icon-shell {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
   border-radius: 7px;
-  background: rgba(26, 15, 0, 0.08);
-  border: 1px solid rgba(61, 37, 9, 0.1);
+  /* Прозрачный шелл: растровая иконка на чёрном сливается с карточкой. */
+  background: transparent;
   color: var(--color-gold);
+}
+
+/* Растровая иконка фракции в правилах онбординга. */
+.intro-raster-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.7));
+}
+
+/* Растровая иконка фракции в сетках итогов (gameover/victory). */
+.result-raster-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 3px;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
 }
 
 .intro-icon-shell.army {

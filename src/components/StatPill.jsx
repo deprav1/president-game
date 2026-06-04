@@ -34,7 +34,7 @@ export default function StatPill({ param, value, flash }) {
         <div className="stat-midline" />
       </div>
       <div className="stat-label">
-        {param.label.toUpperCase()}{isCritical ? "!" : ""}
+        {(param.short || param.label).toUpperCase()}{isCritical ? "!" : ""}
       </div>
     </div>
   );

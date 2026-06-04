@@ -1,6 +1,6 @@
 import { PARAMS } from "../data/params.js";
 import { getAsset } from "../lib/assets.js";
-import FactionIcon from "./FactionIcon.jsx";
+import StatIcon from "./StatIcon.jsx";
 import AchievementsList from "./AchievementsList.jsx";
 import DecisionLog from "./DecisionLog.jsx";
 
@@ -56,11 +56,7 @@ export default function GameOverScreen({
                       {isTooHigh ? "▲ MAX" : "▼ MIN"}
                     </div>
                   )}
-                  <FactionIcon
-                    type={p.key}
-                    className="result-vector-icon"
-                    style={{ color: isKiller ? "#c0392b" : p.color }}
-                  />
+                  <StatIcon param={p} className="result-raster-icon" />
                   <div className="font-typewriter" style={{ fontSize: 10, color: isKiller ? "#c0392b" : "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37", marginTop: 1 }}>
                     {stats[p.key]}
