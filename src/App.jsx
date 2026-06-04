@@ -159,6 +159,29 @@ export default function ThePresident() {
         try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
       }, 500);
     }
+
+    // Safe-area: в фуллскрине Telegram топбар уезжает под системные кнопки
+    // (закрыть/свернуть/время). Считаем верхний отступ = device safe-area +
+    // Telegram content-инсет и прокидываем в CSS-переменную --tg-safe-top.
+    const applyInsets = () => {
+      const sa = tg.safeAreaInset || {};
+      const csa = tg.contentSafeAreaInset || {};
+      const top = (sa.top || 0) + (csa.top || 0);
+      document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
+    };
+    applyInsets();
+    try {
+      tg.onEvent?.("safeAreaChanged", applyInsets);
+      tg.onEvent?.("contentSafeAreaChanged", applyInsets);
+      tg.onEvent?.("fullscreenChanged", applyInsets);
+    } catch { /* Старые клиенты без этих событий. */ }
+    return () => {
+      try {
+        tg.offEvent?.("safeAreaChanged", applyInsets);
+        tg.offEvent?.("contentSafeAreaChanged", applyInsets);
+        tg.offEvent?.("fullscreenChanged", applyInsets);
+      } catch { /* no-op */ }
+    };
   }, []);
 
   // Предзагрузка всех портретов и фонов карт на старте — свайп без мерцания.

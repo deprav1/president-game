@@ -217,7 +217,9 @@ em, i { font-style: normal; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px 8px;
+  /* Верхний отступ учитывает Telegram safe-area (--tg-safe-top), чтобы топбар
+     не уезжал под системные кнопки в фуллскрине. По умолчанию 0. */
+  padding: calc(10px + var(--tg-safe-top, 0px)) 14px 8px;
   background:
     linear-gradient(180deg, rgba(10, 10, 10, 0.97), rgba(6, 6, 6, 0.92)),
     linear-gradient(90deg, rgba(212, 175, 55, 0.04), transparent 40%, rgba(212, 175, 55, 0.04));
@@ -380,7 +382,7 @@ em, i { font-style: normal; }
   --status-color: var(--param-color);
   min-width: 0;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr);
   grid-template-areas:
     "icon track"
     "icon label";
@@ -410,23 +412,24 @@ em, i { font-style: normal; }
 
 .stat-icon-shell {
   grid-area: icon;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 7px;
   color: var(--status-color);
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  overflow: hidden;
+  /* Прозрачный шелл: чёрный фон растровой иконки сливается с пилюлей,
+     без «грязного квадрата». Для SVG-варианта фона тоже не нужно. */
+  background: transparent;
+  overflow: visible;
 }
 
-/* Растровая иконка шкалы (новые 3D-ассеты) */
+/* Растровая иконка шкалы (новые 3D-ассеты) — крупно и читаемо. */
 .stat-raster-icon {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  filter: drop-shadow(0 0 4px var(--status-color));
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 4px var(--status-color));
 }
 
 .stat-vector-icon {
@@ -798,14 +801,19 @@ em, i { font-style: normal; }
   }
 
   .stat-pill {
-    grid-template-columns: 21px minmax(0, 1fr);
+    grid-template-columns: 25px minmax(0, 1fr);
     column-gap: 5px;
     padding: 5px;
   }
 
   .stat-icon-shell {
-    width: 21px;
-    height: 21px;
+    width: 25px;
+    height: 25px;
+  }
+
+  .stat-raster-icon {
+    width: 23px;
+    height: 23px;
   }
 
   .stat-vector-icon {
