@@ -9,6 +9,8 @@ import { EXTRA_CARDS } from "./data/extraCards.js";
 import { getAsset } from "./lib/assets.js";
 import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast } from "./lib/gameHelpers.js";
 import FactionIcon from "./components/FactionIcon.jsx";
+import Topbar from "./components/Topbar.jsx";
+import OnboardingScreen from "./components/OnboardingScreen.jsx";
 import StatPill from "./components/StatPill.jsx";
 import ChoiceEffectRow from "./components/ChoiceEffectRow.jsx";
 import AchievementsList from "./components/AchievementsList.jsx";
@@ -717,31 +719,14 @@ export default function ThePresident() {
         <div className="top-line" />
 
         {/* ── ХЭДЕР ── */}
-        <header className={`game-topbar ${isCrisis ? "crisis" : ""}`}>
-          <div className="brand-lockup">
-            <div className="brand-mark-shell">
-              <FactionIcon type="crest" className="brand-mark" />
-            </div>
-            <div className="brand-copy">
-              <div className="brand-title">ВАРОНИЯ</div>
-              <div className="brand-meta">
-                {presidentName && <span className="brand-president">{presidentName}</span>}
-                <span>{monthName} {year}</span>
-                {isCrisis  && <span className="state-alert">КРИЗИС</span>}
-                {phase === "election" && <span className="state-election">ВЫБОРЫ</span>}
-              </div>
-            </div>
-          </div>
-          {/* Кнопка «Покинуть Варонию» */}
-          <button
-            onClick={() => { haptic("light"); setShowHub(true); }}
-            title="VPN Наружу — покинуть Варонию"
-            className="hub-launch"
-          >
-            <span className="hub-dot" />
-            <span className="hub-launch-text">ПОКИНУТЬ<br/>ВАРОНИЮ</span>
-          </button>
-        </header>
+        <Topbar
+          isCrisis={isCrisis}
+          presidentName={presidentName}
+          monthName={monthName}
+          year={year}
+          phase={phase}
+          onHubOpen={() => { haptic("light"); setShowHub(true); }}
+        />
 
         {/* ── ШКАЛЫ ── */}
         <div className="stats-panel">
@@ -750,109 +735,15 @@ export default function ThePresident() {
 
         {/* ════════════════════════════════ ОНБОРДИНГ ════════════════════════════════ */}
         {phase === "onboarding" && (
-          <div className="screen-scroll-container" style={{ background: FELT_BG }}>
-            <div className="card-paper-container">
-              <div className="card-header-bar">
-                <FactionIcon type="crest" className="dossier-brand-mark" />
-                <div className="font-display" style={{ fontSize: 20, fontWeight: 900, color: "#f5e6c8" }}>ВАРОНИЯ</div>
-                <div className="font-mono" style={{ fontSize: 10, fontWeight: 500, color: "#d4af37bb", marginTop: 3 }}>СЕКРЕТНОЕ ДОСЬЕ · ПРЕЗИДЕНТ</div>
-              </div>
-              <div className="card-content-area">
-                {/* Секретное досье (картинка-плейсхолдер) */}
-                <div className="story-image-frame">
-                  <img 
-                    className="frame-inner-img" 
-                    src={getAsset('/images/onboarding_dossier.webp')} 
-                    alt="Секретное досье" 
-                    onError={e => e.currentTarget.style.display = 'none'} 
-                  />
-                </div>
-                
-                <p style={{ fontSize: 15, lineHeight: 1.55, color: "#e0d8c8", fontWeight: 600, textAlign: "center", marginBottom: 14, letterSpacing: 0.2 }}>
-                  Поздравляем с избранием на пост Президента Республики Варония.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-                  {[
-                    { key: "oligarchs", text: "Элиты финансируют вас — не разочаруйте их" },
-                    { key: "army", text: "Армия защищает вас — пока вы её уважаете" },
-                    { key: "people", text: "Народ вас избрал — и может свергнуть" },
-                    { key: "west", text: "Запад наблюдает — с деньгами и санкциями" },
-                  ].map((item, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "6px 10px", border: "1px solid rgba(212,175,55,0.12)" }}>
-                      <span className={`intro-icon-shell ${item.key}`}>
-                        <FactionIcon type={item.key} className="intro-vector-icon" />
-                      </span>
-                      <span style={{ fontSize: 11, color: "#b8b0a0", lineHeight: 1.35 }}>{item.text}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: "rgba(139,0,0,0.08)", border: "1px solid rgba(139,0,0,0.15)", borderRadius: 8, padding: "8px 12px", marginBottom: 12, textAlign: "center" }}>
-                  <p style={{ fontSize: 12, color: "#e07a6a", fontWeight: 500, lineHeight: 1.45 }}>
-                    Если любая шкала упадёт в 0 или зашкалит до 100 — вас уберут.
-                  </p>
-                </div>
-              </div>
-              <div style={{ padding: "0 20px 12px" }}>
-                {presidentName ? (
-                  <>
-                    <div className="font-typewriter" style={{ textAlign: "center", fontSize: 11, color: "#caa23a", letterSpacing: 1, marginBottom: 10 }}>
-                      С возвращением, {presidentName}
-                    </div>
-                    <button onClick={() => { haptic("medium"); setPhase("card"); }} className="btn-velvet" style={{ marginBottom: 8 }}>
-                      НОВЫЙ СРОК →
-                    </button>
-                    <button onClick={() => { haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }} className="btn-outline" style={{ width: "100%" }}>
-                      ИГРАТЬ ЗА ДРУГОГО
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      maxLength={24}
-                      placeholder="Ваше имя (необязательно)"
-                      value={nameInput}
-                      onChange={e => setNameInput(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && handleNameSubmit()}
-                      style={{
-                        width: "100%", marginBottom: 10, padding: "10px 14px",
-                        background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.2)",
-                        borderRadius: 8, fontSize: 13, fontFamily: "var(--font-serif)",
-                        color: "#e0d8c8", outline: "none", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
-                      }}
-                    />
-                    <button onClick={handleNameSubmit} className="btn-velvet">
-                      ПРИСТУПИТЬ К ОБЯЗАННОСТЯМ
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* ── НАРУЖУ FOOTER ── */}
-              <div
-                onClick={() => openNaruzhu("onboarding")}
-                style={{
-                  padding: "8px 20px 12px", textAlign: "center", cursor: "pointer",
-                  borderTop: "1px solid #c9a84c22",
-                }}
-              >
-                <span className="font-typewriter" style={{
-                  fontSize: 10, color: "#caa23a",
-                  letterSpacing: 0.5, textDecoration: "underline", textUnderlineOffset: 2,
-                  opacity: 0.75,
-                }}>
-                  🚪 Игра от <b style={{ color: "#b45309" }}>Наружу</b> — надёжный VPN для свободного интернета
-                </span>
-              </div>
-
-              <div className="font-typewriter" style={{
-                position: "absolute", bottom: 4, right: 8,
-                fontSize: 10, color: "#ece0c422", letterSpacing: 1, pointerEvents: "none",
-              }}>
-                v1.3.0
-              </div>
-            </div>
-          </div>
+          <OnboardingScreen
+            presidentName={presidentName}
+            nameInput={nameInput}
+            onNameInput={setNameInput}
+            onNameSubmit={handleNameSubmit}
+            onNewTerm={() => { haptic("medium"); setPhase("card"); }}
+            onPlayAsOther={() => { haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
+            onNaruzhu={() => openNaruzhu("onboarding")}
+          />
         )}
 
         {/* ════════════════════════════════ GAME OVER ════════════════════════════════ */}
