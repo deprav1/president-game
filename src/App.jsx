@@ -15,6 +15,7 @@ import GameOverScreen from "./components/GameOverScreen.jsx";
 import VictoryScreen from "./components/VictoryScreen.jsx";
 import ElectionScreen from "./components/ElectionScreen.jsx";
 import SecondChanceScreen from "./components/SecondChanceScreen.jsx";
+import HubOverlay from "./components/HubOverlay.jsx";
 import StatPill from "./components/StatPill.jsx";
 import ChoiceEffectRow from "./components/ChoiceEffectRow.jsx";
 import AchievementsList from "./components/AchievementsList.jsx";
@@ -928,131 +929,15 @@ export default function ThePresident() {
 
         {/* ════════ VPN НАРУЖУ HUB — ПОКИНУТЬ ВАРОНИЮ ════════ */}
         {showHub && (
-          <div className="hub-overlay" onClick={() => setShowHub(false)}>
-            <div className="hub-card" onClick={e => e.stopPropagation()}>
-
-              {/* ── Hub header ── */}
-              <div className="hub-card-header">
-                <div>
-                  <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: NARUZHU_YELLOW, letterSpacing: 2 }}>
-                    🚪 ПОКИНУТЬ ВАРОНИЮ
-                  </div>
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
-                    VPN Наружу — свобода без блокировок
-                  </div>
-                </div>
-                <button onClick={() => setShowHub(false)} style={{ background:"none", border:"none", color:"#6b4c1e", fontSize:16, cursor:"pointer", padding:4 }}>✕</button>
-              </div>
-
-              <div className="hub-card-body">
-
-                {/* ── Рекорд ── */}
-                <div className="hub-stats-panel">
-                  <div>
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
-                    <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{bestScore} <span style={{ fontSize: 10 }}>МЕС.</span></div>
-                  </div>
-                  <div style={{ fontSize: 24 }}>🏆</div>
-                </div>
-
-                {/* ── Достижения ── */}
-                {achievements.length > 0 && (
-                  <div className="hub-section">
-                    <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ДОСТИЖЕНИЯ</div>
-                    <div className="hub-grid">
-                      {ACHIEVEMENTS_DEF.map(a => {
-                        const hasAch = achievements.includes(a.id);
-                        return (
-                          <div key={a.id} title={a.desc} className={`hub-grid-item ${hasAch ? "active" : "inactive"}`}>
-                            <span style={{ fontSize: 12 }}>{a.icon}</span>
-                            {hasAch && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{a.label}</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Хроника финалов ── */}
-                <div className="hub-section">
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
-                  <div className="hub-grid">
-                    {Object.values(ENDINGS).map(e => {
-                      const unlocked = unlockedEndings.includes(e.id);
-                      return (
-                        <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} className={`hub-grid-item ${unlocked ? "active" : "inactive"}`}>
-                          <span style={{ fontSize: 12 }}>{e.icon}</span>
-                          {unlocked && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{e.title}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 6, letterSpacing: 0.5 }}>
-                    {unlockedEndings.length} из {Object.keys(ENDINGS).length} финалов открыто
-                  </div>
-                </div>
-
-                {/* ── VPN Наружу — что это ── */}
-                <div className="hub-naruzhu-pitch">
-                  <div className="font-typewriter" style={{ fontSize: 10, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
-                    🔒 VPN НАРУЖУ — РЕАЛЬНЫЙ МИР
-                  </div>
-                  {[
-                    "YouTube, Instagram, Wikipedia без блокировок",
-                    "Без логов — ваш трафик никто не видит",
-                    "60+ стран, до 5 устройств одновременно",
-                    "Работает даже при замедлении Чебунета",
-                  ].map((feat, i) => (
-                    <div key={i} className="hub-feature-row">
-                      <span style={{ color: NARUZHU_YELLOW, fontWeight: 700 }}>▶</span>
-                      <span className="font-typewriter" style={{ fontSize: 11, color: "#c4a882", lineHeight: 1.4 }}>{feat}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ── Промокод ── */}
-                <div className="hub-promo-box">
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1, marginBottom: 4 }}>
-                    🎁 ПРОМОКОД — 7 ДНЕЙ БЕСПЛАТНО
-                  </div>
-                  <div
-                    className="hub-promo-code"
-                    onClick={() => { navigator.clipboard?.writeText("WARONIA"); haptic("light"); }}
-                  >
-                    WARONIA
-                  </div>
-                  <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
-                    Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>naruzhu.am</span>
-                  </div>
-                </div>
-
-                {/* ── Реферальный счётчик ── */}
-                {referralCount > 0 && (
-                  <div className="font-typewriter" style={{ fontSize: 11, color: "#b89a5e", textAlign: "center", letterSpacing: 0.5 }}>
-                    👥 Вы привели {referralCount} {referralCount === 1 ? "игрока" : "игроков"}
-                  </div>
-                )}
-
-                {/* ── CTA кнопка ── */}
-                <button onClick={() => openNaruzhu("hub")} className="btn-hub-cta">
-                  🌐 ОТКРЫТЬ VPN НАРУЖУ →
-                </button>
-
-                {/* ── Реферальная ссылка ── */}
-                <button onClick={() => {
-                  const tg = window.Telegram?.WebApp;
-                  const userId = tg?.initDataUnsafe?.user?.id || "guest";
-                  const refLink = `https://t.me/mr_president_gamebot?start=ref_${userId}`;
-                  const msg = `🦅 Играй за президента Варонии — принимай решения, удержись у власти!\n\n→ ${refLink}`;
-                  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(msg)}`;
-                  if (tg) tg.openLink(shareUrl); else window.open(shareUrl, "_blank");
-                  haptic("light");
-                }} className="btn-hub-secondary">
-                  📤 ПРИГЛАСИТЬ ДРУГА
-                </button>
-              </div>
-            </div>
-          </div>
+          <HubOverlay
+            onClose={() => setShowHub(false)}
+            bestScore={bestScore}
+            achievements={achievements}
+            unlockedEndings={unlockedEndings}
+            referralCount={referralCount}
+            onOpenNaruzhu={() => openNaruzhu("hub")}
+            haptic={haptic}
+          />
         )}
       </div>
     </>
