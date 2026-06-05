@@ -1,21 +1,26 @@
+import { useMemo } from "react";
 import { getAsset } from "../lib/assets.js";
+import { defeatVerdict } from "../data/verdicts.js";
 import AchievementsList from "./AchievementsList.jsx";
 
-// Экран поражения: причина, VPN-ревайв, скидка, достижения, шеринг/рестарт.
+// Экран поражения: причина, вердикт, VPN-ревайв, скидка, достижения, шеринг/рестарт.
 export default function GameOverScreen({
-  tenure, tenureLabel, deathMsg, achievements,
+  tenure, tenureLabel, deathMsg, achievements, killerKey,
   promoCode, canRevive, onShare, onRestart, onVpnRevive,
 }) {
+  const verdict = useMemo(() => defeatVerdict(killerKey), [killerKey]);
   return (
     <div className="screen-scroll-container">
-      <div className="card-paper-container crisis" style={{ paddingBottom: 16 }}>
-        <div className="card-header-bar crisis">
-          <div style={{ fontSize: 28, marginBottom: 2 }}>⚰️</div>
-          <div className="font-typewriter" style={{ fontSize: 13, letterSpacing: 4, color: "#c0392b", fontWeight: 700 }}>КОНЕЦ ПРАВЛЕНИЯ</div>
-          <div className="font-typewriter" style={{ fontSize: 11, color: "#caa23a", letterSpacing: 2, marginTop: 2 }}>
+      <div className="flow-defeat" style={{ paddingBottom: 16 }}>
+        <div className="flow-defeat-header">
+          <div style={{ fontSize: 34, marginBottom: 2 }}>⚰️</div>
+          <div className="flow-defeat-title">КОНЕЦ ПРАВЛЕНИЯ</div>
+          <div className="font-typewriter" style={{ fontSize: 12, color: "#8b9aa3", letterSpacing: 2, marginTop: 4 }}>
             {tenure} МЕС. У ВЛАСТИ — {tenureLabel}
           </div>
         </div>
+
+        <div className="flow-verdict">«{verdict}»</div>
 
         <div className="card-content-area">
           <div className="story-image-frame crisis ruins">

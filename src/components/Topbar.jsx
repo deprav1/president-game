@@ -21,11 +21,11 @@ export default function Topbar({ isCrisis, presidentName, monthName, year, phase
       {/* Кнопка «Покинуть Варонию» */}
       <button
         onClick={onHubOpen}
-        title="VPN Наружу — покинуть Варонию"
+        title="Личное дело · VPN Наружу"
         className="hub-launch"
       >
         <span className="hub-dot" />
-        <span className="hub-launch-text">ПОКИНУТЬ<br/>ВАРОНИЮ</span>
+        <span className="hub-launch-text">СБЕЖАТЬ<br/>НАРУЖУ</span>
       </button>
     </header>
   );

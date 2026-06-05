@@ -27,6 +27,10 @@ export default function GameCard({
 
   return (
     <div className={`game-card-screen${crisis}`}>
+      {/* Лента-сирена кризиса — явно «другой флоу» */}
+      {isCrisis && (
+        <div className="crisis-banner">🚨 ЭКСТРЕННАЯ СИТУАЦИЯ 🚨</div>
+      )}
       {/* Превью эффектов (реальные значения 1.2×) */}
       <div style={{ height: 24, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
         {previewFxReal && PARAMS.map(p => previewFxReal[p.key] !== 0 && (

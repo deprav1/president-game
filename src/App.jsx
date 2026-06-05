@@ -66,7 +66,7 @@ export default function ThePresident() {
   const [deck, setDeck]                 = useState(() => shuffle(ALL_CARDS));
   const [cardIdx, setCardIdx]           = useState(0);
   const [pendingEvents, setPendingEvents] = useState([]);
-  const [phase, setPhase]               = useState("onboarding");
+  const [phase, setPhase]               = useState(() => new URLSearchParams(location.search).get("p") || "onboarding");
   const [deathMsg, setDeathMsg]         = useState("");
   const [hovered, setHovered]           = useState(null);
   const [flashParams, setFlashParams]   = useState({});
@@ -74,7 +74,7 @@ export default function ThePresident() {
   const [crisisCard, setCrisisCard]     = useState(null);
   const [termsCompleted, setTermsCompleted] = useState(0);
   const [hasUsedSecondChance, setHasUsedSecondChance] = useState(false);
-  const [rescueCard, setRescueCard]     = useState(null);
+  const [rescueCard, setRescueCard]     = useState(() => new URLSearchParams(location.search).get("p") === "second_chance" ? { advisor: 1, text: "Разъярённая толпа окружила дворец. Генерал Громов предлагает ввести танки и объявить комендантский час.", agreeText: "Ввести танки (Силовики ↑, Народ ↑, Запад ↓)", fx: {}, targetStats: { oligarchs:50, army:50, people:0, west:50 }, targetMonth: 30 } : null);
   const [presidentName, setPresidentName] = useState("");
   const [nameInput, setNameInput]         = useState("");
   const [achievements, setAchievements]   = useState([]);
@@ -726,6 +726,7 @@ export default function ThePresident() {
 
   const tenure      = months - 1;
   const tenureLabel = tenure < 6 ? "КАТАСТРОФА" : tenure < 24 ? "ПРОВАЛ" : tenure < 48 ? "СЛАБО" : tenure < 96 ? "НЕПЛОХО" : tenure < 144 ? "КРЕПКИЙ ЛИДЕР" : "ЛЕГЕНДА";
+  const killerKey   = PARAMS.find(p => stats[p.key] <= 0 || stats[p.key] >= 100)?.key;
   const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
   // Цвета карты вынесены в CSS (.game-card / .game-card.crisis в App.css).
 
@@ -832,6 +833,7 @@ export default function ThePresident() {
             tenureLabel={tenureLabel}
             deathMsg={deathMsg}
             achievements={achievements}
+            killerKey={killerKey}
             promoCode={promoCode}
             canRevive={!hasUsedVpnRevive && reviveAvailable}
             onShare={shareGameOver}

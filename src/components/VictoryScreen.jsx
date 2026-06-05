@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { PARAMS } from "../data/params.js";
 import { getAsset } from "../lib/assets.js";
+import { victoryVerdict } from "../data/verdicts.js";
 import StatIcon from "./StatIcon.jsx";
 import AchievementsList from "./AchievementsList.jsx";
 import DecisionLog from "./DecisionLog.jsx";
@@ -11,16 +13,19 @@ const ENDING_NO_ICON_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker"];
 export default function VictoryScreen({
   tenure, ending, stats, achievements, decisionLog, promoCode, onCopyPromo, onShare, onRestart,
 }) {
+  const verdict = useMemo(() => victoryVerdict(), []);
   return (
     <div className="screen-scroll-container">
-      <div className="card-paper-container" style={{ paddingBottom: 16 }}>
-        <div className="card-header-bar gold">
-          <div style={{ fontSize: 32, marginBottom: 2 }}>🏛️</div>
-          <div className="font-typewriter" style={{ fontSize: 13, letterSpacing: 4, color: "#d4af37", fontWeight: 700 }}>ВЫ ВОШЛИ В ИСТОРИЮ</div>
-          <div className="font-typewriter" style={{ fontSize: 11, color: "#caa23a", letterSpacing: 2, marginTop: 2 }}>
+      <div className="flow-victory" style={{ paddingBottom: 16 }}>
+        <div className="flow-victory-header">
+          <div style={{ fontSize: 38, marginBottom: 2 }}>🏛️</div>
+          <div className="flow-victory-title">ВЫ ВОШЛИ В ИСТОРИЮ</div>
+          <div className="font-typewriter" style={{ fontSize: 12, color: "#caa23a", letterSpacing: 2, marginTop: 4 }}>
             {tenure} МЕСЯЦЕВ У ВЛАСТИ
           </div>
         </div>
+
+        <div className="flow-verdict">«{verdict}»</div>
 
         <div className="card-content-area">
           {ending && (

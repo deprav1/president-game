@@ -31,10 +31,10 @@ export default function HubOverlay({
         <div className="hub-card-header">
           <div>
             <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: NARUZHU_YELLOW, letterSpacing: 2 }}>
-              🚪 ПОКИНУТЬ ВАРОНИЮ
+              🗂️ ЛИЧНОЕ ДЕЛО
             </div>
-            <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
-              VPN Наружу — свобода без блокировок
+            <div className="font-typewriter" style={{ fontSize: 11, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
+              Рекорд, достижения · и выход на свободу
             </div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#6b4c1e", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
