@@ -25,6 +25,27 @@ import "./App.css";
 
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
 
+// Скидка зависит от длины рана: дольше правил — больше скидка.
+const discountFor = (tenure) => {
+  if (tenure >= 72) return { percent: 30, code: "WAR-X2P8-30" };
+  if (tenure >= 24) return { percent: 20, code: "WAR-M4Q9-20" };
+  return                   { percent: 10, code: "WAR-N7K2-10" };
+};
+
+// Строит UTM-размеченный URL на сайт «Наружу».
+const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId = "") => {
+  const p = new URLSearchParams({
+    utm_source: "varonia",
+    utm_medium: "game",
+    utm_campaign: campaign,
+  });
+  if (content) p.set("utm_content", content);
+  if (months > 0) p.set("m", String(months));
+  if (ctaId) p.set("ab", ctaId);
+  if (promoCode?.code) p.set("promo", promoCode.code);
+  return `https://naruzhu.am/?${p.toString()}`;
+};
+
 // A/B-тест текста CTA-кнопки «Наружу» на карте.
 const CTA_VARIANTS = [
   { id: "exit",     label: "🌐 VPN Наружу — выйти из Варонии" },
@@ -113,11 +134,16 @@ export default function ThePresident() {
     loadData();
   }, []);
 
-  const touchStart = useRef(null);
-  const choosing   = useRef(false);
+  const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
+  const [reviveAvailable, setReviveAvailable]   = useState(false);
+
+  const touchStart    = useRef(null);
+  const choosing      = useRef(false);
   const swipeTriggered = useRef(false);
-  const cardRef    = useRef(null);
-  const lastDirRef = useRef(null);
+  const cardRef       = useRef(null);
+  const lastDirRef    = useRef(null);
+  // Хранит последние 3 снапшота состояния ДО каждого решения (для VPN-ревайва).
+  const historyRef    = useRef([]);
 
   const haptic = useCallback((type = "light") => {
     const tg = window.Telegram?.WebApp;
@@ -249,6 +275,7 @@ export default function ThePresident() {
 
     if (hasUsedSecondChance) {
       setDeathMsg(death.msg);
+      setPromoCode(discountFor(score));
       if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
       telegramStorage.removeItem("varon_save");
       setPhase("gameover");
@@ -375,6 +402,7 @@ export default function ThePresident() {
         hapticNotify("error");
         setDeathMsg("Вы отказались от сделки по спасению власти и предпочли с честью сложить полномочия.");
         const score = rescueCard.targetMonth - 1;
+        setPromoCode(discountFor(score));
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
         telegramStorage.removeItem("varon_save");
         setPhase("gameover");
@@ -399,6 +427,7 @@ export default function ThePresident() {
         hapticNotify("error");
         setDeathMsg("Вы отказались от участия в выборах и добровольно ушли на покой. В Варонии наступила новая эпоха.");
         const score = months - 1;
+        setPromoCode(discountFor(score));
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
         telegramStorage.removeItem("varon_save");
         setPhase("gameover");
@@ -435,9 +464,7 @@ export default function ThePresident() {
         hapticNotify("success");
         const score = newMonth - 1;
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-        if (score >= 96)      setPromoCode({ code: "WARONIA30", days: 30 });
-        else if (score >= 48) setPromoCode({ code: "WARONIA14", days: 14 });
-        else                  setPromoCode({ code: "WARONIA7",  days: 7  });
+        setPromoCode(discountFor(score));
         telegramStorage.removeItem("varon_save");
         
         const endObj = getVictoryEnding(ns, score);
@@ -483,6 +510,10 @@ export default function ThePresident() {
     }
 
     setTimeout(() => {
+      // Снапшот состояния ДО решения — для VPN-ревайва (откат 2 ходов).
+      historyRef.current = [...historyRef.current.slice(-2), { stats, months, deck, cardIdx, pendingEvents }];
+      setReviveAvailable(true);
+
       const { ns, fl } = applyFx(fx, stats);
       setFlashParams(fl);
       setTimeout(() => setFlashParams({}), 600);
@@ -644,8 +675,11 @@ export default function ThePresident() {
     setPendingEvents([]);
     setDecisionLog([]);
     setHasUsedSecondChance(false);
+    setHasUsedVpnRevive(false);
+    setReviveAvailable(false);
     setRescueCard(null);
     choosing.current = false;
+    historyRef.current = [];
     telegramStorage.removeItem("varon_save");
   };
 
@@ -653,18 +687,41 @@ export default function ThePresident() {
   // чтобы различать источник клика (онбординг / карта / хаб), конкретную карту,
   // прогресс игрока и выданный промокод для атрибуции конверсий.
   const openNaruzhu = (source = "hub", content = "") => {
-    const params = new URLSearchParams({
-      utm_source: "varonia",
-      utm_medium: "game",
-      utm_campaign: source,
-    });
-    if (content) params.set("utm_content", content);
-    params.set("m", String(Math.max(0, months - 1)));
-    if (ctaVariant?.id) params.set("ab", ctaVariant.id);
-    if (promoCode?.code) params.set("promo", promoCode.code);
-    const url = `https://naruzhu.am/?${params.toString()}`;
+    const url = naruzhuUrl(source, content, Math.max(0, months - 1), promoCode, ctaVariant?.id);
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
+  };
+
+  // VPN-ревайв: открывает размеченную ссылку, откатывает последние 2 решения.
+  const reviveViaVpn = () => {
+    openNaruzhu("revive");
+    const hist = historyRef.current;
+    const snap = hist.length >= 2 ? hist[hist.length - 2] : hist[0];
+    if (!snap) return;
+    setStats(snap.stats);
+    setMonths(snap.months);
+    setDeck(snap.deck);
+    setCardIdx(snap.cardIdx);
+    setPendingEvents(snap.pendingEvents);
+    setHasUsedVpnRevive(true);
+    setReviveAvailable(false);
+    setDeathMsg("");
+    setIsCrisis(false);
+    setPromoCode(null);
+    try {
+      telegramStorage.setItem("varon_save", JSON.stringify({
+        stats: snap.stats,
+        months: snap.months,
+        deck: snap.deck,
+        cardIdx: snap.cardIdx,
+        pendingEvents: snap.pendingEvents,
+        hasUsedSecondChance,
+        rescueCard: null,
+        termsCompleted,
+        phase: "card",
+      }));
+    } catch { /* no-op */ }
+    setPhase("card");
   };
 
   const tenure      = months - 1;
@@ -696,7 +753,7 @@ export default function ThePresident() {
       high: `Меня назвали марионеткой Вашингтона. Националисты не оценили. ${tenure} мес.`,
     },
   };
-  const PROMO_LINE = `\n🚪 Промокод WARONIA → 7 дней «Наружу» бесплатно: naruzhu.am`;
+  const PROMO_LINE = `\n🔒 7 дней VPN «Наружу» бесплатно — промокод WARONIA: ${naruzhuUrl("share", "", Math.max(0, months - 1))}`;
   const BOT_LINK   = "t.me/mr_president_gamebot/mr_president";
 
   const shareGameOver = () => {
@@ -775,8 +832,11 @@ export default function ThePresident() {
             tenureLabel={tenureLabel}
             deathMsg={deathMsg}
             achievements={achievements}
+            promoCode={promoCode}
+            canRevive={!hasUsedVpnRevive && reviveAvailable}
             onShare={shareGameOver}
             onRestart={restart}
+            onVpnRevive={reviveViaVpn}
           />
         )}
 

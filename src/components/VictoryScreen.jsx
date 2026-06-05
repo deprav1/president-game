@@ -77,13 +77,16 @@ export default function VictoryScreen({
           {promoCode && (
             <div className="hub-promo-box" style={{ marginBottom: 14 }}>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                🎁 ПОДАРОК ЗА ПОБЕДУ — {promoCode.days} ДНЕЙ VPN НАРУЖУ
+                🎁 СКИДКА {promoCode.percent}% НА VPN «НАРУЖУ» ЗА ПОБЕДУ
               </div>
-              <div className="hub-promo-code" onClick={onCopyPromo}>
+              <div className="hub-promo-code" style={{ letterSpacing: 2.5 }} onClick={onCopyPromo}>
                 {promoCode.code}
               </div>
-              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
+              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
                 Копировать · Активация на naruzhu.am
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 9, color: "#6b4c1e", marginTop: 3 }}>
+                или 7 дней бесплатно — промокод WARONIA
               </div>
             </div>
           )}
