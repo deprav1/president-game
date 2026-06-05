@@ -154,24 +154,20 @@ export default function ThePresident() {
     tg.expand();
     setTimeout(() => tg.expand(), 300);
     setTimeout(() => tg.expand(), 1000);
-    if (typeof tg.requestFullscreen === "function" && telegramVersionAtLeast(tg, "8.0")) {
-      try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
-      setTimeout(() => {
-        try { tg.requestFullscreen(); } catch { /* Older Telegram clients can expose unsupported methods. */ }
-      }, 500);
+    // НЕ используем requestFullscreen: в фуллскрине контент уезжает под
+    // системный статус-бар и кнопки Telegram (Закрыть/⋮), а инсеты приходят
+    // ненадёжно → перекрытие шапки. Без фуллскрина Telegram сам рисует свою
+    // шапку НАД webview, и наш интерфейс начинается ниже — без наложений.
+    if (typeof tg.disableVerticalSwipes === "function") {
+      try { tg.disableVerticalSwipes(); } catch { /* optional */ }
     }
 
-    // Safe-area: в фуллскрине Telegram топбар уезжает под системные кнопки
-    // (закрыть/свернуть/время). Считаем верхний отступ = device safe-area +
-    // Telegram content-инсет и прокидываем в CSS-переменную --tg-safe-top.
+    // Safe-area: на устройствах с «чёлкой» учитываем верхний инсет. В обычном
+    // (не фуллскрин) режиме Telegram он обычно 0 — шапку держит сам Telegram.
     const applyInsets = () => {
       const sa = tg.safeAreaInset || {};
       const csa = tg.contentSafeAreaInset || {};
-      let top = (sa.top || 0) + (csa.top || 0);
-      // В фуллскрине Telegram держит ✕/⋯ в правом верхнем углу. Если инсеты
-      // ещё не пришли (медленный/старый клиент) — гарантируем минимальный
-      // отступ, чтобы кнопка «Покинуть» не лезла под системные кнопки.
-      if (tg.isFullscreen && top < 50) top = 50;
+      const top = (sa.top || 0) + (csa.top || 0);
       document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
     };
     applyInsets();
