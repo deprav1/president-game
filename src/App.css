@@ -842,10 +842,10 @@ em, i { font-style: normal; }
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url('/images/imperial_empty_throne_1780579902857.webp');
+  background-image: url('/images/imperial_eagle_cracked_1780579894115.webp');
   background-size: cover;
   background-position: center;
-  opacity: 0.17;
+  opacity: 0.15;
   -webkit-mask-image: radial-gradient(ellipse 75% 70% at center, #000 25%, transparent 88%);
   mask-image: radial-gradient(ellipse 75% 70% at center, #000 25%, transparent 88%);
 }
