@@ -10,9 +10,17 @@ const NARUZHU_FEATURES = [
   "Работает даже при замедлении Чебунета",
 ];
 
+const shareCountLabel = (count) => {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return "раз";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "раза";
+  return "раз";
+};
+
 // Модал «Покинуть Варонию»: рекорд, достижения, хроника финалов, оффер VPN Наружу.
 export default function HubOverlay({
-  onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, haptic,
+  onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
 }) {
   const shareReferral = () => {
     const tg = window.Telegram?.WebApp;
@@ -21,6 +29,7 @@ export default function HubOverlay({
     const msg = `🦅 Играй за президента Варонии — принимай решения, удержись у власти!\n\n→ ${refLink}`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(msg)}`;
     if (tg) tg.openLink(shareUrl); else window.open(shareUrl, "_blank");
+    onReferralShared();
     haptic("light");
   };
 
@@ -114,7 +123,7 @@ export default function HubOverlay({
 
           {referralCount > 0 && (
             <div className="font-typewriter" style={{ fontSize: 11, color: "#b89a5e", textAlign: "center", letterSpacing: 0.5 }}>
-              👥 Вы привели {referralCount} {referralCount === 1 ? "игрока" : "игроков"}
+              👥 Вы поделились приглашением {referralCount} {shareCountLabel(referralCount)}
             </div>
           )}
 

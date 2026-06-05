@@ -85,6 +85,8 @@ export default function ThePresident() {
   const [ctaVariant, setCtaVariant]       = useState(CTA_VARIANTS[0]);
   const [decisionLog, setDecisionLog]     = useState([]);
   const [unlockedEndings, setUnlockedEndings] = useState([]);
+  const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
+  const [reviveAvailable, setReviveAvailable]   = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -103,6 +105,7 @@ export default function ThePresident() {
         setPhase(savedRun.phase || "card");
         setTermsCompleted(savedRun.termsCompleted || 0);
         setHasUsedSecondChance(savedRun.hasUsedSecondChance || false);
+        setHasUsedVpnRevive(savedRun.hasUsedVpnRevive || false);
         setRescueCard(savedRun.rescueCard || null);
       }
 
@@ -110,14 +113,7 @@ export default function ThePresident() {
       try { setAchievements(JSON.parse(data["varon_ach"] || "[]")); } catch {}
       setBestScore(safeInt(data["varon_best"]));
       
-      let refs = safeInt(data["varon_refs"]);
-      const tg = window.Telegram?.WebApp;
-      const startParam = tg?.initDataUnsafe?.start_param || "";
-      if (startParam.startsWith("ref_")) {
-        refs += 1;
-        telegramStorage.setItem("varon_refs", String(refs));
-      }
-      setReferralCount(refs);
+      setReferralCount(safeInt(data["varon_refs"]));
 
       try { setUnlockedEndings(JSON.parse(data["varon_ends"] || "[]")); } catch {}
 
@@ -133,9 +129,6 @@ export default function ThePresident() {
     }
     loadData();
   }, []);
-
-  const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
-  const [reviveAvailable, setReviveAvailable]   = useState(false);
 
   const touchStart    = useRef(null);
   const choosing      = useRef(false);
@@ -355,6 +348,7 @@ export default function ThePresident() {
           cardIdx,
           pendingEvents: nextPendingEvents,
           hasUsedSecondChance: false,
+          hasUsedVpnRevive,
           rescueCard: {
             advisor: advisorId,
             text: rescueText,
@@ -368,7 +362,7 @@ export default function ThePresident() {
         }));
       } catch { /* Save failure should not interrupt the current run. */ }
     }
-  }, [hasUsedSecondChance, bestScore, deck, cardIdx, pendingEvents, termsCompleted, hapticNotify]);
+  }, [hasUsedSecondChance, hasUsedVpnRevive, bestScore, deck, cardIdx, pendingEvents, termsCompleted, hapticNotify]);
 
   const choose = useCallback((side) => {
     if (choosing.current) return;
@@ -393,6 +387,7 @@ export default function ThePresident() {
             cardIdx,
             pendingEvents,
             hasUsedSecondChance: true,
+            hasUsedVpnRevive,
             rescueCard: null,
             termsCompleted,
             phase: "card"
@@ -490,6 +485,7 @@ export default function ThePresident() {
           cardIdx,
           pendingEvents,
           hasUsedSecondChance,
+          hasUsedVpnRevive,
           rescueCard,
           termsCompleted: newTerms,
           phase: "card"
@@ -571,6 +567,7 @@ export default function ThePresident() {
           cardIdx: nextCardIdx,
           pendingEvents: newPending,
           hasUsedSecondChance,
+          hasUsedVpnRevive,
           rescueCard,
           termsCompleted,
           phase: "card"
@@ -589,7 +586,7 @@ export default function ThePresident() {
         setCrisisCard(CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)]);
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -716,6 +713,7 @@ export default function ThePresident() {
         cardIdx: snap.cardIdx,
         pendingEvents: snap.pendingEvents,
         hasUsedSecondChance,
+        hasUsedVpnRevive: true,
         rescueCard: null,
         termsCompleted,
         phase: "card",
@@ -898,6 +896,13 @@ export default function ThePresident() {
             unlockedEndings={unlockedEndings}
             referralCount={referralCount}
             onOpenNaruzhu={() => openNaruzhu("hub")}
+            onReferralShared={() => {
+              setReferralCount(prev => {
+                const next = prev + 1;
+                telegramStorage.setItem("varon_refs", String(next));
+                return next;
+              });
+            }}
             haptic={haptic}
           />
         )}

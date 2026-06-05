@@ -21,6 +21,7 @@ export const validateSave = (save) => {
   if (typeof save.months !== "number" || save.months < 1) return null;
   if (typeof save.cardIdx !== "number" || save.cardIdx < 0) return null;
   if (!Array.isArray(save.pendingEvents)) return null;
+  if (save.hasUsedVpnRevive != null && typeof save.hasUsedVpnRevive !== "boolean") return null;
   if (save.rescueCard != null) {
     const rc = save.rescueCard;
     if (typeof rc.agreeText !== "string" || !rc.agreeText) return null;
