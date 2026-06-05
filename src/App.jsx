@@ -172,7 +172,7 @@ export default function ThePresident() {
       if (canFullscreen) {
         // Минимум, перекрывающий статус-бар + плавающие кнопки Telegram,
         // даже если инсеты ещё не пришли (top = 0).
-        top = Math.max(top, 92);
+        top = Math.max(top, 64);
       }
       document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
     };
