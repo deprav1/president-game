@@ -56,7 +56,7 @@ export default function GameOverScreen({
                       {isTooHigh ? "▲ MAX" : "▼ MIN"}
                     </div>
                   )}
-                  <StatIcon param={p} className="result-raster-icon" />
+                  <StatIcon param={p} className="result-stat-icon" style={{ color: isKiller ? "#c0392b" : p.color }} />
                   <div className="font-typewriter" style={{ fontSize: 10, color: isKiller ? "#c0392b" : "#6b4c1e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: isKiller ? "#c0392b" : stats[p.key] > 65 ? "#27ae60" : "#d4af37", marginTop: 1 }}>
                     {stats[p.key]}

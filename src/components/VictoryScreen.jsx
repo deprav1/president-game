@@ -63,7 +63,7 @@ export default function VictoryScreen({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "14px 0 12px" }}>
             {PARAMS.map(p => (
               <div key={p.key} style={{ background: "#0a0a0a", border: `1px solid ${p.color}22`, borderRadius: 8, padding: "8px 10px", boxShadow: `0 0 8px ${p.color}10` }}>
-                <StatIcon param={p} className="result-raster-icon" />
+                <StatIcon param={p} className="result-stat-icon" style={{ color: p.color }} />
                 <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 0.5, marginTop: 2 }}>{p.label.toUpperCase()}</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: p.color, marginTop: 1 }}>{stats[p.key]}</div>
               </div>

@@ -41,7 +41,7 @@ export default function OnboardingScreen({
             {INTRO_RULES.map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "6px 10px", border: "1px solid rgba(212,175,55,0.12)" }}>
                 <span className={`intro-icon-shell ${item.key}`}>
-                  <StatIcon param={paramByKey(item.key)} className="intro-raster-icon" />
+                  <StatIcon param={paramByKey(item.key)} className="intro-stat-icon" />
                 </span>
                 <span style={{ fontSize: 11, color: "#b8b0a0", lineHeight: 1.35 }}>{item.text}</span>
               </div>

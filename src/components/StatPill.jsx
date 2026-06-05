@@ -1,7 +1,7 @@
-import { getAsset } from "../lib/assets.js";
+import FactionIcon from "./FactionIcon.jsx";
 
 // Шкала параметра/фракции с цветовыми состояниями (norm/warn/danger/critical).
-// Использует растровые иконки из params.icon.
+// Иконка — векторный глиф (прозрачный, наследует --status-color).
 export default function StatPill({ param, value, flash }) {
   const pct        = Math.max(0, Math.min(100, value));
   const isCritical = pct <= 8  || pct >= 92;
@@ -12,15 +12,7 @@ export default function StatPill({ param, value, flash }) {
   return (
     <div className={`stat-pill ${param.key} ${state}`} style={{ "--param-color": param.color }}>
       <div className="stat-icon-shell">
-        {param.icon ? (
-          <img
-            src={getAsset(param.icon)}
-            alt=""
-            className="stat-raster-icon"
-          />
-        ) : (
-          <span className="stat-vector-icon" />
-        )}
+        <FactionIcon type={param.key} className="stat-vector-icon" />
       </div>
       <div className="stat-track">
         <div className="stat-safe-zone" />
