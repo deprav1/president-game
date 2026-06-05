@@ -781,6 +781,108 @@ em, i { font-style: normal; }
   flex-shrink: 0;
 }
 
+/* ─── ИГРОВАЯ КАРТА: ТЕМА (все цвета правятся здесь, не в JSX) ─── */
+.game-card-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px 12px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 22%, #0e0e0e 0%, #080808 48%, #040404 100%);
+}
+.game-card-screen.crisis {
+  background: radial-gradient(circle at 50% 22%, #1a0000 0%, #0e0303 50%, #060202 100%);
+}
+
+.game-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #0e0e0e 0%, #0a0a0a 50%, #070707 100%);
+  border: 1px solid #c9a84c;
+  color: #e0d8c8;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.game-card.crisis {
+  background: linear-gradient(160deg, #140000 0%, #1a0000 50%, #140000 100%);
+  border-color: #8b0000;
+  color: #f0c0c0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  animation: crisisShake 0.4s ease;
+}
+
+.game-card-header {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: linear-gradient(to right, #141008, #0c0a04, #141008);
+}
+.game-card-header.crisis {
+  background: linear-gradient(to right, #2a0000, #1a0000, #2a0000);
+}
+
+.game-card-text {
+  font-size: 16px;
+  line-height: 1.55;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: 0.1px;
+  z-index: 1;
+  color: inherit; /* наследует .game-card color (norm/crisis) */
+}
+
+.game-card-divider {
+  height: 1px;
+  margin: 0 16px;
+  background: linear-gradient(to right, transparent, #c9a84c66, transparent);
+}
+.game-card.crisis .game-card-divider {
+  background: linear-gradient(to right, transparent, #8b000066, transparent);
+}
+
+/* Кнопки выбора: .active вешается из JS (свайп/ховер), цвета — тут */
+.game-choice-btn {
+  border-radius: 8px;
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 92px;
+  background: linear-gradient(135deg, #2c1a06, #1a0f00);
+  color: #c4a882;
+  border: 1px solid #c9a84c44;
+}
+.game-choice-btn.active {
+  background: linear-gradient(135deg, #8b0000, #6b0000);
+  color: #f5e6c8;
+  border-color: #d4af37;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 8px rgba(212,175,55,0.2);
+}
+.game-choice-btn-label {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  margin-bottom: 4px;
+  font-weight: 700;
+  color: #8b6914;
+}
+.game-choice-btn.active .game-choice-btn-label {
+  color: #d4af37;
+}
+.game-choice-btn-text {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 /* Компактный режим для большинства смартфонов (iPhone 12/13/14/15, Pixel и т.д.) */
 @media (max-height: 900px) {
   .screen-scroll-container {

@@ -24,8 +24,6 @@ import { telegramStorage } from "./utils/telegramStorage.js";
 import "./App.css";
 
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
-const FELT_BG   = `radial-gradient(circle at 50% 22%,#0e0e0e 0%,#080808 48%,#040404 100%)`;
-const CRISIS_BG = `radial-gradient(circle at 50% 22%,#1a0000 0%,#0e0303 50%,#060202 100%)`;
 
 // A/B-тест текста CTA-кнопки «Наружу» на карте.
 const CTA_VARIANTS = [
@@ -653,14 +651,7 @@ export default function ThePresident() {
   const tenure      = months - 1;
   const tenureLabel = tenure < 6 ? "КАТАСТРОФА" : tenure < 24 ? "ПРОВАЛ" : tenure < 48 ? "СЛАБО" : tenure < 96 ? "НЕПЛОХО" : tenure < 144 ? "КРЕПКИЙ ЛИДЕР" : "ЛЕГЕНДА";
   const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
-  const cardBg      = isCrisis ? CRISIS_BG : FELT_BG;
-  const cardPaperBg = isCrisis
-    ? "linear-gradient(160deg,#140000 0%,#1a0000 50%,#140000 100%)"
-    : "linear-gradient(160deg,#0e0e0e 0%,#0a0a0a 50%,#070707 100%)";
-  const cardTextColor = isCrisis ? "#f0c0c0" : "#e0d8c8";
-  const headerBg    = isCrisis
-    ? "linear-gradient(to right,#2a0000,#1a0000,#2a0000)"
-    : "linear-gradient(to right,#141008,#0c0a04,#141008)";
+  // Цвета карты вынесены в CSS (.game-card / .game-card.crisis в App.css).
 
   // Превью с реальным сбалансированным масштабом
   const previewFxReal = hovered && currentCard
@@ -791,10 +782,6 @@ export default function ThePresident() {
           <GameCard
             previewFxReal={previewFxReal}
             isCrisis={isCrisis}
-            cardBg={cardBg}
-            cardPaperBg={cardPaperBg}
-            cardTextColor={cardTextColor}
-            headerBg={headerBg}
             advisor={advisor}
             currentCard={currentCard}
             hovered={hovered}
