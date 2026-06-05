@@ -14,6 +14,17 @@ export default function GameCard({
 }) {
   const crisis = isCrisis ? " crisis" : "";
 
+  let bgImage = currentCard.bgImage;
+  if (!bgImage) {
+    if (currentCard.advisor === 2) {
+      bgImage = "/images/bg_press.webp";
+    } else if (currentCard.advisor === 3) {
+      bgImage = "/images/bg_kremlin_night.webp";
+    } else if (currentCard.advisor === 4) {
+      bgImage = "/images/bg_west_summit.webp";
+    }
+  }
+
   return (
     <div className={`game-card-screen${crisis}`}>
       {/* Превью эффектов (реальные значения 1.2×) */}
@@ -58,15 +69,17 @@ export default function GameCard({
 
           {/* Текст карты */}
           <div style={{ flex: 1, padding: "16px 18px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
-            {currentCard.bgImage && (
+            {/* Атмосферный фон-подложка «мир Варонии» (заполняет пустоту) */}
+            <div className="game-card-ambiance" />
+            {bgImage && (
               <div style={{
                 position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-                backgroundImage: `url(${getAsset(currentCard.bgImage)})`,
+                backgroundImage: `url(${getAsset(bgImage)})`,
                 backgroundSize: "cover", backgroundPosition: "center",
                 opacity: 0.22, zIndex: 0, pointerEvents: "none"
               }} />
             )}
-            <img src={getAsset(advisor.avatar)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} />
+            <img src={getAsset(currentCard.assetImage || advisor.avatar)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} />
             {hovered && (
               <div style={{
                 position: "absolute", top: 12, left: "50%", transform: `translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,

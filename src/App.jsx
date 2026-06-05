@@ -37,8 +37,8 @@ const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
-  // Значение не читается в UI; оставляем только сеттер (флаг инициализации).
-  const [, setIsInitializing] = useState(true);
+  // Состояние инициализации приложения (лоадер на старте).
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const [stats, setStats]               = useState({ oligarchs:50, army:50, people:50, west:50 });
   const [months, setMonths]             = useState(1);
@@ -705,6 +705,17 @@ export default function ThePresident() {
   };
 
   // ─── РЕНДЕР ───────────────────────────────────────────────────────────────
+  if (isInitializing) {
+    return (
+      <div className="loading-splash-screen">
+        <div className="loading-splash-content">
+          <div className="loading-spinner" />
+          <div className="loading-text">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="app-shell" style={{ background: WOOD_BG }}>
