@@ -167,7 +167,11 @@ export default function ThePresident() {
     const applyInsets = () => {
       const sa = tg.safeAreaInset || {};
       const csa = tg.contentSafeAreaInset || {};
-      const top = (sa.top || 0) + (csa.top || 0);
+      let top = (sa.top || 0) + (csa.top || 0);
+      // В фуллскрине Telegram держит ✕/⋯ в правом верхнем углу. Если инсеты
+      // ещё не пришли (медленный/старый клиент) — гарантируем минимальный
+      // отступ, чтобы кнопка «Покинуть» не лезла под системные кнопки.
+      if (tg.isFullscreen && top < 50) top = 50;
       document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
     };
     applyInsets();
