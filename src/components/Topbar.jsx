@@ -1,7 +1,7 @@
 import FactionIcon from "./FactionIcon.jsx";
 
-// Верхняя панель: герб/бренд, месяц-год, статусы (кризис/выборы), кнопка «Наружу».
-export default function Topbar({ isCrisis, presidentName, monthName, year, phase, onHubOpen }) {
+// Верхняя панель: герб/бренд, срок правления, статусы (кризис/выборы), кнопка хаба.
+export default function Topbar({ isCrisis, presidentName, monthName, year, tenure, phase, onHubOpen }) {
   return (
     <header className={`game-topbar ${isCrisis ? "crisis" : ""}`}>
       <div className="brand-lockup">
@@ -12,7 +12,8 @@ export default function Topbar({ isCrisis, presidentName, monthName, year, phase
           <div className="brand-title">ВАРОНИЯ</div>
           <div className="brand-meta">
             {presidentName && <span className="brand-president">{presidentName}</span>}
-            <span>{monthName} {year}</span>
+            <span className="brand-tenure">Срок: {tenure} мес.</span>
+            <span className="brand-date">{monthName} {year}</span>
             {isCrisis && <span className="state-alert">КРИЗИС</span>}
             {phase === "election" && <span className="state-election">ВЫБОРЫ</span>}
           </div>
@@ -21,11 +22,11 @@ export default function Topbar({ isCrisis, presidentName, monthName, year, phase
       {/* Кнопка «Покинуть Варонию» */}
       <button
         onClick={onHubOpen}
-        title="Личное дело · VPN Наружу"
+        title="Покинуть Варонию · личное дело"
         className="hub-launch"
       >
         <span className="hub-dot" />
-        <span className="hub-launch-text">СБЕЖАТЬ<br/>НАРУЖУ</span>
+        <span className="hub-launch-text">ПОКИНУТЬ<br/>ВАРОНИЮ</span>
       </button>
     </header>
   );

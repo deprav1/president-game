@@ -42,8 +42,8 @@ export default function HubOverlay({
             <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: NARUZHU_YELLOW, letterSpacing: 2 }}>
               🗂️ ЛИЧНОЕ ДЕЛО
             </div>
-            <div className="font-typewriter" style={{ fontSize: 11, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
-              Рекорд, достижения · и выход на свободу
+            <div className="font-typewriter" style={{ fontSize: 12, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
+              Рекорд, достижения · покинуть Варонию
             </div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#6b4c1e", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
@@ -95,13 +95,13 @@ export default function HubOverlay({
           </div>
 
           <div className="hub-naruzhu-pitch">
-            <div className="font-typewriter" style={{ fontSize: 10, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
-              🔒 VPN НАРУЖУ — РЕАЛЬНЫЙ МИР
+            <div className="font-typewriter" style={{ fontSize: 12, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
+              🔒 VPN НАРУЖУ — ВЫХОД ИЗ ВАРОНИИ
             </div>
             {NARUZHU_FEATURES.map((feat, i) => (
               <div key={i} className="hub-feature-row">
                 <span style={{ color: NARUZHU_YELLOW, fontWeight: 700 }}>▶</span>
-                <span className="font-typewriter" style={{ fontSize: 11, color: "#c4a882", lineHeight: 1.4 }}>{feat}</span>
+                <span className="font-typewriter" style={{ fontSize: 12, color: "#c4a882", lineHeight: 1.45 }}>{feat}</span>
               </div>
             ))}
           </div>
@@ -128,7 +128,7 @@ export default function HubOverlay({
           )}
 
           <button onClick={onOpenNaruzhu} className="btn-hub-cta">
-            🌐 ОТКРЫТЬ VPN НАРУЖУ →
+            🌐 ПОКИНУТЬ ВАРОНИЮ С НАРУЖУ →
           </button>
 
           <button onClick={shareReferral} className="btn-hub-secondary">

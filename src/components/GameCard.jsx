@@ -83,7 +83,9 @@ export default function GameCard({
                 opacity: 0.22, zIndex: 0, pointerEvents: "none"
               }} />
             )}
-            <img src={getAsset(currentCard.assetImage || advisor.avatar)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} />
+            {currentCard.assetImage && (
+              <img src={getAsset(currentCard.assetImage)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} />
+            )}
             {hovered && (
               <div style={{
                 position: "absolute", top: 12, left: "50%", transform: `translateX(-50%) rotate(${hovered === "left" ? "-6deg" : "6deg"})`,
@@ -105,13 +107,13 @@ export default function GameCard({
                 onClick={e => { e.stopPropagation(); haptic("light"); onNaruzhu(currentCard?.id || "card"); }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                  margin: "10px auto 0", padding: "5px 14px", borderRadius: 999,
-                  background: "rgba(15,10,0,0.82)",
-                  border: `1px solid ${NARUZHU_YELLOW}88`,
+                  margin: "12px auto 0", padding: "8px 16px", borderRadius: 999,
+                  background: "linear-gradient(135deg, rgba(255,214,10,0.2), rgba(15,10,0,0.9))",
+                  border: `1px solid ${NARUZHU_YELLOW}`,
                   cursor: "pointer", color: NARUZHU_YELLOW,
-                  fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: 0.6,
+                  fontSize: 12, fontFamily: "var(--font-mono)", letterSpacing: 0.6,
                   fontWeight: 700,
-                  boxShadow: `0 0 12px ${NARUZHU_YELLOW}22`,
+                  boxShadow: `0 0 18px ${NARUZHU_YELLOW}33`,
                 }}
               >
                 {ctaVariant.label}

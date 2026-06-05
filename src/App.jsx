@@ -802,6 +802,7 @@ export default function ThePresident() {
           presidentName={presidentName}
           monthName={monthName}
           year={year}
+          tenure={tenure}
           phase={phase}
           onHubOpen={() => { haptic("light"); setShowHub(true); }}
         />

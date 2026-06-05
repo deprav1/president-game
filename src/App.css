@@ -339,12 +339,21 @@ em, i { font-style: normal; }
   color: rgba(245, 230, 200, 0.86);
 }
 
+.brand-tenure {
+  color: rgba(245, 230, 200, 0.92);
+  font-weight: 700;
+}
+
+.brand-date {
+  color: rgba(212, 175, 55, 0.58);
+}
+
 .state-alert,
 .state-election {
   flex: 0 0 auto;
   padding: 2px 5px;
   border-radius: 999px;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1px;
   border: 1px solid currentColor;
 }
@@ -360,8 +369,8 @@ em, i { font-style: normal; }
 
 .hub-launch {
   flex: 0 0 auto;
-  min-height: 32px;
-  min-width: 58px;
+  min-height: 36px;
+  min-width: 82px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -382,7 +391,7 @@ em, i { font-style: normal; }
 
 .hub-launch-text {
   font-family: var(--font-sans);
-  font-size: 7.5px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.5px;
   line-height: 1.25;
@@ -531,7 +540,7 @@ em, i { font-style: normal; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-text);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   /* Узкий трекинг + короткие лейблы (param.short), чтобы влезали без обрезки. */
   letter-spacing: 0.01em;
@@ -590,6 +599,29 @@ em, i { font-style: normal; }
   color: #2980b9;
 }
 
+.onboarding-goal-strip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(8, 8, 8, 0.55));
+  color: #caa23a;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.onboarding-goal-strip strong {
+  color: #f5e6a0;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
 .intro-vector-icon {
   width: 17px;
   height: 17px;
@@ -632,9 +664,9 @@ em, i { font-style: normal; }
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 5px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   background: rgba(245, 230, 200, 0.08);
@@ -928,7 +960,7 @@ em, i { font-style: normal; }
   box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 8px rgba(212,175,55,0.2);
 }
 .game-choice-btn-label {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1.2px;
   margin-bottom: 4px;
   font-weight: 700;
@@ -938,8 +970,37 @@ em, i { font-style: normal; }
   color: #d4af37;
 }
 .game-choice-btn-text {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.naruzhu-footer-cta {
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 214, 10, 0.42);
+  background:
+    linear-gradient(135deg, rgba(255, 214, 10, 0.14), rgba(255, 214, 10, 0.04)),
+    rgba(8, 8, 8, 0.78);
+  box-shadow: 0 0 18px rgba(255, 214, 10, 0.08);
+  color: var(--color-naruzhu-yellow);
+  text-align: center;
+  cursor: pointer;
+}
+
+.naruzhu-footer-kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.naruzhu-footer-copy {
+  margin-top: 3px;
+  font-family: var(--font-text);
   font-size: 12px;
   line-height: 1.35;
+  color: #f0d57a;
 }
 
 /* ═══════════ СПЕЦ-ФЛОУ: отдельный визуальный язык ═══════════ */
@@ -1095,7 +1156,7 @@ em, i { font-style: normal; }
   }
 
   .brand-meta {
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 1px;
   }
 
@@ -1136,8 +1197,8 @@ em, i { font-style: normal; }
   }
 
   .choice-effect-chip {
-    font-size: 9px;
-    padding: 2px 4px;
+    font-size: 10px;
+    padding: 2px 5px;
   }
 }
 
@@ -1162,17 +1223,20 @@ em, i { font-style: normal; }
   }
 
   .brand-president,
+  .brand-date,
   .state-election {
     display: none;
   }
 
   .hub-launch {
-    min-width: 42px;
-    padding-inline: 8px;
+    min-width: 72px;
+    padding-inline: 7px;
   }
 
   .hub-launch-text {
-    display: none;
+    display: inline;
+    font-size: 8px;
+    letter-spacing: 0.2px;
   }
 
   .stats-panel {
@@ -1192,7 +1256,7 @@ em, i { font-style: normal; }
 
   .stat-label {
     max-width: 100%;
-    font-size: 7px;
+    font-size: 9px;
   }
 }
 
@@ -1205,7 +1269,7 @@ em, i { font-style: normal; }
   border: 1px solid #f5e6a0;
   padding: 12px 18px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: 2px;
@@ -1236,7 +1300,7 @@ em, i { font-style: normal; }
   border: 1px solid var(--color-gold);
   padding: 12px 18px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: 2px;
@@ -1267,7 +1331,7 @@ em, i { font-style: normal; }
   border: 1px solid #27ae60;
   padding: 12px 18px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: 2px;
@@ -1295,7 +1359,7 @@ em, i { font-style: normal; }
   border: 1px solid rgba(212, 175, 55, 0.35);
   padding: 10px 16px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--font-sans);
   font-weight: 700;
   letter-spacing: 2.5px;
@@ -1445,9 +1509,9 @@ em, i { font-style: normal; }
   background: linear-gradient(135deg, #14283c, #0b1a29);
   color: var(--color-text-light) !important;
   border: 1px solid rgba(41, 128, 185, 0.4);
-  padding: 13px;
+  padding: 14px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-typewriter);
   letter-spacing: 2px;
   cursor: pointer;
