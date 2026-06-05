@@ -774,9 +774,7 @@ export default function ThePresident() {
             tenure={tenure}
             tenureLabel={tenureLabel}
             deathMsg={deathMsg}
-            stats={stats}
             achievements={achievements}
-            decisionLog={decisionLog}
             onShare={shareGameOver}
             onRestart={restart}
           />
