@@ -154,29 +154,48 @@ export default function ThePresident() {
     tg.expand();
     setTimeout(() => tg.expand(), 300);
     setTimeout(() => tg.expand(), 1000);
-    // НЕ используем requestFullscreen: в фуллскрине контент уезжает под
-    // системный статус-бар и кнопки Telegram (Закрыть/⋮), а инсеты приходят
-    // ненадёжно → перекрытие шапки. Без фуллскрина Telegram сам рисует свою
-    // шапку НАД webview, и наш интерфейс начинается ниже — без наложений.
     if (typeof tg.disableVerticalSwipes === "function") {
       try { tg.disableVerticalSwipes(); } catch { /* optional */ }
     }
 
-    // Safe-area: на устройствах с «чёлкой» учитываем верхний инсет. В обычном
-    // (не фуллскрин) режиме Telegram он обычно 0 — шапку держит сам Telegram.
+    // Иммерсивный фуллскрин (Bot API 8.0+).
+    const canFullscreen = typeof tg.requestFullscreen === "function" && telegramVersionAtLeast(tg, "8.0");
+
+    // Safe-area: в фуллскрине контент уходит под статус-бар и кнопки Telegram
+    // (✕/⋮ в правом верхнем углу). Прокидываем верхний отступ в --tg-safe-top,
+    // чтобы шапка и кнопка «Покинуть» не перекрывались. Инсеты Telegram приходят
+    // асинхронно и ненадёжно, поэтому держим гарантированный минимум в фуллскрине.
     const applyInsets = () => {
       const sa = tg.safeAreaInset || {};
       const csa = tg.contentSafeAreaInset || {};
-      const top = (sa.top || 0) + (csa.top || 0);
+      let top = (sa.top || 0) + (csa.top || 0);
+      if (canFullscreen) {
+        // Минимум, перекрывающий статус-бар + плавающие кнопки Telegram,
+        // даже если инсеты ещё не пришли (top = 0).
+        top = Math.max(top, 92);
+      }
       document.documentElement.style.setProperty("--tg-safe-top", `${top}px`);
     };
-    applyInsets();
+
+    // Подписываемся на события ДО запроса фуллскрина.
     try {
       tg.onEvent?.("safeAreaChanged", applyInsets);
       tg.onEvent?.("contentSafeAreaChanged", applyInsets);
       tg.onEvent?.("fullscreenChanged", applyInsets);
     } catch { /* Старые клиенты без этих событий. */ }
+
+    if (canFullscreen) {
+      try { tg.requestFullscreen(); } catch { /* optional */ }
+      setTimeout(() => { try { tg.requestFullscreen(); } catch { /* optional */ } }, 400);
+    }
+
+    // Поллинг: инсеты/isFullscreen появляются асинхронно — переприменяем
+    // отступ несколько раз, не полагаясь только на события.
+    applyInsets();
+    const timers = [120, 350, 700, 1200, 2000].map(d => setTimeout(applyInsets, d));
+
     return () => {
+      timers.forEach(clearTimeout);
       try {
         tg.offEvent?.("safeAreaChanged", applyInsets);
         tg.offEvent?.("contentSafeAreaChanged", applyInsets);

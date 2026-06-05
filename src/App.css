@@ -938,7 +938,8 @@ em, i { font-style: normal; }
   }
 
   .game-topbar {
-    padding: 8px 12px 7px;
+    /* Сохраняем Telegram safe-area сверху (иначе фуллскрин-кнопки перекрывают). */
+    padding: calc(8px + var(--tg-safe-top, 0px)) 12px 7px;
   }
 
   .brand-mark-shell {
