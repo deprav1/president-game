@@ -600,7 +600,7 @@ export default function ThePresident() {
     if (cardRef.current) {
       cardRef.current.style.transform = `translateX(${dx * 0.45}px) rotate(${dx * 0.04}deg)`;
     }
-    const newDir = dx < -30 ? "left" : dx > 30 ? "right" : null;
+    const newDir = dx < -45 ? "left" : dx > 45 ? "right" : null;
     // setHovered только при смене направления — иначе бесполезный ре-рендер
     if (newDir !== lastDirRef.current) {
       lastDirRef.current = newDir;

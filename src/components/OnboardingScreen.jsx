@@ -97,6 +97,9 @@ export default function OnboardingScreen({
         {/* ── НАРУЖУ FOOTER ── */}
         <div
           onClick={onNaruzhu}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNaruzhu(); } }}
+          role="button"
+          tabIndex={0}
           className="naruzhu-footer-cta"
         >
           <div className="naruzhu-footer-kicker">VPN НАРУЖУ</div>

@@ -113,6 +113,9 @@ export default function HubOverlay({
             <div
               className="hub-promo-code"
               onClick={() => { navigator.clipboard?.writeText("WARONIA"); haptic("light"); }}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigator.clipboard?.writeText("WARONIA"); haptic("light"); } }}
+              role="button"
+              tabIndex={0}
             >
               WARONIA
             </div>

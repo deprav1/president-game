@@ -64,7 +64,7 @@ export default function GameCard({
         <div className={`game-card${crisis}`}>
           {/* Советник */}
           <div className={`game-card-header${crisis}`}>
-            <img src={getAsset(advisor.avatar)} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #d4af37", boxShadow: "0 0 8px rgba(212,175,55,0.3)" }} alt="" />
+            <img src={getAsset(advisor.avatar)} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #d4af37", boxShadow: "0 0 8px rgba(212,175,55,0.3)" }} alt="" onError={e => e.currentTarget.style.display = 'none'} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>{advisor.name}</div>
               <div style={{ fontSize: 10, color: "#d4af3799", fontFamily: "var(--font-typewriter)", letterSpacing: 0.5 }}>{advisor.role}</div>
@@ -84,7 +84,7 @@ export default function GameCard({
               }} />
             )}
             {currentCard.assetImage && (
-              <img src={getAsset(currentCard.assetImage)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} />
+              <img src={getAsset(currentCard.assetImage)} className="card-advisor-avatar" alt="" style={{ zIndex: 1 }} onError={e => e.currentTarget.style.display = 'none'} />
             )}
             {hovered && (
               <div style={{

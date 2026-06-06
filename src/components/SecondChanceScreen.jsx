@@ -20,6 +20,7 @@ export default function SecondChanceScreen({ rescueCard, onChoose }) {
               src={getAsset(advisor?.avatar || "/images/Zubov_Finance.webp")}
               style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover", border: "2px solid #ff6b5a", flexShrink: 0 }}
               alt=""
+              onError={e => e.currentTarget.style.display = 'none'}
             />
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#ffd9d2", lineHeight: 1.2 }}>{advisor?.name || "Советник"}</div>

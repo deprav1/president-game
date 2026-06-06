@@ -10,7 +10,7 @@ export default function ElectionScreen({ peopleStat, onChoose }) {
     <div className="screen-scroll-container" style={{ background: FELT_BG }}>
       <div className="card-paper-container" style={{ animation: "electionPulse 2.5s ease infinite" }}>
         <div className="card-header-bar gold" style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
-          <img src={getAsset("/images/Vlasova_Press.webp")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" />
+          <img src={getAsset("/images/Vlasova_Press.webp")} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "2px solid #d4af37" }} alt="" onError={e => e.currentTarget.style.display = 'none'} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#f5e6c8", lineHeight: 1.2 }}>Елена Власова</div>
             <div className="font-typewriter" style={{ fontSize: 11, color: "#d4af3799" }}>Пресс-секретарь</div>

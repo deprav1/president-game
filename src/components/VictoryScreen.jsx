@@ -84,7 +84,14 @@ export default function VictoryScreen({
               <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
                 🎁 СКИДКА {promoCode.percent}% НА VPN «НАРУЖУ» ЗА ПОБЕДУ
               </div>
-              <div className="hub-promo-code" style={{ letterSpacing: 2.5 }} onClick={onCopyPromo}>
+              <div
+                className="hub-promo-code"
+                style={{ letterSpacing: 2.5 }}
+                onClick={onCopyPromo}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyPromo(); } }}
+                role="button"
+                tabIndex={0}
+              >
                 {promoCode.code}
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
