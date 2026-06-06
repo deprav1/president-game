@@ -1,7 +1,4 @@
-import { PARAMS } from "../data/params.js";
 import { getAsset } from "../lib/assets.js";
-import FactionIcon from "./FactionIcon.jsx";
-import ChoiceEffectRow from "./ChoiceEffectRow.jsx";
 
 const NARUZHU_YELLOW = "#FFD60A";
 
@@ -9,7 +6,7 @@ const NARUZHU_YELLOW = "#FFD60A";
 // Цвета карты вынесены в CSS (.game-card / .game-card.crisis и т.д.) — правятся там.
 // cardRef передаётся как обычный проп (для swipe-анимации в родителе).
 export default function GameCard({
-  previewFxReal, isCrisis, advisor, currentCard, hovered, setHovered, ctaVariant,
+  isCrisis, advisor, currentCard, hovered, setHovered, ctaVariant,
   cardRef, onTouchStart, onTouchMove, onTouchEnd, haptic, onChoose, onNaruzhu,
 }) {
   const crisis = isCrisis ? " crisis" : "";
@@ -31,31 +28,6 @@ export default function GameCard({
       {isCrisis && (
         <div className="crisis-banner">🚨 ЭКСТРЕННАЯ СИТУАЦИЯ 🚨</div>
       )}
-      {/* Превью эффектов (реальные значения 1.2×) */}
-      <div style={{ height: 24, display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
-        {previewFxReal && PARAMS.map(p => previewFxReal[p.key] !== 0 && (
-          <span key={p.key} style={{
-            fontSize: 12,
-            fontFamily: "var(--font-sans)",
-            color: previewFxReal[p.key] > 0 ? "#27ae60" : "#c0392b",
-            animation: "fadeIn 0.2s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            background: "rgba(10, 5, 0, 0.65)",
-            padding: "2px 8px",
-            borderRadius: 6,
-            border: `1px solid ${previewFxReal[p.key] > 0 ? "rgba(39, 174, 96, 0.3)" : "rgba(192, 57, 43, 0.3)"}`,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-          }}>
-            <FactionIcon type={p.key} className="preview-effect-icon" />
-            <span style={{ fontWeight: 700 }}>
-              {previewFxReal[p.key] > 0 ? "+" : "−"}
-            </span>
-          </span>
-        ))}
-      </div>
-
       <div
         ref={cardRef}
         style={{ flex: 1, minHeight: 0, animation: "cardIn 0.3s ease", position: "relative", touchAction: "pan-y", willChange: "transform" }}
@@ -137,7 +109,6 @@ export default function GameCard({
                   {currentCard[side].label.toUpperCase()}
                 </div>
                 <div className="game-choice-btn-text">{currentCard[side].text}</div>
-                <ChoiceEffectRow fx={currentCard[side].fx} />
               </button>
             ))}
           </div>

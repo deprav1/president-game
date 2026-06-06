@@ -875,7 +875,7 @@ export default function ThePresident() {
 
         {/* ── ШКАЛЫ ── */}
         <div className="stats-panel">
-          {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]}/>)}
+          {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]} preview={previewFxReal ? (previewFxReal[p.key] || 0) : 0}/>)}
         </div>
 
         {/* ════════════════════════════════ ОНБОРДИНГ ════════════════════════════════ */}
@@ -935,7 +935,6 @@ export default function ThePresident() {
         {/* ════════════════════════════════ ИГРОВАЯ КАРТА ════════════════════════════════ */}
         {phase === "card" && currentCard && (
           <GameCard
-            previewFxReal={previewFxReal}
             isCrisis={isCrisis}
             advisor={advisor}
             currentCard={currentCard}
