@@ -20,6 +20,10 @@ export default defineConfig({
         // при правках логики пользователь не перекачивает React.
         manualChunks(id) {
           if (id.includes('node_modules')) return 'vendor';
+          // Контент карточек (~160 kB) меняется редко и независимо от
+          // игровой логики — отдельный чанк переживает правки в App.jsx
+          // и не перекачивается при каждом релизе.
+          if (id.includes('/src/data/')) return 'gamedata';
         },
       },
     },

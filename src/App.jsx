@@ -406,8 +406,8 @@ export default function ThePresident() {
     }
 
     if (phase === "election") {
-      let fx = { oligarchs: 0, army: 0, people: 0, west: 0 };
-      let tacticLabel = "";
+      let fx;
+      let tacticLabel;
       if (side === "honest") {
         if (stats.people < 40) return;
         fx = { oligarchs: 0, army: 0, people: 10, west: 10 };
