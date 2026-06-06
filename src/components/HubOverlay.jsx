@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ACHIEVEMENTS_DEF } from "../data/achievements.js";
 import { ENDINGS } from "../data/endings.js";
+import { copyText } from "../lib/clipboard.js";
 import { discountFor } from "../lib/promo.js";
 
 const NARUZHU_YELLOW = "#FFD60A";
@@ -32,6 +33,11 @@ export default function HubOverlay({
   const toggleDossier = () => {
     setIsDossierOpen(open => !open);
     haptic("light");
+  };
+
+  const copyPromo = async () => {
+    const copied = await copyText(promoCode.code);
+    haptic(copied ? "light" : "medium");
   };
 
   const shareReferral = () => {
@@ -131,8 +137,8 @@ export default function HubOverlay({
             </div>
             <div
               className="hub-promo-code"
-              onClick={() => { navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigator.clipboard?.writeText(promoCode.code); haptic("light"); } }}
+              onClick={copyPromo}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copyPromo(); } }}
               role="button"
               tabIndex={0}
             >

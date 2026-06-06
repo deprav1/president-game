@@ -28,7 +28,7 @@ export default function OnboardingScreen({
           <div className="story-image-frame">
             <img
               className="frame-inner-img"
-              src={getAsset('/images/onboarding_dossier.webp')}
+              src={getAsset('/images/onboarding_dossier_v2.webp')}
               alt="Секретное досье"
               onError={e => e.currentTarget.style.display = 'none'}
             />
@@ -52,18 +52,10 @@ export default function OnboardingScreen({
               </div>
             ))}
           </div>
-          <div style={{ background: "rgba(139,0,0,0.08)", border: "1px solid rgba(139,0,0,0.15)", borderRadius: 8, padding: "8px 12px", marginBottom: 12, textAlign: "center" }}>
-            <p style={{ fontSize: 12, color: "#e07a6a", fontWeight: 500, lineHeight: 1.45 }}>
-              Если любая шкала упадёт в 0 или зашкалит до 100 — вас уберут.
-            </p>
-          </div>
         </div>
         <div style={{ padding: "0 20px 12px" }}>
           {presidentName ? (
             <>
-              <div className="font-typewriter" style={{ textAlign: "center", fontSize: 12, color: "#caa23a", letterSpacing: 1, marginBottom: 10 }}>
-                С возвращением, {presidentName}
-              </div>
               <button onClick={onNewTerm} className="btn-velvet" style={{ marginBottom: 8 }}>
                 НОВЫЙ СРОК →
               </button>

@@ -22,6 +22,7 @@ import DecisionLog from "./components/DecisionLog.jsx";
 import { ACHIEVEMENTS_DEF } from "./data/achievements.js";
 import { telegramStorage } from "./utils/telegramStorage.js";
 import { track, EVENTS, hashStr } from "./lib/analytics.js";
+import { copyText } from "./lib/clipboard.js";
 import { discountFor } from "./lib/promo.js";
 import "./App.css";
 
@@ -756,6 +757,13 @@ export default function ThePresident() {
     else window.open(url, "_blank");
   };
 
+  const copyPromo = async () => {
+    if (!promoCode?.code) return;
+    const copied = await copyText(promoCode.code);
+    track(EVENTS.PROMO_COPIED, { promo: promoCode.code, success: copied });
+    haptic(copied ? "light" : "medium");
+  };
+
   // VPN-ревайв: открывает размеченную ссылку, откатывает последние 2 решения.
   const reviveViaVpn = () => {
     track(EVENTS.VPN_REVIVE);
@@ -908,6 +916,7 @@ export default function ThePresident() {
             onShare={shareGameOver}
             onRestart={restart}
             onVpnRevive={reviveViaVpn}
+            onCopyPromo={copyPromo}
           />
         )}
 
@@ -920,7 +929,7 @@ export default function ThePresident() {
             achievements={achievements}
             decisionLog={decisionLog}
             promoCode={promoCode}
-            onCopyPromo={() => { track(EVENTS.PROMO_COPIED, { promo: promoCode?.code || null }); navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
+            onCopyPromo={copyPromo}
             onShare={shareVictory}
             onRestart={restart}
           />

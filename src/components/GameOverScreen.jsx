@@ -7,6 +7,7 @@ import AchievementsList from "./AchievementsList.jsx";
 export default function GameOverScreen({
   tenure, tenureLabel, deathMsg, achievements, killerKey,
   promoCode, canRevive, onShare, onRestart, onVpnRevive,
+  onCopyPromo,
 }) {
   const verdict = useMemo(() => defeatVerdict(killerKey), [killerKey]);
   return (
@@ -85,7 +86,14 @@ export default function GameOverScreen({
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
                 Попробуйте 7 дней бесплатно
               </div>
-              <div className="hub-promo-code" style={{ letterSpacing: 2.5 }}>
+              <div
+                className="hub-promo-code"
+                style={{ letterSpacing: 2.5 }}
+                onClick={onCopyPromo}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyPromo(); } }}
+                role="button"
+                tabIndex={0}
+              >
                 {promoCode.code}
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>

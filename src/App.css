@@ -803,8 +803,8 @@ em, i { font-style: normal; }
   font-family: var(--font-typewriter);
   font-size: 11px;
   font-weight: bold;
-  color: rgba(212, 175, 55, 0.22);
-  border: 1.5px dashed rgba(212, 175, 55, 0.22);
+  color: rgba(212, 175, 55, 0.08);
+  border: 1.5px dashed rgba(212, 175, 55, 0.08);
   padding: 4px 10px;
   transform: rotate(-10deg);
   letter-spacing: 2px;
@@ -814,20 +814,20 @@ em, i { font-style: normal; }
 
 .story-image-frame.crisis::before {
   content: "CRISIS CONTEXT";
-  color: rgba(192, 57, 43, 0.35);
-  border-color: rgba(192, 57, 43, 0.35);
+  color: rgba(192, 57, 43, 0.12);
+  border-color: rgba(192, 57, 43, 0.12);
 }
 
 .story-image-frame.election::before {
   content: "VOTE STATION";
-  color: rgba(139, 105, 20, 0.25);
-  border-color: rgba(139, 105, 20, 0.25);
+  color: rgba(139, 105, 20, 0.1);
+  border-color: rgba(139, 105, 20, 0.1);
 }
 
 .story-image-frame.ruins::before {
   content: "PALACE RUINS";
-  color: rgba(139, 0, 0, 0.25);
-  border-color: rgba(139, 0, 0, 0.25);
+  color: rgba(139, 0, 0, 0.1);
+  border-color: rgba(139, 0, 0, 0.1);
 }
 
 /* Изображение внутри рамки */
@@ -984,7 +984,7 @@ em, i { font-style: normal; }
   background-image: url('/images/imperial_eagle_cracked_1780579894115.webp');
   background-size: cover;
   background-position: center;
-  opacity: 0.15;
+  opacity: 0.045;
   -webkit-mask-image: radial-gradient(ellipse 75% 70% at center, #000 25%, transparent 88%);
   mask-image: radial-gradient(ellipse 75% 70% at center, #000 25%, transparent 88%);
 }
