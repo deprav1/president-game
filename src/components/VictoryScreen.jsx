@@ -82,7 +82,13 @@ export default function VictoryScreen({
           {promoCode && (
             <div className="hub-promo-box" style={{ marginBottom: 14 }}>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                🎁 СКИДКА {promoCode.percent}% НА VPN «НАРУЖУ» ЗА ПОБЕДУ
+                Вы продержались {tenure} мес.
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
+                Получите скидку {promoCode.percent}%
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
+                Попробуйте 7 дней бесплатно
               </div>
               <div
                 className="hub-promo-code"
@@ -96,9 +102,6 @@ export default function VictoryScreen({
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
                 Копировать · Активация на naruzhu.am
-              </div>
-              <div className="font-typewriter" style={{ fontSize: 9, color: "#6b4c1e", marginTop: 3 }}>
-                или 7 дней бесплатно — промокод WARONIA
               </div>
             </div>
           )}

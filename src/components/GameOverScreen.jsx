@@ -51,7 +51,7 @@ export default function GameOverScreen({
               boxShadow: "0 0 18px rgba(255,214,10,0.08)",
             }}>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#FFD60A", letterSpacing: 1.5, marginBottom: 6, fontWeight: 700 }}>
-                🔓 ЕЩЁ ОДИН ШАНС
+                ЕЩЁ ОДИН ШАНС
               </div>
               <p style={{ fontSize: 13, lineHeight: 1.55, color: "#d8c8a0", marginBottom: 10 }}>
                 Ты проиграл. Но с бесконечным доступом к свободному интернету всё могло сложиться иначе. Посети VPN «Наружу» — и получи ещё один шанс.
@@ -68,7 +68,7 @@ export default function GameOverScreen({
                   boxShadow: "0 0 12px rgba(255,214,10,0.12)",
                 }}
               >
-                🌐 ПОЛУЧИТЬ ЕЩЁ ШАНС →
+                ПОЛУЧИТЬ ЕЩЁ ШАНС
               </button>
             </div>
           )}
@@ -77,16 +77,19 @@ export default function GameOverScreen({
           {promoCode && (
             <div className="hub-promo-box" style={{ marginBottom: 12 }}>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                🎁 СКИДКА {promoCode.percent}% НА VPN «НАРУЖУ»
+                Вы продержались {tenure} мес.
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
+                Получите скидку {promoCode.percent}%
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
+                Попробуйте 7 дней бесплатно
               </div>
               <div className="hub-promo-code" style={{ letterSpacing: 2.5 }}>
                 {promoCode.code}
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
                 Копировать · Активация на naruzhu.am
-              </div>
-              <div className="font-typewriter" style={{ fontSize: 9, color: "#6b4c1e", marginTop: 3 }}>
-                или 7 дней бесплатно — промокод WARONIA
               </div>
             </div>
           )}

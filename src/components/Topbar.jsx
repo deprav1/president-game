@@ -1,13 +1,8 @@
-import FactionIcon from "./FactionIcon.jsx";
-
-// Верхняя панель: герб/бренд, срок правления, статусы (кризис/выборы), кнопка хаба.
+// Верхняя панель: бренд, срок правления, статусы (кризис/выборы), кнопка хаба.
 export default function Topbar({ isCrisis, presidentName, monthName, year, tenure, phase, onHubOpen }) {
   return (
     <header className={`game-topbar ${isCrisis ? "crisis" : ""}`}>
       <div className="brand-lockup">
-        <div className="brand-mark-shell">
-          <FactionIcon type="crest" className="brand-mark" />
-        </div>
         <div className="brand-copy">
           <div className="brand-title">ВАРОНИЯ</div>
           <div className="brand-meta">

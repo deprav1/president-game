@@ -1,5 +1,6 @@
 import { ACHIEVEMENTS_DEF } from "../data/achievements.js";
 import { ENDINGS } from "../data/endings.js";
+import { discountFor } from "../lib/promo.js";
 
 const NARUZHU_YELLOW = "#FFD60A";
 
@@ -22,6 +23,8 @@ const shareCountLabel = (count) => {
 export default function HubOverlay({
   onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
 }) {
+  const promoCode = discountFor(bestScore);
+
   const shareReferral = () => {
     const tg = window.Telegram?.WebApp;
     const userId = tg?.initDataUnsafe?.user?.id || "guest";
@@ -40,7 +43,7 @@ export default function HubOverlay({
         <div className="hub-card-header">
           <div>
             <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: NARUZHU_YELLOW, letterSpacing: 2 }}>
-              🗂️ ЛИЧНОЕ ДЕЛО
+              ЛИЧНОЕ ДЕЛО
             </div>
             <div className="font-typewriter" style={{ fontSize: 12, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
               Рекорд, достижения · покинуть Варонию
@@ -51,16 +54,16 @@ export default function HubOverlay({
 
         <div className="hub-card-body">
 
-          <div className="hub-stats-panel">
-            <div>
-              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
-              <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{bestScore} <span style={{ fontSize: 10 }}>МЕС.</span></div>
+          <div className="hub-dossier-block">
+            <div className="hub-dossier-record">
+              <div>
+                <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
+                <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{bestScore} <span style={{ fontSize: 10 }}>МЕС.</span></div>
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1.2 }}>АРХИВ</div>
             </div>
-            <div style={{ fontSize: 24 }}>🏆</div>
-          </div>
 
-          {achievements.length > 0 && (
-            <div className="hub-section">
+            <div className="hub-dossier-section">
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ДОСТИЖЕНИЯ</div>
               <div className="hub-grid">
                 {ACHIEVEMENTS_DEF.map(a => {
@@ -74,29 +77,29 @@ export default function HubOverlay({
                 })}
               </div>
             </div>
-          )}
 
-          <div className="hub-section">
-            <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
-            <div className="hub-grid">
-              {Object.values(ENDINGS).map(e => {
-                const unlocked = unlockedEndings.includes(e.id);
-                return (
-                  <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} className={`hub-grid-item ${unlocked ? "active" : "inactive"}`}>
-                    <span style={{ fontSize: 12 }}>{e.icon}</span>
-                    {unlocked && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{e.title}</span>}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 6, letterSpacing: 0.5 }}>
-              {unlockedEndings.length} из {Object.keys(ENDINGS).length} финалов открыто
+            <div className="hub-dossier-section">
+              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ХРОНИКА ПРАВЛЕНИЙ</div>
+              <div className="hub-grid">
+                {Object.values(ENDINGS).map(e => {
+                  const unlocked = unlockedEndings.includes(e.id);
+                  return (
+                    <div key={e.id} title={unlocked ? `${e.title} — ${e.subtitle}` : "Не открыто"} className={`hub-grid-item ${unlocked ? "active" : "inactive"}`}>
+                      <span style={{ fontSize: 12 }}>{e.icon}</span>
+                      {unlocked && <span className="font-typewriter" style={{ fontSize: 10, color: "#d4af37", letterSpacing: 0.5 }}>{e.title}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 6, letterSpacing: 0.5 }}>
+                {unlockedEndings.length} из {Object.keys(ENDINGS).length} финалов открыто
+              </div>
             </div>
           </div>
 
           <div className="hub-naruzhu-pitch">
             <div className="font-typewriter" style={{ fontSize: 12, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
-              🔒 VPN НАРУЖУ — ВЫХОД ИЗ ВАРОНИИ
+              VPN НАРУЖУ — ВЫХОД ИЗ ВАРОНИИ
             </div>
             {NARUZHU_FEATURES.map((feat, i) => (
               <div key={i} className="hub-feature-row">
@@ -108,16 +111,22 @@ export default function HubOverlay({
 
           <div className="hub-promo-box">
             <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1, marginBottom: 4 }}>
-              🎁 ПРОМОКОД — 7 ДНЕЙ БЕСПЛАТНО
+              Вы продержались {bestScore} мес.
+            </div>
+            <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
+              Получите скидку {promoCode.percent}%
+            </div>
+            <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
+              Попробуйте 7 дней бесплатно
             </div>
             <div
               className="hub-promo-code"
-              onClick={() => { navigator.clipboard?.writeText("WARONIA"); haptic("light"); }}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigator.clipboard?.writeText("WARONIA"); haptic("light"); } }}
+              onClick={() => { navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigator.clipboard?.writeText(promoCode.code); haptic("light"); } }}
               role="button"
               tabIndex={0}
             >
-              WARONIA
+              {promoCode.code}
             </div>
             <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
               Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>naruzhu.am</span>
@@ -126,16 +135,16 @@ export default function HubOverlay({
 
           {referralCount > 0 && (
             <div className="font-typewriter" style={{ fontSize: 11, color: "#b89a5e", textAlign: "center", letterSpacing: 0.5 }}>
-              👥 Вы поделились приглашением {referralCount} {shareCountLabel(referralCount)}
+              Вы поделились приглашением {referralCount} {shareCountLabel(referralCount)}
             </div>
           )}
 
           <button onClick={onOpenNaruzhu} className="btn-hub-cta">
-            🌐 ПОКИНУТЬ ВАРОНИЮ С НАРУЖУ →
+            ПОКИНУТЬ ВАРОНИЮ С НАРУЖУ
           </button>
 
           <button onClick={shareReferral} className="btn-hub-secondary">
-            📤 ПРИГЛАСИТЬ ДРУГА
+            ПРИГЛАСИТЬ ДРУГА
           </button>
         </div>
       </div>

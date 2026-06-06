@@ -275,35 +275,13 @@ em, i { font-style: normal; }
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.brand-mark-shell {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  color: var(--color-gold);
-  background:
-    radial-gradient(circle at 50% 22%, rgba(245, 230, 160, 0.18), transparent 48%),
-    linear-gradient(145deg, rgba(36, 28, 8, 0.95), rgba(10, 8, 2, 0.96));
-  border: 1px solid rgba(212, 175, 55, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(245, 230, 160, 0.2),
-    inset 0 0 12px rgba(212, 175, 55, 0.08),
-    0 0 20px rgba(212, 175, 55, 0.14);
-}
-
-.brand-mark {
-  width: 26px;
-  height: 26px;
-  filter: drop-shadow(0 0 7px rgba(212, 175, 55, 0.34));
+  gap: 0;
+  flex: 1 1 auto;
 }
 
 .brand-copy {
   min-width: 0;
+  padding-left: 2px;
 }
 
 .brand-title {
@@ -1112,31 +1090,90 @@ em, i { font-style: normal; }
   animation: sirenBlink 1.1s ease-in-out infinite;
 }
 
-/* ── ВТОРОЙ ШАНС: тревожный красный, прерывание ── */
+/* ── АВАРИЙНОЕ РЕШЕНИЕ: кризисная карточка в общем стиле ── */
 .flow-rescue {
   width: 100%;
   max-width: 380px;
+  height: auto;
   margin: auto;
-  border-radius: 18px;
-  overflow: hidden;
-  background: radial-gradient(circle at 50% 0%, #2a0606 0%, #160202 55%, #0a0101 100%);
-  border: 1.5px solid rgba(192, 57, 43, 0.7);
-  box-shadow: 0 18px 50px rgba(0,0,0,0.85);
-  animation: alarmPulse 1.4s ease-in-out infinite;
+  min-height: 0;
+  animation: cardIn 0.3s ease;
 }
-.flow-rescue-siren {
+
+.flow-rescue-heading {
   text-align: center;
-  padding: 16px 18px 6px;
+  padding: 14px 18px 8px;
+  background:
+    linear-gradient(90deg, transparent, rgba(139, 0, 0, 0.34), transparent),
+    rgba(6, 0, 0, 0.74);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.24);
 }
-.flow-rescue-siren .emoji { font-size: 40px; display: block; animation: pulse 0.9s infinite; }
-.flow-rescue-title {
+
+.flow-rescue-kicker {
   font-family: var(--font-mono);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
-  letter-spacing: 4px;
-  color: #ff6b5a;
-  text-shadow: 0 0 18px rgba(192,57,43,0.6);
-  margin-top: 6px;
+  letter-spacing: 3px;
+  color: #e8b2a8;
+  text-shadow: 0 0 14px rgba(192,57,43,0.35);
+}
+
+.flow-rescue-subtitle {
+  margin-top: 4px;
+  font-family: var(--font-typewriter);
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  color: rgba(212, 175, 55, 0.62);
+  text-transform: uppercase;
+}
+
+.flow-rescue-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 18px 16px;
+  overflow: hidden;
+}
+
+.flow-rescue-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.26;
+}
+
+.flow-rescue-text {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.58;
+  color: #ead1cc;
+  text-align: left;
+  font-weight: 500;
+}
+
+.flow-rescue-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flow-rescue-primary {
+  padding: 14px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.flow-rescue-secondary {
+  padding: 13px 10px;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 /* ── ПОБЕДА: золото, триумф ── */
@@ -1230,11 +1267,6 @@ em, i { font-style: normal; }
     padding: calc(8px + var(--tg-safe-top, 0px)) 12px 7px;
   }
 
-  .brand-mark-shell {
-    width: 34px;
-    height: 34px;
-  }
-
   .brand-title {
     font-size: 19px;
     letter-spacing: 5px;
@@ -1291,15 +1323,6 @@ em, i { font-style: normal; }
   .game-topbar {
     gap: 8px;
     padding-inline: 10px;
-  }
-
-  .brand-lockup {
-    gap: 8px;
-  }
-
-  .brand-mark-shell {
-    width: 32px;
-    height: 32px;
   }
 
   .brand-title {
@@ -1527,6 +1550,28 @@ em, i { font-style: normal; }
   border: 1px solid rgba(61, 37, 9, 0.5);
   border-radius: 10px;
   padding: 10px 14px;
+}
+
+.hub-dossier-block {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(212, 175, 55, 0.08), transparent 36%),
+    rgba(18, 12, 4, 0.48);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.hub-dossier-record {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+}
+
+.hub-dossier-section {
+  padding-top: 10px;
 }
 
 .hub-grid {

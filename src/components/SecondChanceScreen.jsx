@@ -1,49 +1,69 @@
 import { ADVISORS } from "../data/advisors.js";
 import { getAsset } from "../lib/assets.js";
 
-// Экран «второго шанса» — отдельный яркий тревожный флоу (не карта).
+const RESCUE_BACKGROUNDS = {
+  1: "/images/bg_military_parade.webp",
+  3: "/images/bg_security_bunker.webp",
+  4: "/images/bg_finance_ministry.webp",
+  6: "/images/bg_palace_corruption.webp",
+  7: "/images/bg_oligarch_yacht.webp",
+};
+
+const cleanRescueText = (text = "") =>
+  text
+    .replace(/^🚨\s*/u, "")
+    .replace(/^ВТОРОЙ ШАНС\s*\([^)]*\):\s*/iu, "")
+    .trim();
+
+const cleanChoiceText = (text = "") =>
+  text
+    .replaceAll("🤝", "")
+    .replaceAll("☠️", "")
+    .replaceAll("🚨", "")
+    .replaceAll("⚠️", "")
+    .trim();
+
+// Экран аварийного решения — та же игровая эстетика, но с кризисным напряжением.
 export default function SecondChanceScreen({ rescueCard, onChoose }) {
   const advisor = ADVISORS[rescueCard.advisor];
+  const bgImage = RESCUE_BACKGROUNDS[rescueCard.advisor] || "/images/bg_palace_corruption.webp";
+
   return (
     <div className="screen-scroll-container">
-      <div className="flow-rescue">
-        {/* Сирена */}
-        <div className="flow-rescue-siren">
-          <span className="emoji">🚨</span>
-          <div className="flow-rescue-title">ПОСЛЕДНИЙ ШАНС</div>
+      <div className="flow-rescue game-card crisis">
+        <div className="flow-rescue-heading">
+          <div className="flow-rescue-kicker">КРИЗИС ВЛАСТИ</div>
+          <div className="flow-rescue-subtitle">чрезвычайное решение</div>
         </div>
 
-        <div style={{ padding: "0 18px 18px" }}>
-          {/* Советник, предлагающий сделку */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <img
-              src={getAsset(advisor?.avatar || "/images/Zubov_Finance.webp")}
-              style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover", border: "2px solid #ff6b5a", flexShrink: 0 }}
-              alt=""
-              onError={e => e.currentTarget.style.display = 'none'}
-            />
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#ffd9d2", lineHeight: 1.2 }}>{advisor?.name || "Советник"}</div>
-              <div className="font-mono" style={{ fontSize: 12, color: "#ff8a7a" }}>{advisor?.role || "Куратор"}</div>
-            </div>
+        <div className="game-card-hero crisis">
+          <img
+            className="game-card-hero-img"
+            src={getAsset(advisor?.avatar || "/images/Zubov_Finance_Wide.webp")}
+            alt=""
+            onError={e => e.currentTarget.style.display = "none"}
+          />
+          <div className="game-card-hero-meta">
+            <div className="game-card-hero-name">{advisor?.name || "Советник"}</div>
+            <div className="game-card-hero-role">{advisor?.role || "Куратор"}</div>
           </div>
+        </div>
 
-          <p style={{ fontSize: 16, lineHeight: 1.6, color: "#ffe4de", textAlign: "left", fontWeight: 500, marginBottom: 16 }}>
-            {rescueCard.text}
-          </p>
+        <div className="flow-rescue-body">
+          <div className="game-card-ambiance" />
+          <div
+            className="flow-rescue-bg"
+            style={{ backgroundImage: `url(${getAsset(bgImage)})` }}
+          />
 
-          <div style={{ background: "rgba(192,57,43,0.18)", border: "1px solid rgba(192,57,43,0.5)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, textAlign: "center" }}>
-            <p style={{ fontSize: 13, color: "#ffb3a8", fontWeight: 600, lineHeight: 1.5 }}>
-              ⚠️ Это твой единственный второй шанс. Следующий перекос шкал — окончательное поражение.
-            </p>
-          </div>
+          <p className="flow-rescue-text">{cleanRescueText(rescueCard.text)}</p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => onChoose("agree")} className="btn-gold" style={{ padding: "15px 10px", fontSize: 13 }}>
-              🤝 {rescueCard.agreeText.toUpperCase()}
+          <div className="flow-rescue-actions">
+            <button onClick={() => onChoose("agree")} className="btn-gold flow-rescue-primary">
+              {cleanChoiceText(rescueCard.agreeText).toUpperCase()}
             </button>
-            <button onClick={() => onChoose("deny")} className="btn-outline">
-              ☠️ ОТКЛОНИТЬ И СЛОЖИТЬ ПОЛНОМОЧИЯ
+            <button onClick={() => onChoose("deny")} className="btn-outline flow-rescue-secondary">
+              ОТКЛОНИТЬ И СЛОЖИТЬ ПОЛНОМОЧИЯ
             </button>
           </div>
         </div>
