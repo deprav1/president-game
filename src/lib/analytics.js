@@ -31,6 +31,7 @@ export const EVENTS = Object.freeze({
   PLAY_AS_OTHER: "play_as_other",
   GAME_START: "game_start",
   CARD_VIEW: "card_view",
+  CARD_RATE: "card_rate",
   DECISION: "decision",
   CHAIN_TRIGGERED: "chain_triggered",
   CRISIS_SHOWN: "crisis_shown",

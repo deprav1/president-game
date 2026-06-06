@@ -740,6 +740,37 @@ export default function ThePresident() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentCard, isCrisis, phase]);
 
+  // Оценка карточек (тест-период, за флагом VITE_RATING_ENABLED).
+  // card_id уже оценённых карт хранится локально → один игрок оценивает карту один раз.
+  const ratedCardsRef = useRef(null);
+  if (ratedCardsRef.current === null) {
+    let saved = [];
+    try { saved = JSON.parse(telegramStorage.getItem("varon_rated") || "[]"); } catch { /* ignore */ }
+    ratedCardsRef.current = new Set(Array.isArray(saved) ? saved : []);
+  }
+  // Подсветка значка для текущей карты (визуальный отклик «оценка учтена»).
+  const [cardRating, setCardRating] = useState(null);
+  useEffect(() => {
+    const id = cardKey(currentCard);
+    setCardRating(id && ratedCardsRef.current.has(id) ? "rated" : null);
+  }, [currentCard]);
+
+  const rateCard = useCallback((rating) => {
+    const id = cardKey(currentCard);
+    if (!id || ratedCardsRef.current.has(id)) return;
+    ratedCardsRef.current.add(id);
+    try { telegramStorage.setItem("varon_rated", JSON.stringify([...ratedCardsRef.current])); } catch { /* ignore */ }
+    track(EVENTS.CARD_RATE, {
+      card_id: id,
+      rating,
+      advisor: currentCard.advisor,
+      is_crisis: isCrisis,
+      month: months,
+    });
+    haptic("light");
+    setCardRating(rating);
+  }, [currentCard, isCrisis, months, haptic]);
+
   const handleNameSubmit = () => {
     const name = nameInput.trim() || "Президент";
     setPresidentName(name);
@@ -1002,6 +1033,9 @@ export default function ThePresident() {
             haptic={haptic}
             onChoose={choose}
             onNaruzhu={(id) => openNaruzhu("card", id)}
+            ratingEnabled={import.meta.env.VITE_RATING_ENABLED === "1"}
+            cardRating={cardRating}
+            onRate={rateCard}
           />
         )}
 

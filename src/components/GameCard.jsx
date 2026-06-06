@@ -11,6 +11,9 @@ const ADVISOR_BACKGROUNDS = {
   5: "/images/bg_church_interior.webp",
   6: "/images/bg_protest.webp",
   7: "/images/bg_oligarch_yacht.webp",
+  8: "/images/bg_state_tv_studio.webp",   // Пизулина — цензура
+  9: "/images/bg_courtroom.webp",          // Борзыкин — следствие/суды
+  10: "/images/bg_military_parade.webp",   // Погожинга — дружина «Порох»
 };
 
 const THEME_BACKGROUNDS = [
@@ -55,6 +58,7 @@ const getCardBackground = (card) => {
 export default function GameCard({
   isCrisis, advisor, currentCard, hovered, setHovered, ctaVariant,
   cardRef, onTouchStart, onTouchMove, onTouchEnd, haptic, onChoose, onNaruzhu,
+  ratingEnabled, cardRating, onRate,
 }) {
   const crisis = isCrisis ? " crisis" : "";
   const bgImage = getCardBackground(currentCard);
@@ -152,8 +156,40 @@ export default function GameCard({
         </div>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: 8, flexShrink: 0, fontSize: 11, color: "#d4af3788", fontFamily: "var(--font-mono)", letterSpacing: 1.5, fontWeight: 500 }}>
-        ← СВАЙП ИЛИ ТАП →
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 8, flexShrink: 0 }}>
+        {ratingEnabled && (() => {
+          const rated = cardRating === "up" || cardRating === "down" || cardRating === "rated";
+          const btn = (kind, glyph, color) => {
+            return (
+              <button
+                onClick={e => { e.stopPropagation(); if (!rated) onRate(kind); }}
+                disabled={rated}
+                aria-label={kind === "up" ? "Хорошая карта" : "Плохая карта"}
+                style={{
+                  background: "none", border: "none", cursor: rated ? "default" : "pointer",
+                  fontSize: 17, lineHeight: 1, padding: 4,
+                  opacity: rated ? (cardRating === kind ? 1 : 0.25) : 0.4,
+                  filter: cardRating === kind ? `drop-shadow(0 0 5px ${color})` : "grayscale(0.4)",
+                  transition: "opacity 0.2s ease, filter 0.2s ease",
+                }}
+              >{glyph}</button>
+            );
+          };
+          return (
+            <>
+              {btn("up", "👍", "#d4af37")}
+              <span style={{ fontSize: 11, color: "#d4af3788", fontFamily: "var(--font-mono)", letterSpacing: 1.5, fontWeight: 500 }}>
+                ← СВАЙП ИЛИ ТАП →
+              </span>
+              {btn("down", "👎", "#ff756b")}
+            </>
+          );
+        })()}
+        {!ratingEnabled && (
+          <span style={{ fontSize: 11, color: "#d4af3788", fontFamily: "var(--font-mono)", letterSpacing: 1.5, fontWeight: 500 }}>
+            ← СВАЙП ИЛИ ТАП →
+          </span>
+        )}
       </div>
     </div>
   );
