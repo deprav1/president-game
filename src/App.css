@@ -921,33 +921,38 @@ em, i { font-style: normal; }
 .game-card-hero {
   position: relative;
   width: 100%;
-  height: clamp(72px, 11dvh, 104px);
+  height: clamp(94px, 14dvh, 135px); /* +30% к прежней высоте */
   flex-shrink: 0;
   overflow: hidden;
-  background: #060606; /* совпадает с чёрным фоном портретов — бесшовно */
-  border-bottom: 1px solid rgba(201, 168, 76, 0.4);
-}
-.game-card-hero.crisis {
-  background: #0a0202;
-  border-bottom-color: rgba(139, 0, 0, 0.5);
+  background: transparent; /* портрет «плавает» в фоне карты — без рамки и шва */
 }
 .game-card-hero-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 18%; /* держим лицо в кадре при кропе */
+  object-position: center 16%; /* держим лицо в кадре при кропе */
   display: block;
+  /* Края иллюстрации растворяются в тёмный фон со всех сторон, кроме верха,
+     чтобы чёрный фон портрета и карта читались как единое изображение. */
+  -webkit-mask-image:
+    linear-gradient(to bottom, #000 52%, transparent 100%),
+    linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, #000 52%, transparent 100%),
+    linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
+  mask-composite: intersect;
 }
-/* Низ портрета растворяется в фон карты — имя читается, шва не видно. */
+/* Лёгкая «посадка» под имя — чтобы текст читался поверх растворённого низа. */
 .game-card-hero::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent 40%, rgba(7, 7, 7, 0.55) 72%, #0a0a0a 100%);
+  background: linear-gradient(to bottom, transparent 60%, rgba(6, 6, 6, 0.45) 88%, transparent 100%);
 }
 .game-card.crisis .game-card-hero::after {
-  background: linear-gradient(to bottom, transparent 40%, rgba(20, 0, 0, 0.55) 72%, #140000 100%);
+  background: linear-gradient(to bottom, transparent 55%, rgba(40, 0, 0, 0.35) 85%, transparent 100%);
 }
 .game-card-hero-meta {
   position: absolute;
