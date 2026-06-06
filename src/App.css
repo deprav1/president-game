@@ -555,12 +555,56 @@ em, i { font-style: normal; }
   color: var(--status-color);
 }
 
-.dossier-brand-mark {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 5px;
+.onboarding-title-bar {
+  padding: 10px 16px 9px;
+  text-align: center;
+  background: linear-gradient(to right, #120303, #260606, #120303);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.14);
+}
+
+.onboarding-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #f5e6c8;
+  white-space: nowrap;
+}
+
+.onboarding-title span {
   color: var(--color-gold);
-  filter: drop-shadow(0 0 9px rgba(212, 175, 55, 0.38));
+  letter-spacing: 0.14em;
+}
+
+.onboarding-return-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+
+.onboarding-new-term {
+  min-width: 0;
+}
+
+.onboarding-edit-name {
+  width: 44px;
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.36);
+  background: rgba(8, 8, 8, 0.78);
+  color: var(--color-gold);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(245, 230, 160, 0.06), 0 4px 12px rgba(0, 0, 0, 0.32);
+}
+
+.onboarding-edit-name:hover {
+  border-color: rgba(212, 175, 55, 0.62);
+  background: rgba(20, 12, 2, 0.86);
 }
 
 .intro-icon-shell {

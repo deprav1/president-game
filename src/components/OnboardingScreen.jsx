@@ -1,6 +1,5 @@
 import { PARAMS } from "../data/params.js";
 import { getAsset } from "../lib/assets.js";
-import FactionIcon from "./FactionIcon.jsx";
 import StatIcon from "./StatIcon.jsx";
 
 const paramByKey = key => PARAMS.find(p => p.key === key);
@@ -19,10 +18,8 @@ export default function OnboardingScreen({
   return (
     <div className="screen-scroll-container" style={{ background: "radial-gradient(circle at 50% 22%,#2a1208 0%,#160a04 48%,#080402 100%)" }}>
       <div className="card-paper-container">
-        <div className="card-header-bar">
-          <FactionIcon type="crest" className="dossier-brand-mark" />
-          <div className="font-display" style={{ fontSize: 20, fontWeight: 900, color: "#f5e6c8" }}>ВАРОНИЯ</div>
-          <div className="font-mono" style={{ fontSize: 12, fontWeight: 500, color: "#d4af37bb", marginTop: 3 }}>СЕКРЕТНОЕ ДОСЬЕ · ПРЕЗИДЕНТ</div>
+        <div className="onboarding-title-bar">
+          <div className="onboarding-title">Welcome to <span>ВАРОНИЯ</span></div>
         </div>
         <div className="card-content-area">
           <div className="story-image-frame">
@@ -55,14 +52,14 @@ export default function OnboardingScreen({
         </div>
         <div style={{ padding: "0 20px 12px" }}>
           {presidentName ? (
-            <>
-              <button onClick={onNewTerm} className="btn-velvet" style={{ marginBottom: 8 }}>
+            <div className="onboarding-return-actions">
+              <button onClick={onNewTerm} className="btn-velvet onboarding-new-term">
                 НОВЫЙ СРОК →
               </button>
-              <button onClick={onPlayAsOther} className="btn-outline" style={{ width: "100%" }}>
-                ИГРАТЬ ЗА ДРУГОГО
+              <button onClick={onPlayAsOther} className="onboarding-edit-name" title="Изменить имя" aria-label="Изменить имя">
+                ✎
               </button>
-            </>
+            </div>
           ) : (
             <>
               <input
