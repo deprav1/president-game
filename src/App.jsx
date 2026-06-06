@@ -101,9 +101,11 @@ export default function ThePresident() {
     async function loadData() {
       const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends"];
       const data = await telegramStorage.getItems(keys);
+      const forcedPhase = new URLSearchParams(location.search).get("p");
       
       let savedRun = null;
       try { savedRun = validateSave(JSON.parse(data["varon_save"] || "null")); } catch {}
+      if (forcedPhase) savedRun = null;
 
       track(EVENTS.APP_OPEN, { is_returning: !!savedRun });
       if (savedRun) track(EVENTS.RUN_RESUMED, { month: savedRun.months, phase: savedRun.phase });
