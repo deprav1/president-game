@@ -921,7 +921,9 @@ em, i { font-style: normal; }
 .game-card-hero {
   position: relative;
   width: 100%;
-  height: clamp(94px, 14dvh, 135px); /* +30% к прежней высоте */
+  height: clamp(112px, calc(104px + (100dvh - 520px) * 0.32), 184px);
+  margin-bottom: -14px;
+  z-index: 2;
   flex-shrink: 0;
   overflow: hidden;
   background: transparent; /* портрет «плавает» в фоне карты — без рамки и шва */
@@ -930,16 +932,16 @@ em, i { font-style: normal; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 16%; /* держим лицо в кадре при кропе */
+  object-position: center 20%; /* держим лицо в кадре при кропе */
   display: block;
   /* Края иллюстрации растворяются в тёмный фон со всех сторон, кроме верха,
      чтобы чёрный фон портрета и карта читались как единое изображение. */
   -webkit-mask-image:
-    linear-gradient(to bottom, #000 52%, transparent 100%),
+    linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.92) 66%, transparent 100%),
     linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
   -webkit-mask-composite: source-in;
   mask-image:
-    linear-gradient(to bottom, #000 52%, transparent 100%),
+    linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.92) 66%, transparent 100%),
     linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
   mask-composite: intersect;
 }
@@ -949,10 +951,10 @@ em, i { font-style: normal; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent 60%, rgba(6, 6, 6, 0.45) 88%, transparent 100%);
+  background: linear-gradient(to bottom, transparent 48%, rgba(6, 6, 6, 0.42) 82%, rgba(6, 6, 6, 0.1) 100%);
 }
 .game-card.crisis .game-card-hero::after {
-  background: linear-gradient(to bottom, transparent 55%, rgba(40, 0, 0, 0.35) 85%, transparent 100%);
+  background: linear-gradient(to bottom, transparent 48%, rgba(40, 0, 0, 0.38) 82%, rgba(40, 0, 0, 0.08) 100%);
 }
 .game-card-hero-meta {
   position: absolute;
@@ -978,6 +980,10 @@ em, i { font-style: normal; }
   letter-spacing: 0.6px;
   margin-top: 1px;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+.game-card-body {
+  min-height: 0;
 }
 
 .game-card-text {

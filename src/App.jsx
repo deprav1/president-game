@@ -61,6 +61,15 @@ const CTA_VARIANTS = [
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS];
 
+const getPreviewCard = () => {
+  if (!import.meta.env.DEV) return null;
+  const raw = new URLSearchParams(location.search).get("advisor");
+  if (raw == null) return null;
+  const advisorId = Number(raw);
+  if (!Number.isInteger(advisorId)) return null;
+  return ALL_CARDS.find(card => card.advisor === advisorId) || null;
+};
+
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ────────────────────────────────────────────────────────
 export default function ThePresident() {
   // Состояние инициализации приложения (лоадер на старте).
@@ -242,7 +251,8 @@ export default function ThePresident() {
     urls.forEach(src => { const img = new Image(); img.src = src; });
   }, []);
 
-  const currentCard = isCrisis && crisisCard ? crisisCard : deck[cardIdx % deck.length];
+  const previewCard = getPreviewCard();
+  const currentCard = previewCard || (isCrisis && crisisCard ? crisisCard : deck[cardIdx % deck.length]);
   const advisor     = currentCard ? (ADVISORS[currentCard.advisor] || ADVISORS[0]) : ADVISORS[0];
   const year        = 2024 + Math.floor((months - 1) / 12);
   const monthName   = MONTHS[(months - 1) % 12];
