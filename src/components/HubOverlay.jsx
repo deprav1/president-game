@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ACHIEVEMENTS_DEF } from "../data/achievements.js";
 import { ENDINGS } from "../data/endings.js";
 import { discountFor } from "../lib/promo.js";
@@ -24,6 +25,14 @@ export default function HubOverlay({
   onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
 }) {
   const promoCode = discountFor(bestScore);
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const endingsCount = Object.keys(ENDINGS).length;
+  const dossierStatus = `${achievements.length} достиж. · ${unlockedEndings.length}/${endingsCount} финалов`;
+
+  const toggleDossier = () => {
+    setIsDossierOpen(open => !open);
+    haptic("light");
+  };
 
   const shareReferral = () => {
     const tg = window.Telegram?.WebApp;
@@ -39,30 +48,30 @@ export default function HubOverlay({
   return (
     <div className="hub-overlay" onClick={onClose}>
       <div className="hub-card" onClick={e => e.stopPropagation()}>
-
-        <div className="hub-card-header">
-          <div>
-            <div className="font-typewriter" style={{ fontSize: 14, fontWeight: 700, color: NARUZHU_YELLOW, letterSpacing: 2 }}>
-              ЛИЧНОЕ ДЕЛО
-            </div>
-            <div className="font-typewriter" style={{ fontSize: 12, color: "#caa23a", letterSpacing: 0.5, marginTop: 2 }}>
-              Рекорд, достижения · покинуть Варонию
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#6b4c1e", fontSize: 16, cursor: "pointer", padding: 4 }}>✕</button>
-        </div>
+        <button onClick={onClose} className="hub-close" aria-label="Закрыть">×</button>
 
         <div className="hub-card-body">
 
-          <div className="hub-dossier-block">
+          <button
+            type="button"
+            className={`hub-dossier-toggle ${isDossierOpen ? "open" : ""}`}
+            onClick={toggleDossier}
+            aria-expanded={isDossierOpen}
+          >
             <div className="hub-dossier-record">
               <div>
                 <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
                 <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{bestScore} <span style={{ fontSize: 10 }}>МЕС.</span></div>
               </div>
-              <div className="font-typewriter" style={{ fontSize: 10, color: "#6b4c1e", letterSpacing: 1.2 }}>АРХИВ</div>
+              <div className="hub-dossier-status">
+                <span>{dossierStatus}</span>
+                <span className="hub-dossier-chevron">{isDossierOpen ? "−" : "+"}</span>
+              </div>
             </div>
+          </button>
 
+          {isDossierOpen && (
+            <div className="hub-dossier-details">
             <div className="hub-dossier-section">
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ДОСТИЖЕНИЯ</div>
               <div className="hub-grid">
@@ -92,10 +101,11 @@ export default function HubOverlay({
                 })}
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 6, letterSpacing: 0.5 }}>
-                {unlockedEndings.length} из {Object.keys(ENDINGS).length} финалов открыто
+                {unlockedEndings.length} из {endingsCount} финалов открыто
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
           <div className="hub-naruzhu-pitch">
             <div className="font-typewriter" style={{ fontSize: 12, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
