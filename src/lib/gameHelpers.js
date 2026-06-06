@@ -42,7 +42,11 @@ export const validateSave = (save) => {
 export const scaleStatEffect = (key, val) => {
   if (!val) return 0;
   if (key === "people") {
-    const mult = val > 0 ? 0.75 : 1.08;
+    // Народ всё ещё разочаровывается быстрее, чем проникается доверием,
+    // но прежняя асимметрия (0.75/1.08) на почти симметричных по сырью
+    // картах делала революцию доминирующей причиной поражения. Смягчаем
+    // «перекрут», сохраняя тематический перекос вниз.
+    const mult = val > 0 ? 0.82 : 1.04;
     return Math.round(val * mult);
   }
   return Math.round(val * 0.95);
