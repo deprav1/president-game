@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,6 +13,8 @@ export default defineConfig({
   // getAsset() добавляет ?v=__BUILD_ID__ — каждый билд инвалидирует кэш.
   define: {
     __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
+    // Версия из package.json — чтобы экран онбординга не врал после бампа.
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   build: {
     rollupOptions: {

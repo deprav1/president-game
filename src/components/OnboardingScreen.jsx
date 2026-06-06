@@ -107,7 +107,7 @@ export default function OnboardingScreen({
           position: "absolute", bottom: 4, right: 8,
           fontSize: 10, color: "#ece0c422", letterSpacing: 1, pointerEvents: "none",
         }}>
-          v1.3.0
+          v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev"}
         </div>
       </div>
     </div>
