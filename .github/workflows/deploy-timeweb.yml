@@ -26,6 +26,11 @@ jobs:
         run: npm ci
 
       - name: Build project
+        # ID счётчика Yandex Metrica не секрет (виден в исходниках страницы),
+        # поэтому задаём его прямо здесь. .env локальный и в репозиторий не
+        # коммитится, так что прод-сборка должна получить ID отсюда.
+        env:
+          VITE_YM_ID: "109695119"
         run: npm run build
 
       - name: Deploy to Timeweb via FTP

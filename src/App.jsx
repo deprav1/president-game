@@ -21,7 +21,12 @@ import AchievementsList from "./components/AchievementsList.jsx";
 import DecisionLog from "./components/DecisionLog.jsx";
 import { ACHIEVEMENTS_DEF } from "./data/achievements.js";
 import { telegramStorage } from "./utils/telegramStorage.js";
+import { track, EVENTS, hashStr } from "./lib/analytics.js";
 import "./App.css";
+
+// Стабильный короткий id карты для аналитики (у карт нет своего id —
+// хэшируем текст). Покрывает обычные карты (t) и rescue-карту (text).
+const cardKey = (c) => (c ? hashStr(c.t || c.text || "") : null);
 
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
 
@@ -96,6 +101,9 @@ export default function ThePresident() {
       let savedRun = null;
       try { savedRun = validateSave(JSON.parse(data["varon_save"] || "null")); } catch {}
 
+      track(EVENTS.APP_OPEN, { is_returning: !!savedRun });
+      if (savedRun) track(EVENTS.RUN_RESUMED, { month: savedRun.months, phase: savedRun.phase });
+
       if (savedRun) {
         setStats(savedRun.stats || { oligarchs:50, army:50, people:50, west:50 });
         setMonths(savedRun.months || 1);
@@ -122,6 +130,7 @@ export default function ThePresident() {
       if (!foundCta) {
         foundCta = CTA_VARIANTS[Math.floor(Math.random() * CTA_VARIANTS.length)];
         telegramStorage.setItem("varon_cta_ab", foundCta.id);
+        track(EVENTS.CTA_VARIANT_ASSIGNED, { cta_variant: foundCta.id });
       }
       setCtaVariant(foundCta);
 
@@ -155,6 +164,7 @@ export default function ThePresident() {
       if (prev.includes(id)) return prev;
       const next = [...prev, id];
       telegramStorage.setItem("varon_ach", JSON.stringify(next));
+      track(EVENTS.ACHIEVEMENT_UNLOCKED, { achievement_id: id });
       hapticNotify("success");
       return next;
     });
@@ -271,6 +281,7 @@ export default function ThePresident() {
       setPromoCode(discountFor(score));
       if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
       telegramStorage.removeItem("varon_save");
+      track(EVENTS.GAME_OVER, { reason: "death", killer_key: death.key, is_low: death.low, tenure: score, score });
       setPhase("gameover");
     } else {
       const paramKey = death.key;
@@ -338,6 +349,7 @@ export default function ThePresident() {
         targetStats: nextStats,
         targetMonth: nextMonth
       });
+      track(EVENTS.SECOND_CHANCE_VIEW, { param_key: death.key, is_low: death.low, tenure: score });
       setPhase("second_chance");
 
       try {
@@ -364,10 +376,11 @@ export default function ThePresident() {
     }
   }, [hasUsedSecondChance, hasUsedVpnRevive, bestScore, deck, cardIdx, pendingEvents, termsCompleted, hapticNotify]);
 
-  const choose = useCallback((side) => {
+  const choose = useCallback((side, via = "click") => {
     if (choosing.current) return;
 
     if (phase === "second_chance" && rescueCard) {
+      track(EVENTS.SECOND_CHANCE_CHOICE, { accepted: side === "agree" });
       if (side === "agree") {
         hapticNotify("success");
         const { ns, fl } = applyFx(rescueCard.fx, rescueCard.targetStats);
@@ -400,6 +413,7 @@ export default function ThePresident() {
         setPromoCode(discountFor(score));
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
         telegramStorage.removeItem("varon_save");
+        track(EVENTS.GAME_OVER, { reason: "second_chance_declined", tenure: score, score });
         setPhase("gameover");
       }
       return;
@@ -419,16 +433,19 @@ export default function ThePresident() {
         fx = { oligarchs: 18, army: 0, people: -6, west: -8 };
         tacticLabel = "Сделка с олигархами";
       } else {
+        track(EVENTS.ELECTION_CHOICE, { tactic: "skip" });
         hapticNotify("error");
         setDeathMsg("Вы отказались от участия в выборах и добровольно ушли на покой. В Варонии наступила новая эпоха.");
         const score = months - 1;
         setPromoCode(discountFor(score));
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
         telegramStorage.removeItem("varon_save");
+        track(EVENTS.GAME_OVER, { reason: "election_skip", tenure: score, score });
         setPhase("gameover");
         return;
       }
 
+      track(EVENTS.ELECTION_CHOICE, { tactic: side });
       hapticNotify("success");
       unlockAchievement("win_election");
 
@@ -467,8 +484,10 @@ export default function ThePresident() {
           if (prev.includes(endObj.id)) return prev;
           const next = [...prev, endObj.id];
           telegramStorage.setItem("varon_ends", JSON.stringify(next));
+          track(EVENTS.ENDING_UNLOCKED, { ending_id: endObj.id });
           return next;
         });
+        track(EVENTS.VICTORY, { ending_id: endObj.id, tenure: score, terms: newTerms });
         unlockAchievement("victory");
         setPhase("victory");
         return;
@@ -496,6 +515,16 @@ export default function ThePresident() {
 
     if (phase !== "card" || !currentCard) return;
     choosing.current = true;
+
+    track(EVENTS.DECISION, {
+      card_id: cardKey(currentCard),
+      advisor: currentCard.advisor,
+      side,
+      label: currentCard[side].label,
+      input: via,
+      is_crisis: isCrisis,
+      month: months,
+    });
 
     const fx = currentCard[side].fx;
     // Анимация вылета карточки — напрямую через DOM
@@ -528,12 +557,16 @@ export default function ThePresident() {
       const newPending = [...pendingEvents];
       if (chainId && CHAINS[chainId]) {
         newPending.push({ ...CHAINS[chainId], triggerMonth: newMonth + CHAINS[chainId].delay });
+        track(EVENTS.CHAIN_TRIGGERED, { chain_id: chainId });
       }
       if (chainId === "ds_arc_4_soft_end") unlockAchievement("naruzhu_open");
 
       // Наказание за экстремум: фракция у потолка пытается перехватить власть.
       const extremum = getExtremumEvent(ns, newPending);
-      if (extremum) newPending.push({ ...extremum, triggerMonth: newMonth + extremum.delay });
+      if (extremum) {
+        newPending.push({ ...extremum, triggerMonth: newMonth + extremum.delay });
+        track(EVENTS.EXTREMUM_EVENT, { month: newMonth });
+      }
 
       const firedIdx = newPending.findIndex(e => e.triggerMonth <= newMonth);
       let chainCard  = null;
@@ -583,10 +616,12 @@ export default function ThePresident() {
       if (newMonth % 12 === 1 && newMonth > 1) {
         hapticNotify("warning");
         setIsCrisis(true);
-        setCrisisCard(CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)]);
+        const crisis = CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)];
+        setCrisisCard(crisis);
+        track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(crisis), month: newMonth });
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -619,7 +654,7 @@ export default function ThePresident() {
     swipeTriggered.current = false;
     lastDirRef.current = null;
     if (Math.abs(dx) > 65) {
-      choose(dx < 0 ? "left" : "right");
+      choose(dx < 0 ? "left" : "right", "swipe");
     } else {
       // Snap-back через DOM, без React-рендера
       if (cardRef.current) {
@@ -642,22 +677,43 @@ export default function ThePresident() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (phase !== "card" || choosing.current) return;
-      if (e.key === "ArrowLeft") choose("left");
-      else if (e.key === "ArrowRight") choose("right");
+      if (e.key === "ArrowLeft") choose("left", "key");
+      else if (e.key === "ArrowRight") choose("right", "key");
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [phase, choose]);
 
+  // Аналитика просмотров экранов (фаз).
+  useEffect(() => {
+    if (phase === "onboarding") track(EVENTS.ONBOARDING_VIEW);
+    else if (phase === "election") track(EVENTS.ELECTION_VIEW);
+  }, [phase]);
+
+  // Аналитика показа игровой карты.
+  useEffect(() => {
+    if (phase !== "card" || !currentCard) return;
+    track(EVENTS.CARD_VIEW, {
+      card_id: cardKey(currentCard),
+      advisor: currentCard.advisor,
+      is_crisis: isCrisis,
+      month: months,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCard, isCrisis, phase]);
+
   const handleNameSubmit = () => {
     const name = nameInput.trim() || "Президент";
     setPresidentName(name);
     telegramStorage.setItem("varon_pname", name);
+    track(EVENTS.NAME_SUBMIT, { is_default_name: !nameInput.trim() });
+    track(EVENTS.GAME_START, { from: "name_submit" });
     setPhase("card");
     haptic("medium");
   };
 
   const restart = () => {
+    track(EVENTS.RESTART);
     setStats({ oligarchs:50, army:50, people:50, west:50 });
     setMonths(1);
     setDeck(shuffle(ALL_CARDS));
@@ -685,12 +741,20 @@ export default function ThePresident() {
   // прогресс игрока и выданный промокод для атрибуции конверсий.
   const openNaruzhu = (source = "hub", content = "") => {
     const url = naruzhuUrl(source, content, Math.max(0, months - 1), promoCode, ctaVariant?.id);
+    track(EVENTS.NARUZHU_CLICK, {
+      source,
+      content: content || null,
+      cta_variant: ctaVariant?.id || null,
+      months: Math.max(0, months - 1),
+      promo: promoCode?.code || null,
+    });
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
   };
 
   // VPN-ревайв: открывает размеченную ссылку, откатывает последние 2 решения.
   const reviveViaVpn = () => {
+    track(EVENTS.VPN_REVIVE);
     openNaruzhu("revive");
     const hist = historyRef.current;
     const snap = hist.length >= 2 ? hist[hist.length - 2] : hist[0];
@@ -762,6 +826,7 @@ export default function ThePresident() {
     const text   = SHARE_DEATH[key]?.[isHigh ? "high" : "low"] || `${tenure} мес. у власти в Варонии.`;
     const msg    = `🦅 ${text}${PROMO_LINE}\n\nСможешь лучше? → ${BOT_LINK}`;
     const url    = `https://t.me/share/url?url=${encodeURIComponent(`t.me/${BOT_LINK.split("t.me/")[1]}`)}&text=${encodeURIComponent(msg)}`;
+    track(EVENTS.SHARE_CLICK, { kind: "gameover" });
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
   };
@@ -775,6 +840,7 @@ export default function ThePresident() {
     const text = VICTORY_TEXTS[Math.floor(Math.random() * VICTORY_TEXTS.length)];
     const msg  = `🏛️ ${text}${PROMO_LINE}\n\nСможешь повторить? → ${BOT_LINK}`;
     const url  = `https://t.me/share/url?url=${encodeURIComponent(`t.me/${BOT_LINK.split("t.me/")[1]}`)}&text=${encodeURIComponent(msg)}`;
+    track(EVENTS.SHARE_CLICK, { kind: "victory" });
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
   };
@@ -804,7 +870,7 @@ export default function ThePresident() {
           year={year}
           tenure={tenure}
           phase={phase}
-          onHubOpen={() => { haptic("light"); setShowHub(true); }}
+          onHubOpen={() => { track(EVENTS.HUB_OPEN); haptic("light"); setShowHub(true); }}
         />
 
         {/* ── ШКАЛЫ ── */}
@@ -819,8 +885,8 @@ export default function ThePresident() {
             nameInput={nameInput}
             onNameInput={setNameInput}
             onNameSubmit={handleNameSubmit}
-            onNewTerm={() => { haptic("medium"); setPhase("card"); }}
-            onPlayAsOther={() => { haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
+            onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setPhase("card"); }}
+            onPlayAsOther={() => { track(EVENTS.PLAY_AS_OTHER); haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
             onNaruzhu={() => openNaruzhu("onboarding")}
           />
         )}
@@ -850,7 +916,7 @@ export default function ThePresident() {
             achievements={achievements}
             decisionLog={decisionLog}
             promoCode={promoCode}
-            onCopyPromo={() => { navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
+            onCopyPromo={() => { track(EVENTS.PROMO_COPIED, { promo: promoCode?.code || null }); navigator.clipboard?.writeText(promoCode.code); haptic("light"); }}
             onShare={shareVictory}
             onRestart={restart}
           />
@@ -898,6 +964,7 @@ export default function ThePresident() {
             referralCount={referralCount}
             onOpenNaruzhu={() => openNaruzhu("hub")}
             onReferralShared={() => {
+              track(EVENTS.REFERRAL_SHARED);
               setReferralCount(prev => {
                 const next = prev + 1;
                 telegramStorage.setItem("varon_refs", String(next));
