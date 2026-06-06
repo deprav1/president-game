@@ -7,9 +7,9 @@ export const ADVISORS = [
   { name: "Аркадий Зубов", role: "Глава Центробанка",       avatar: "/images/Zubov_Finance_Wide.webp"  }, // 0 (Финансовый блок, таргетирование инфляции)
   { name: "Генерал Валерий Громов", role: "Глава Генерального штаба", avatar: "/images/Gromov_Military_Wide.webp" }, // 1 (Военное ведомство, контракты, снаряды)
   { name: "Елена Власова",      role: "Пресс-секретарь президента", avatar: "/images/Vlasova_Press_Wide.webp"  }, // 2 (Пресс-служба, озабоченность)
-  { name: "Николай Сенин",    role: "Секретарь Совета Безопасности", avatar: "/images/Senin_Security.webp" }, // 3 (Спецслужбы, теории заговоров, боевые гуси)
-  { name: "Посол Сара Хартли",   role: "Посол Коллективного Запада", avatar: "/images/Hartley_Ambassador.webp" }, // 4 (Представитель Запада, санкции)
-  { name: "Патриарх Варсонофий", role: "Глава Церкви",           avatar: "/images/Patriarch_Church.webp" }, // 5 (Церковный клир, традиционные ценности, иконы)
-  { name: "Юлия Стрельцова",     role: "Лидер оппозиции в изгнании", avatar: "/images/Streltsova_Opposition.webp"  }, // 6 (Оппозиция, Вильнюс, расследования)
+  { name: "Николай Сенин",    role: "Секретарь Совета Безопасности", avatar: "/images/Senin_Security_Wide.webp" }, // 3 (Спецслужбы, теории заговоров, боевые гуси)
+  { name: "Посол Сара Хартли",   role: "Посол Коллективного Запада", avatar: "/images/Hartley_Ambassador_Wide.webp" }, // 4 (Представитель Запада, санкции)
+  { name: "Патриарх Варсонофий", role: "Глава Церкви",           avatar: "/images/Patriarch_Church_Wide.webp" }, // 5 (Церковный клир, традиционные ценности, иконы)
+  { name: "Юлия Стрельцова",     role: "Лидер оппозиции в изгнании", avatar: "/images/Streltsova_Opposition_Wide.webp"  }, // 6 (Оппозиция, Вильнюс, расследования)
   { name: "Борис Усманов",       role: "Олигарх №1",             avatar: "/images/Usmanov_Oligarch_Wide.webp"  }, // 7 (Олигархический конгломерат, яхты, VK)
 ];
