@@ -831,15 +831,16 @@ export default function ThePresident() {
     },
   };
   const PROMO_LINE = `\n🔒 7 дней VPN «Наружу» бесплатно — промокод WARONIA: ${naruzhuUrl("share", "", Math.max(0, months - 1))}`;
-  const BOT_LINK   = "t.me/mr_president_gamebot/mr_president";
+  const BOT_LINK   = "https://t.me/varonia_bot";
+  const SHARE_SIGNATURE = "Варони - симулятор президента, где возможно все.";
 
   const shareGameOver = () => {
     const killerParam = PARAMS.find(p => stats[p.key] <= 0 || stats[p.key] >= 100);
     const key    = killerParam?.key || "people";
     const isHigh = stats[key] >= 100;
     const text   = SHARE_DEATH[key]?.[isHigh ? "high" : "low"] || `${tenure} мес. у власти в Варонии.`;
-    const msg    = `🦅 ${text}${PROMO_LINE}\n\nСможешь лучше? → ${BOT_LINK}`;
-    const url    = `https://t.me/share/url?url=${encodeURIComponent(`t.me/${BOT_LINK.split("t.me/")[1]}`)}&text=${encodeURIComponent(msg)}`;
+    const msg    = `${text}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
+    const url    = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;
     track(EVENTS.SHARE_CLICK, { kind: "gameover" });
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");
@@ -852,8 +853,8 @@ export default function ThePresident() {
   ];
   const shareVictory = () => {
     const text = VICTORY_TEXTS[Math.floor(Math.random() * VICTORY_TEXTS.length)];
-    const msg  = `🏛️ ${text}${PROMO_LINE}\n\nСможешь повторить? → ${BOT_LINK}`;
-    const url  = `https://t.me/share/url?url=${encodeURIComponent(`t.me/${BOT_LINK.split("t.me/")[1]}`)}&text=${encodeURIComponent(msg)}`;
+    const msg  = `${text}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
+    const url  = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;
     track(EVENTS.SHARE_CLICK, { kind: "victory" });
     if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
     else window.open(url, "_blank");

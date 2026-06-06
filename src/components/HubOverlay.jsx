@@ -5,6 +5,8 @@ import { copyText } from "../lib/clipboard.js";
 import { discountFor } from "../lib/promo.js";
 
 const NARUZHU_YELLOW = "#FFD60A";
+const SHARE_BOT_URL = "https://t.me/varonia_bot";
+const SHARE_SIGNATURE = "Варони - симулятор президента, где возможно все.";
 
 const NARUZHU_FEATURES = [
   "YouTube, Instagram, Wikipedia без блокировок",
@@ -43,8 +45,8 @@ export default function HubOverlay({
   const shareReferral = () => {
     const tg = window.Telegram?.WebApp;
     const userId = tg?.initDataUnsafe?.user?.id || "guest";
-    const refLink = `https://t.me/mr_president_gamebot?start=ref_${userId}`;
-    const msg = `🦅 Играй за президента Варонии — принимай решения, удержись у власти!\n\n→ ${refLink}`;
+    const refLink = `${SHARE_BOT_URL}?start=ref_${userId}`;
+    const msg = `${SHARE_SIGNATURE}\n\n${refLink}`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(msg)}`;
     if (tg) tg.openLink(shareUrl); else window.open(shareUrl, "_blank");
     onReferralShared();
