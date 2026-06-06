@@ -1,15 +1,4 @@
-import { PARAMS } from "../data/params.js";
 import { getAsset } from "../lib/assets.js";
-import StatIcon from "./StatIcon.jsx";
-
-const paramByKey = key => PARAMS.find(p => p.key === key);
-
-const INTRO_RULES = [
-  { key: "oligarchs", text: "Держите элиты, силовиков, народ и Запад в балансе" },
-  { key: "army",      text: "Каждый выбор двигает шкалы — крайности опаснее провала" },
-  { key: "people",    text: "0 или 100 по любой шкале — конец правления" },
-  { key: "west",      text: "Продержитесь два срока, чтобы войти в историю" },
-];
 
 // Экран онбординга: досье, правила, ввод имени / продолжение срока.
 export default function OnboardingScreen({
@@ -34,21 +23,6 @@ export default function OnboardingScreen({
           <p style={{ fontSize: 16, lineHeight: 1.55, color: "#e0d8c8", fontWeight: 700, textAlign: "center", marginBottom: 10, letterSpacing: 0.2 }}>
             Удержитесь у власти два срока. Не дайте ни одной силе стать слишком слабой или слишком сильной.
           </p>
-          <div className="onboarding-goal-strip">
-            <span>ЦЕЛЬ</span>
-            <strong>96 месяцев</strong>
-            <span>2 срока = легенда</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-            {INTRO_RULES.map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "6px 10px", border: "1px solid rgba(212,175,55,0.12)" }}>
-                <span className={`intro-icon-shell ${item.key}`}>
-                  <StatIcon param={paramByKey(item.key)} className="intro-stat-icon" />
-                </span>
-                <span style={{ fontSize: 12, color: "#b8b0a0", lineHeight: 1.4 }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
         </div>
         <div style={{ padding: "0 20px 12px" }}>
           {presidentName ? (

@@ -13,7 +13,11 @@ const ENDING_NO_ICON_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker"];
 export default function VictoryScreen({
   tenure, ending, stats, achievements, decisionLog, promoCode, onCopyPromo, onShare, onRestart,
 }) {
-  const verdict = useMemo(() => victoryVerdict(), []);
+  const verdict = useMemo(() => (
+    ending?.id === "democratic_transition"
+      ? "Впервые власть в Варонии закончилась не переворотом, а календарём."
+      : victoryVerdict()
+  ), [ending?.id]);
   return (
     <div className="screen-scroll-container">
       <div className="flow-victory" style={{ paddingBottom: 16 }}>

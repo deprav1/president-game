@@ -13,6 +13,7 @@ import OnboardingScreen from "./components/OnboardingScreen.jsx";
 import GameOverScreen from "./components/GameOverScreen.jsx";
 import VictoryScreen from "./components/VictoryScreen.jsx";
 import ElectionScreen from "./components/ElectionScreen.jsx";
+import ConstitutionScreen from "./components/ConstitutionScreen.jsx";
 import SecondChanceScreen from "./components/SecondChanceScreen.jsx";
 import HubOverlay from "./components/HubOverlay.jsx";
 import GameCard from "./components/GameCard.jsx";
@@ -94,6 +95,7 @@ export default function ThePresident() {
   const [ctaVariant, setCtaVariant]       = useState(CTA_VARIANTS[0]);
   const [decisionLog, setDecisionLog]     = useState([]);
   const [unlockedEndings, setUnlockedEndings] = useState([]);
+  const [victoryEndingId, setVictoryEndingId] = useState(null);
   const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
   const [reviveAvailable, setReviveAvailable]   = useState(false);
 
@@ -118,6 +120,7 @@ export default function ThePresident() {
         setPendingEvents(savedRun.pendingEvents || []);
         setPhase(savedRun.phase || "card");
         setTermsCompleted(savedRun.termsCompleted || 0);
+        setVictoryEndingId(savedRun.victoryEndingId || null);
         setHasUsedSecondChance(savedRun.hasUsedSecondChance || false);
         setHasUsedVpnRevive(savedRun.hasUsedVpnRevive || false);
         setRescueCard(savedRun.rescueCard || null);
@@ -383,8 +386,34 @@ export default function ThePresident() {
     }
   }, [hasUsedSecondChance, hasUsedVpnRevive, bestScore, deck, cardIdx, pendingEvents, termsCompleted, hapticNotify]);
 
+  const completeVictory = useCallback((endObj, score, reason = "victory", terms = termsCompleted) => {
+    hapticNotify("success");
+    if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
+    setPromoCode(discountFor(score));
+    setVictoryEndingId(endObj.id);
+    telegramStorage.removeItem("varon_save");
+
+    setUnlockedEndings(prev => {
+      if (prev.includes(endObj.id)) return prev;
+      const next = [...prev, endObj.id];
+      telegramStorage.setItem("varon_ends", JSON.stringify(next));
+      track(EVENTS.ENDING_UNLOCKED, { ending_id: endObj.id });
+      return next;
+    });
+    track(EVENTS.VICTORY, { ending_id: endObj.id, tenure: score, terms, reason });
+    unlockAchievement("victory");
+    setPhase("victory");
+  }, [bestScore, hapticNotify, termsCompleted, unlockAchievement]);
+
   const choose = useCallback((side, via = "click") => {
     if (choosing.current) return;
+
+    if (phase === "constitution") {
+      const score = months - 1;
+      const endObj = side === "leave" ? ENDINGS.democratic_transition : getVictoryEnding(stats, score);
+      completeVictory(endObj, score, side === "leave" ? "constitutional_exit" : "constitutional_breach", termsCompleted);
+      return;
+    }
 
     if (phase === "second_chance" && rescueCard) {
       track(EVENTS.SECOND_CHANCE_CHOICE, { accepted: side === "agree" });
@@ -481,22 +510,22 @@ export default function ThePresident() {
 
       if (newTerms >= 2) {
         hapticNotify("success");
-        const score = newMonth - 1;
-        if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-        setPromoCode(discountFor(score));
-        telegramStorage.removeItem("varon_save");
-        
-        const endObj = getVictoryEnding(ns, score);
-        setUnlockedEndings(prev => {
-          if (prev.includes(endObj.id)) return prev;
-          const next = [...prev, endObj.id];
-          telegramStorage.setItem("varon_ends", JSON.stringify(next));
-          track(EVENTS.ENDING_UNLOCKED, { ending_id: endObj.id });
-          return next;
-        });
-        track(EVENTS.VICTORY, { ending_id: endObj.id, tenure: score, terms: newTerms });
-        unlockAchievement("victory");
-        setPhase("victory");
+        setPhase("constitution");
+        setIsCrisis(false);
+        try {
+          telegramStorage.setItem("varon_save", JSON.stringify({
+            stats: ns,
+            months: newMonth,
+            deck,
+            cardIdx,
+            pendingEvents,
+            hasUsedSecondChance,
+            hasUsedVpnRevive,
+            rescueCard,
+            termsCompleted: newTerms,
+            phase: "constitution"
+          }));
+        } catch { /* Save failure should not interrupt the current run. */ }
         return;
       }
 
@@ -628,7 +657,7 @@ export default function ThePresident() {
         track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(crisis), month: newMonth });
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -715,6 +744,7 @@ export default function ThePresident() {
     telegramStorage.setItem("varon_pname", name);
     track(EVENTS.NAME_SUBMIT, { is_default_name: !nameInput.trim() });
     track(EVENTS.GAME_START, { from: "name_submit" });
+    setVictoryEndingId(null);
     setPhase("card");
     haptic("medium");
   };
@@ -732,6 +762,7 @@ export default function ThePresident() {
     setIsCrisis(false);
     setCrisisCard(null);
     setTermsCompleted(0);
+    setVictoryEndingId(null);
     setPendingEvents([]);
     setDecisionLog([]);
     setHasUsedSecondChance(false);
@@ -803,7 +834,7 @@ export default function ThePresident() {
   const tenure      = months - 1;
   const tenureLabel = tenure < 6 ? "КАТАСТРОФА" : tenure < 24 ? "ПРОВАЛ" : tenure < 48 ? "СЛАБО" : tenure < 96 ? "НЕПЛОХО" : tenure < 144 ? "КРЕПКИЙ ЛИДЕР" : "ЛЕГЕНДА";
   const killerKey   = PARAMS.find(p => stats[p.key] <= 0 || stats[p.key] >= 100)?.key;
-  const ending      = phase === "victory" ? getVictoryEnding(stats, tenure) : null;
+  const ending      = phase === "victory" ? (victoryEndingId ? ENDINGS[victoryEndingId] : getVictoryEnding(stats, tenure)) : null;
   // Цвета карты вынесены в CSS (.game-card / .game-card.crisis в App.css).
 
   // Превью с реальным сбалансированным масштабом
@@ -900,7 +931,7 @@ export default function ThePresident() {
             nameInput={nameInput}
             onNameInput={setNameInput}
             onNameSubmit={handleNameSubmit}
-            onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setPhase("card"); }}
+            onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setVictoryEndingId(null); setPhase("card"); }}
             onPlayAsOther={() => { track(EVENTS.PLAY_AS_OTHER); haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
             onNaruzhu={() => openNaruzhu("onboarding")}
           />
@@ -941,6 +972,11 @@ export default function ThePresident() {
         {/* ════════════════════════════════ ВЫБОРЫ ════════════════════════════════ */}
         {phase === "election" && (
           <ElectionScreen peopleStat={stats.people} onChoose={choose} />
+        )}
+
+        {/* ════════════════════════════════ КОНСТИТУЦИЯ ════════════════════════════════ */}
+        {phase === "constitution" && (
+          <ConstitutionScreen onChoose={choose} />
         )}
 
         {/* ════════════════════════════════ ВТОРОЙ ШАНС ════════════════════════════════ */}

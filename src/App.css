@@ -649,29 +649,6 @@ em, i { font-style: normal; }
   color: #2980b9;
 }
 
-.onboarding-goal-strip {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(8, 8, 8, 0.55));
-  color: #caa23a;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-}
-
-.onboarding-goal-strip strong {
-  color: #f5e6a0;
-  text-align: center;
-  font-size: 14px;
-  letter-spacing: 0.08em;
-}
-
 .intro-vector-icon {
   width: 17px;
   height: 17px;
