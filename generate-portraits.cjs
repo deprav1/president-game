@@ -22,6 +22,7 @@ const prompts = [
   { name: 'Pizulina_Censor', prompt: `prim severe young-ish female internet-censorship official, tight bun, buttoned high-collar blouse, deadpan, holding a glowing gold padlock over a screen. ${baseStyle}`, ratio: '1:1' },
   { name: 'Borzykin_Investigator', prompt: `stern bald male chief investigator, dark uniform with gold epaulettes, deadpan, holding a thick red case file stamped with a gold seal. ${baseStyle}`, ratio: '1:1' },
   { name: 'Porohov_Mercenary', prompt: `brutal bald male mercenary warlord, stubble, plain dark fatigues, deadpan menacing stare, gold sledgehammer resting on shoulder. ${baseStyle}`, ratio: '1:1' },
+  { name: 'Fsinov_Prison', prompt: `cold grim male prison system chief, dark green uniform, deadpan stare, holding a glowing gold keyring with heavy iron keys. ${baseStyle}`, ratio: '1:1' },
   { name: 'bg_protest', prompt: `dark empty city square at night, scattered abandoned protest signs, faint crimson glow, brutalist, oppressive, imperial decay. ${baseStyle}`, ratio: '16:9' },
   { name: 'ending_zastoy', prompt: `a frozen giant clock with gold hands stuck, covered in dust, pitch black void. ${baseStyle}`, ratio: '1:1' },
   { name: 'ending_kooperativ', prompt: `cluster of identical gold dachas behind a lake at night, opulent and cold, empty. ${baseStyle}`, ratio: '1:1' },

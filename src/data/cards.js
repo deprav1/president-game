@@ -1,3 +1,5 @@
+import { seriousCards } from './seriousCards.js';
+
 /**
  * Базовая колода карт President Game (адаптированная под российские реалии).
  * Сокращения полей: a=advisor (индекс советника), t=text (текст карточки),
@@ -131,7 +133,7 @@ const BASE_CARDS_RAW = [
 ];
 
 /** Нормализованные карты (из сокращённого формата в полный объект) */
-export const CARDS = BASE_CARDS_RAW.map((c, index) => ({
+const NORMALIZED_BASE_CARDS = BASE_CARDS_RAW.map((c, index) => ({
   id: c.id || `base_${index + 1}`,
   advisor: c.a,
   text: c.t,
@@ -140,6 +142,8 @@ export const CARDS = BASE_CARDS_RAW.map((c, index) => ({
   chain: c.ch,
   bgImage: c.bgImage || undefined,
 }));
+
+export const CARDS = [...NORMALIZED_BASE_CARDS, ...seriousCards];
 
 /** Кризисные карты — запускаются случайно раз в 12 месяцев */
 export const CRISIS_CARDS = [
