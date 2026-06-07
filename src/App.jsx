@@ -8,6 +8,7 @@ import { NARUZHU_CARDS } from "./data/naruzhuCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
 import { PANORAMA_CARDS } from "./data/panoramaCards.js";
 import { CHRONICLE_CARDS } from "./data/chronicleCards.js";
+import { PRECEDENT_CARDS } from "./data/precedentCards.js";
 import { getAsset } from "./lib/assets.js";
 import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast } from "./lib/gameHelpers.js";
 import Topbar from "./components/Topbar.jsx";
@@ -57,7 +58,7 @@ const CTA_VARIANTS = [
 ];
 
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
-const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS, ...PANORAMA_CARDS, ...CHRONICLE_CARDS];
+const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS, ...PANORAMA_CARDS, ...CHRONICLE_CARDS, ...PRECEDENT_CARDS];
 
 const getPreviewCard = () => {
   if (!import.meta.env.DEV) return null;
