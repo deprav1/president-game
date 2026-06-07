@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Варония · аналитика карточек</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top">
+        <div>
+          <p class="eyebrow">Внутренняя админка</p>
+          <h1>Карточки и аналитика Варонии</h1>
+        </div>
+        <button id="refresh">Обновить</button>
+      </header>
+
+      <section class="metrics" id="metrics"></section>
+
+      <section class="toolbar">
+        <input id="search" type="search" placeholder="Поиск по тексту, советнику, id" />
+        <select id="advisor"></select>
+        <select id="deck"></select>
+        <label class="check"><input id="problemOnly" type="checkbox" /> Только проблемные</label>
+      </section>
+
+      <section class="notice" id="notice"></section>
+      <section class="table" id="cards"></section>
+    </main>
+
+    <dialog id="editor">
+      <form method="dialog" class="editor">
+        <h2>Правка карточки</h2>
+        <p id="editorMeta" class="muted"></p>
+        <label>Текст<textarea id="editText" rows="6"></textarea></label>
+        <div class="grid2">
+          <label>Левый выбор<input id="editLeftLabel" /></label>
+          <label>Правый выбор<input id="editRightLabel" /></label>
+        </div>
+        <div class="grid2">
+          <label>Подсказка слева<textarea id="editLeftText" rows="3"></textarea></label>
+          <label>Подсказка справа<textarea id="editRightText" rows="3"></textarea></label>
+        </div>
+        <menu>
+          <button value="cancel">Отмена</button>
+          <button id="saveEdit" value="default">Сохранить оверрайд</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -17,6 +17,7 @@ import { telegramStorage } from "../utils/telegramStorage.js";
 const YM_ID = import.meta.env.VITE_YM_ID
   ? Number(import.meta.env.VITE_YM_ID)
   : null;
+const SERVER_ENDPOINT = import.meta.env.VITE_ANALYTICS_ENDPOINT || "";
 const IS_DEV = import.meta.env.DEV;
 
 // Контекст сессии — собирается один раз в initAnalytics(), мерджится в каждое событие.
@@ -62,6 +63,20 @@ function ym(...args) {
     window.ym(YM_ID, ...args);
   } catch {
     /* Аналитика не должна влиять на игру. */
+  }
+}
+
+function sendServerEvent(name, payload) {
+  if (!SERVER_ENDPOINT || typeof fetch !== "function") return;
+  try {
+    fetch(SERVER_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({ event: name, payload, ts: new Date().toISOString() }),
+    }).catch(() => {});
+  } catch {
+    /* Внешний collector не должен влиять на игру. */
   }
 }
 
@@ -142,4 +157,5 @@ export function track(name, props = {}) {
   }
   ym("reachGoal", name, payload);
   ym("params", { [name]: payload });
+  sendServerEvent(name, payload);
 }
