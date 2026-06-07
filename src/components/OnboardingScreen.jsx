@@ -5,7 +5,7 @@ export default function OnboardingScreen({
   presidentName, nameInput, onNameInput, onNameSubmit, onNewTerm, onPlayAsOther, onNaruzhu,
 }) {
   return (
-    <div className="screen-scroll-container" style={{ background: "radial-gradient(circle at 50% 22%,#2a1208 0%,#160a04 48%,#080402 100%)" }}>
+    <div className="screen-scroll-container onboarding-screen">
       <div className="card-paper-container">
         <div className="onboarding-title-bar">
           <div className="onboarding-title">Welcome to <span>ВАРОНИЯ</span></div>
@@ -20,11 +20,11 @@ export default function OnboardingScreen({
             />
           </div>
 
-          <p style={{ fontSize: 16, lineHeight: 1.55, color: "#e0d8c8", fontWeight: 700, textAlign: "center", marginBottom: 10, letterSpacing: 0.2 }}>
-            Удержитесь у власти два срока. Не дайте ни одной силе стать слишком слабой или слишком сильной.
+          <p className="onboarding-rules-copy">
+            Удержитесь у власти сколько сможете. Свапайте карточку для принятия решения, не позволяйте одной из четырех сторон слишком ослабнуть или окрепнуть.
           </p>
         </div>
-        <div style={{ padding: "0 20px 12px" }}>
+        <div className="onboarding-actions">
           {presidentName ? (
             <div className="onboarding-return-actions">
               <button onClick={onNewTerm} className="btn-velvet onboarding-new-term">
@@ -44,7 +44,7 @@ export default function OnboardingScreen({
                 onChange={e => onNameInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && onNameSubmit()}
                 style={{
-                  width: "100%", marginBottom: 10, padding: "10px 14px",
+                  width: "100%", padding: "10px 14px",
                   background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.2)",
                   borderRadius: 8, fontSize: 13, fontFamily: "var(--font-serif)",
                   color: "#e0d8c8", outline: "none", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
@@ -66,7 +66,7 @@ export default function OnboardingScreen({
           className="naruzhu-footer-cta"
         >
           <div className="naruzhu-footer-kicker">VPN НАРУЖУ</div>
-          <div className="naruzhu-footer-copy">Свободный интернет за пределами Варонии →</div>
+          <div className="naruzhu-footer-copy">Свободный интернет за пределами Варонии</div>
         </div>
 
         <div className="font-typewriter" style={{
