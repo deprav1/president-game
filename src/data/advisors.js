@@ -12,4 +12,10 @@ export const ADVISORS = [
   { name: "Патриарх Варсонофий", role: "Глава Церкви",           avatar: "/images/Patriarch_Church_Wide.webp" }, // 5 (Церковный клир, традиционные ценности, иконы)
   { name: "Юлия Стрельцова",     role: "Лидер оппозиции в изгнании", avatar: "/images/Streltsova_Opposition_Wide.webp"  }, // 6 (Оппозиция, Вильнюс, расследования)
   { name: "Борис Усманов",       role: "Олигарх №1",             avatar: "/images/Usmanov_Oligarch_Wide.webp"  }, // 7 (Олигархический конгломерат, яхты, VK)
+  // ─── Новые советники (прототипы: Мизулина / Бастрыкин / Пригожин) ───
+  // Портреты пока не сгенерированы — в UI img c onError просто скрывается (имя/роль остаются).
+  // Промпты для генерации добавлены в generate-portraits.cjs (Pizulina/Borzykin/Porohov).
+  { name: "Екатерина Пизулина",  role: "Глава Лиги Чистого Эфира", avatar: "/images/Pizulina_Censor_Wide.webp" }, // 8 (Цензура, доносы на артистов, блокировки, публичные покаяния)
+  { name: "Александр Борзыкин",  role: "Глава Следственного Приказа", avatar: "/images/Borzykin_Investigator_Wide.webp" }, // 9 (Уголовные дела, проверки постов, «нацбезопасность»)
+  { name: "Евгений Погожинга",   role: "Командир дружины «Порох»", avatar: "/images/Porohov_Mercenary_Wide.webp" }, // 10 (Вербовка заключённых, наезды на Генштаб, силовое давление)
 ];
