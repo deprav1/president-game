@@ -10,7 +10,7 @@ import { PANORAMA_CARDS } from "./data/panoramaCards.js";
 import { CHRONICLE_CARDS } from "./data/chronicleCards.js";
 import { PRECEDENT_CARDS } from "./data/precedentCards.js";
 import { getAsset } from "./lib/assets.js";
-import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast } from "./lib/gameHelpers.js";
+import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast, DIFFICULTIES } from "./lib/gameHelpers.js";
 import Topbar from "./components/Topbar.jsx";
 import OnboardingScreen from "./components/OnboardingScreen.jsx";
 import GameOverScreen from "./components/GameOverScreen.jsx";
@@ -101,10 +101,11 @@ export default function ThePresident() {
   const [victoryEndingId, setVictoryEndingId] = useState(null);
   const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
   const [reviveAvailable, setReviveAvailable]   = useState(false);
+  const [difficulty, setDifficulty]             = useState("normal");
 
   useEffect(() => {
     async function loadData() {
-      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends"];
+      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty"];
       const data = await telegramStorage.getItems(keys);
       const forcedPhase = new URLSearchParams(location.search).get("p");
       
@@ -128,6 +129,12 @@ export default function ThePresident() {
         setHasUsedVpnRevive(savedRun.hasUsedVpnRevive || false);
         setRescueCard(savedRun.rescueCard || null);
       }
+
+      // Сложность: приоритет у возобновляемой партии, иначе — последний выбор игрока.
+      const savedDifficulty = savedRun && DIFFICULTIES.includes(savedRun.difficulty)
+        ? savedRun.difficulty
+        : (DIFFICULTIES.includes(data["varon_difficulty"]) ? data["varon_difficulty"] : "normal");
+      setDifficulty(savedDifficulty);
 
       setPresidentName(data["varon_pname"] || "");
       try { setAchievements(JSON.parse(data["varon_ach"] || "[]")); } catch {}
@@ -278,12 +285,12 @@ export default function ThePresident() {
     const ns = {}, fl = {};
     PARAMS.forEach(p => {
       const val = fx[p.key] || 0;
-      const scaled = scaleStatEffect(p.key, val);
+      const scaled = scaleStatEffect(p.key, val, difficulty, months);
       ns[p.key] = Math.max(0, Math.min(100, currentStats[p.key] + scaled));
       if (scaled !== 0) fl[p.key] = true;
     });
     return { ns, fl };
-  }, []);
+  }, [difficulty, months]);
 
   const handleDeathOrRescue = useCallback((death, nextStats, nextMonth, nextPendingEvents = pendingEvents) => {
     hapticNotify("error");
@@ -642,6 +649,7 @@ export default function ThePresident() {
           hasUsedVpnRevive,
           rescueCard,
           termsCompleted,
+          difficulty,
           phase: "card"
         }));
       } catch { /* Save failure should not interrupt the current run. */ }
@@ -660,7 +668,7 @@ export default function ThePresident() {
         track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(crisis), month: newMonth });
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -772,6 +780,13 @@ export default function ThePresident() {
     setCardRating(rating);
   }, [currentCard, isCrisis, months, haptic]);
 
+  const selectDifficulty = (d) => {
+    if (!DIFFICULTIES.includes(d) || d === difficulty) return;
+    setDifficulty(d);
+    telegramStorage.setItem("varon_difficulty", d);
+    haptic("light");
+  };
+
   const handleNameSubmit = () => {
     const name = nameInput.trim() || "Президент";
     setPresidentName(name);
@@ -873,7 +888,7 @@ export default function ThePresident() {
 
   // Превью с реальным сбалансированным масштабом
   const previewFxReal = hovered && currentCard
-    ? Object.fromEntries(PARAMS.map(p => [p.key, scaleStatEffect(p.key, currentCard[hovered].fx[p.key] || 0)]))
+    ? Object.fromEntries(PARAMS.map(p => [p.key, scaleStatEffect(p.key, currentCard[hovered].fx[p.key] || 0, difficulty, months)]))
     : null;
 
   // ─── SHARE-ТЕКСТЫ ─────────────────────────────────────────────────────────
@@ -955,7 +970,7 @@ export default function ThePresident() {
 
         {/* ── ШКАЛЫ ── */}
         <div className="stats-panel">
-          {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]} preview={previewFxReal ? (previewFxReal[p.key] || 0) : 0}/>)}
+          {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]} preview={difficulty === "hardcore" ? 0 : (previewFxReal ? (previewFxReal[p.key] || 0) : 0)}/>)}
         </div>
 
         {/* ════════════════════════════════ ОНБОРДИНГ ════════════════════════════════ */}
@@ -965,6 +980,8 @@ export default function ThePresident() {
             nameInput={nameInput}
             onNameInput={setNameInput}
             onNameSubmit={handleNameSubmit}
+            difficulty={difficulty}
+            onSelectDifficulty={selectDifficulty}
             onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setVictoryEndingId(null); setPhase("card"); }}
             onPlayAsOther={() => { track(EVENTS.PLAY_AS_OTHER); haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
             onNaruzhu={() => openNaruzhu("onboarding")}

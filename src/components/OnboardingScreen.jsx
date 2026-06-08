@@ -1,9 +1,18 @@
 import { getAsset } from "../lib/assets.js";
 
-// Экран онбординга: досье, правила, ввод имени / продолжение срока.
+// Уровни сложности (порядок = как в gameHelpers.DIFFICULTIES).
+const DIFFICULTY_OPTIONS = [
+  { key: "easy",     label: "Лёгкий",  hint: "Спокойная партия — ошибки почти не наказываются." },
+  { key: "normal",   label: "Обычный", hint: "Классический баланс Варонии." },
+  { key: "hardcore", label: "Хардкор", hint: "Без цифр влияния. Давление растёт с каждым годом." },
+];
+
+// Экран онбординга: досье, правила, выбор сложности, ввод имени / продолжение срока.
 export default function OnboardingScreen({
   presidentName, nameInput, onNameInput, onNameSubmit, onNewTerm, onPlayAsOther, onNaruzhu,
+  difficulty = "normal", onSelectDifficulty,
 }) {
+  const activeHint = (DIFFICULTY_OPTIONS.find(o => o.key === difficulty) || DIFFICULTY_OPTIONS[1]).hint;
   return (
     <div className="screen-scroll-container onboarding-screen">
       <div className="card-paper-container">
@@ -25,6 +34,21 @@ export default function OnboardingScreen({
           </p>
         </div>
         <div className="onboarding-actions">
+          <div className="difficulty-select" role="group" aria-label="Сложность">
+            {DIFFICULTY_OPTIONS.map(o => (
+              <button
+                key={o.key}
+                type="button"
+                className={`difficulty-option ${difficulty === o.key ? "active" : ""}`}
+                aria-pressed={difficulty === o.key}
+                onClick={() => onSelectDifficulty?.(o.key)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="difficulty-hint">{activeHint}</p>
+
           {presidentName ? (
             <div className="onboarding-return-actions">
               <button onClick={onNewTerm} className="btn-velvet onboarding-new-term">

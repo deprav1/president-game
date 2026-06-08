@@ -638,6 +638,54 @@ em, i { font-style: normal; }
   padding: 0 20px 16px;
 }
 
+/* ── СЕЛЕКТОР СЛОЖНОСТИ ── */
+.difficulty-select {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #0a0a0a;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.difficulty-option {
+  padding: 9px 4px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #9a8f78;
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.difficulty-option:hover {
+  color: #d8cbac;
+}
+
+.difficulty-option.active {
+  color: #160603;
+  background: linear-gradient(180deg, #e7c862, var(--color-gold));
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 1px 6px rgba(212, 175, 55, 0.3);
+}
+
+.difficulty-hint {
+  margin: -4px 0 2px;
+  min-height: 28px;
+  font-family: var(--font-text);
+  font-size: 12px;
+  line-height: 1.4;
+  color: #b89a5e;
+  text-align: center;
+}
+
 .onboarding-return-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
