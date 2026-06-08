@@ -57,7 +57,7 @@ export const PARAMS = [
   },
   {
     key: "west",
-    label: "Колл. Запад",
+    label: "Запад",
     short: "Запад",
     color: "#2980b9",
     icon: "/images/icon_reputation.webp",
