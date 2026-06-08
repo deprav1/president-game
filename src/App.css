@@ -415,12 +415,11 @@ em, i { font-style: normal; }
   position: relative;
   min-width: 0;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "icon track"
-    "icon label";
+    "track"
+    "label";
   align-items: center;
-  column-gap: 7px;
   padding: 6px 7px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
@@ -549,13 +548,14 @@ em, i { font-style: normal; }
   grid-area: label;
   margin-top: 3px;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  text-align: center;
+  /* Полное название силы — переносим, если не влезает в одну строку. */
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-family: var(--font-text);
   font-size: 11px;
-  line-height: 1;
-  /* Узкий трекинг + короткие лейблы (param.short), чтобы влезали без обрезки. */
+  line-height: 1.05;
   letter-spacing: 0.01em;
   font-weight: 700;
   text-transform: uppercase;
@@ -1332,6 +1332,70 @@ em, i { font-style: normal; }
 .flow-victory .flow-verdict { color: #f0e0b4; border: 1px solid rgba(212,175,55,0.2); }
 .flow-defeat  .flow-verdict { color: #cdb8b4; border: 1px solid rgba(120,130,140,0.15); }
 
+/* ─── HERO-ШАПКА ФИНАЛА: картинка-фон + текст поверх ─── */
+.flow-final-hero {
+  position: relative;
+  width: 100%;
+  height: min(30dvh, 200px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #111 20%, #080808 100%);
+}
+.flow-final-hero .frame-inner-img {
+  opacity: 0.85;
+  filter: grayscale(0.2);
+}
+.flow-defeat .flow-final-hero .frame-inner-img { filter: grayscale(0.4) brightness(0.9); }
+/* Затемняющий градиент снизу под текстом */
+.flow-final-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(to top,
+    rgba(6,7,8,0.96) 0%, rgba(6,7,8,0.72) 38%, rgba(6,7,8,0.18) 68%, transparent 100%);
+  pointer-events: none;
+}
+/* Эмодзи-fallback концовки, когда нет картинки */
+.flow-final-hero-emoji {
+  position: relative;
+  z-index: 2;
+  font-size: 56px;
+  opacity: 0.85;
+}
+.flow-final-hero-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 0 18px 16px;
+  text-align: center;
+}
+.flow-final-hero-text .flow-defeat-title,
+.flow-final-hero-text .flow-victory-title {
+  margin: 0;
+}
+.flow-final-tenure {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-top: 5px;
+}
+.flow-defeat  .flow-final-tenure { color: #8b9aa3; }
+.flow-victory .flow-final-tenure { color: #caa23a; }
+.flow-final-caption {
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.45;
+  margin-top: 8px;
+}
+.flow-defeat  .flow-final-caption { color: #cdb8b4; }
+.flow-victory .flow-final-caption { color: #e6d6ac; }
+
 /* Компактный режим для большинства смартфонов (iPhone 12/13/14/15, Pixel и т.д.) */
 @media (max-height: 900px) {
   .screen-scroll-container {
@@ -1371,24 +1435,7 @@ em, i { font-style: normal; }
   }
 
   .stat-pill {
-    grid-template-columns: 25px minmax(0, 1fr);
-    column-gap: 5px;
     padding: 5px;
-  }
-
-  .stat-icon-shell {
-    width: 25px;
-    height: 25px;
-  }
-
-  .stat-raster-icon {
-    width: 23px;
-    height: 23px;
-  }
-
-  .stat-vector-icon {
-    width: 16px;
-    height: 16px;
   }
 
   .card-advisor-avatar {
@@ -1399,6 +1446,9 @@ em, i { font-style: normal; }
   .story-image-frame {
     height: 74px;
     margin-bottom: 8px;
+  }
+  .flow-final-hero {
+    height: min(24dvh, 150px);
   }
 
   .choice-effect-chip {
@@ -1441,11 +1491,6 @@ em, i { font-style: normal; }
   }
 
   .stat-pill {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "icon"
-      "track"
-      "label";
     justify-items: center;
     row-gap: 4px;
   }

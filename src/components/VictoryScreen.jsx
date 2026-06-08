@@ -3,7 +3,6 @@ import { PARAMS } from "../data/params.js";
 import { getAsset } from "../lib/assets.js";
 import { victoryVerdict } from "../data/verdicts.js";
 import StatIcon from "./StatIcon.jsx";
-import AchievementsList from "./AchievementsList.jsx";
 import DecisionLog from "./DecisionLog.jsx";
 
 const ENDING_IMG_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"];
@@ -11,7 +10,7 @@ const ENDING_NO_ICON_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker"];
 
 // Экран победы: финал (концовка), итоговые шкалы, достижения, история, промокод.
 export default function VictoryScreen({
-  tenure, ending, stats, achievements, decisionLog, promoCode, onCopyPromo, onShare, onRestart,
+  tenure, ending, stats, decisionLog, promoCode, onCopyPromo, onOpenNaruzhu, onShare, onRestart,
 }) {
   const verdict = useMemo(() => (
     ending?.id === "democratic_transition"
@@ -21,34 +20,27 @@ export default function VictoryScreen({
   return (
     <div className="screen-scroll-container">
       <div className="flow-victory" style={{ paddingBottom: 16 }}>
-        <div className="flow-victory-header">
-          <div style={{ fontSize: 38, marginBottom: 2 }}>🏛️</div>
-          <div className="flow-victory-title">ВЫ ВОШЛИ В ИСТОРИЮ</div>
-          <div className="font-typewriter" style={{ fontSize: 12, color: "#caa23a", letterSpacing: 2, marginTop: 4 }}>
-            {tenure} МЕСЯЦЕВ У ВЛАСТИ
+        <div className="flow-final-hero">
+          {ending && (ending.image || ENDING_IMG_IDS.includes(ending.id)) ? (
+            <img
+              className="frame-inner-img"
+              src={getAsset(ending.image || `/images/ending_${ending.id}.webp`)}
+              alt={ending?.title || "Финал"}
+              onError={e => e.currentTarget.style.display = 'none'}
+            />
+          ) : (
+            <span className="flow-final-hero-emoji">{ending?.icon || "🏛️"}</span>
+          )}
+          <div className="flow-final-hero-text">
+            <div className="flow-victory-title">ВЫ ВОШЛИ В ИСТОРИЮ</div>
+            <div className="flow-final-tenure">{tenure} МЕСЯЦЕВ У ВЛАСТИ</div>
+            <div className="flow-final-caption">«{verdict}»</div>
           </div>
         </div>
-
-        <div className="flow-verdict">«{verdict}»</div>
 
         <div className="card-content-area">
           {ending && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {ending.image || ENDING_IMG_IDS.includes(ending.id) ? (
-                <div className="story-image-frame" style={{ height: 150 }}>
-                  <img
-                    className="frame-inner-img"
-                    src={getAsset(ending.image || `/images/ending_${ending.id}.webp`)}
-                    alt={ending.title}
-                    onError={e => e.currentTarget.style.display = 'none'}
-                  />
-                </div>
-              ) : (
-                <div style={{ display: "flex", justifyContent: "center", margin: "10px 0" }}>
-                  <span style={{ fontSize: 44 }}>{ending.icon}</span>
-                </div>
-              )}
-
               <div style={{ padding: "0 4px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   {!ENDING_NO_ICON_IDS.includes(ending.id) && (
@@ -79,8 +71,6 @@ export default function VictoryScreen({
             ))}
           </div>
 
-          <AchievementsList achievements={achievements} title="ДОСТИЖЕНИЯ" />
-
           <DecisionLog decisionLog={decisionLog} />
 
           {promoCode && (
@@ -105,7 +95,16 @@ export default function VictoryScreen({
                 {promoCode.code}
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
-                Копировать · Активация на naruzhu.am
+                Копировать · Активация на{" "}
+                <span
+                  onClick={e => { e.stopPropagation(); onOpenNaruzhu?.(); }}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onOpenNaruzhu?.(); } }}
+                  role="button"
+                  tabIndex={0}
+                  style={{ color: "#d4af37", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  naruzhu.am
+                </span>
               </div>
             </div>
           )}

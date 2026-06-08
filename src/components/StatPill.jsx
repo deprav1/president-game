@@ -1,7 +1,5 @@
-import FactionIcon from "./FactionIcon.jsx";
-
 // Шкала параметра/фракции с цветовыми состояниями (norm/warn/danger/critical).
-// Иконка — векторный глиф (прозрачный, наследует --status-color).
+// Без иконки: на мобилке она съедала место — показываем полное название силы.
 // preview — предполагаемая дельта при свайпе/наведении (0/undefined → не показываем).
 export default function StatPill({ param, value, flash, preview = 0 }) {
   const pct        = Math.max(0, Math.min(100, value));
@@ -12,9 +10,6 @@ export default function StatPill({ param, value, flash, preview = 0 }) {
 
   return (
     <div className={`stat-pill ${param.key} ${state}`} style={{ "--param-color": param.color }}>
-      <div className="stat-icon-shell">
-        <FactionIcon type={param.key} className="stat-vector-icon" />
-      </div>
       <div className="stat-track">
         <div className="stat-safe-zone" />
         <div
@@ -27,7 +22,7 @@ export default function StatPill({ param, value, flash, preview = 0 }) {
         <div className="stat-midline" />
       </div>
       <div className="stat-label">
-        {(param.short || param.label).toUpperCase()}{isCritical ? "!" : ""}
+        {param.label.toUpperCase()}{isCritical ? "!" : ""}
       </div>
       {preview !== 0 && (
         <div className={`stat-delta ${preview > 0 ? "pos" : "neg"}`}>

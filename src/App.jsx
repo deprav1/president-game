@@ -977,7 +977,6 @@ export default function ThePresident() {
             tenure={tenure}
             tenureLabel={tenureLabel}
             deathMsg={deathMsg}
-            achievements={achievements}
             killerKey={killerKey}
             promoCode={promoCode}
             canRevive={!hasUsedVpnRevive && reviveAvailable}
@@ -985,6 +984,7 @@ export default function ThePresident() {
             onRestart={restart}
             onVpnRevive={reviveViaVpn}
             onCopyPromo={copyPromo}
+            onOpenNaruzhu={() => openNaruzhu("gameover_promo")}
           />
         )}
 
@@ -994,10 +994,10 @@ export default function ThePresident() {
             tenure={tenure}
             ending={ending}
             stats={stats}
-            achievements={achievements}
             decisionLog={decisionLog}
             promoCode={promoCode}
             onCopyPromo={copyPromo}
+            onOpenNaruzhu={() => openNaruzhu("victory_promo")}
             onShare={shareVictory}
             onRestart={restart}
           />

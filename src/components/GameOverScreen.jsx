@@ -1,38 +1,34 @@
 import { useMemo } from "react";
 import { getAsset } from "../lib/assets.js";
 import { defeatVerdict } from "../data/verdicts.js";
-import AchievementsList from "./AchievementsList.jsx";
 
 // Экран поражения: причина, вердикт, VPN-ревайв, скидка, достижения, шеринг/рестарт.
 export default function GameOverScreen({
-  tenure, tenureLabel, deathMsg, achievements, killerKey,
+  tenure, tenureLabel, deathMsg, killerKey,
   promoCode, canRevive, onShare, onRestart, onVpnRevive,
-  onCopyPromo,
+  onCopyPromo, onOpenNaruzhu,
 }) {
   const verdict = useMemo(() => defeatVerdict(killerKey), [killerKey]);
   return (
     <div className="screen-scroll-container">
       <div className="flow-defeat" style={{ paddingBottom: 16 }}>
-        <div className="flow-defeat-header">
-          <div style={{ fontSize: 34, marginBottom: 2 }}>⚰️</div>
-          <div className="flow-defeat-title">КОНЕЦ ПРАВЛЕНИЯ</div>
-          <div className="font-typewriter" style={{ fontSize: 12, color: "#8b9aa3", letterSpacing: 2, marginTop: 4 }}>
-            {tenure} МЕС. У ВЛАСТИ — {tenureLabel}
+        <div className="flow-final-hero ruins">
+          <img
+            className="frame-inner-img"
+            src={getAsset('/images/palace_ruined.webp')}
+            alt="Разрушенный дворец"
+            onError={e => e.currentTarget.style.display = 'none'}
+          />
+          <div className="flow-final-hero-text">
+            <div className="flow-defeat-title">КОНЕЦ ПРАВЛЕНИЯ</div>
+            <div className="flow-final-tenure">
+              {tenure} МЕС. У ВЛАСТИ — {tenureLabel}
+            </div>
+            <div className="flow-final-caption">«{verdict}»</div>
           </div>
         </div>
 
-        <div className="flow-verdict">«{verdict}»</div>
-
         <div className="card-content-area">
-          <div className="story-image-frame crisis ruins">
-            <img
-              className="frame-inner-img"
-              src={getAsset('/images/palace_ruined.webp')}
-              alt="Разрушенный дворец"
-              onError={e => e.currentTarget.style.display = 'none'}
-            />
-          </div>
-
           <div style={{
             background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.12)",
             borderRadius: 12, padding: "14px 18px", marginBottom: 12,
@@ -97,12 +93,19 @@ export default function GameOverScreen({
                 {promoCode.code}
               </div>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
-                Копировать · Активация на naruzhu.am
+                Копировать · Активация на{" "}
+                <span
+                  onClick={e => { e.stopPropagation(); onOpenNaruzhu?.(); }}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onOpenNaruzhu?.(); } }}
+                  role="button"
+                  tabIndex={0}
+                  style={{ color: "#FFD60A", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  naruzhu.am
+                </span>
               </div>
             </div>
           )}
-
-          <AchievementsList achievements={achievements} title="ВАШИ ДОСТИЖЕНИЯ" />
         </div>
 
         <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
