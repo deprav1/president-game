@@ -14,6 +14,7 @@ const ADVISOR_BACKGROUNDS = {
   8: "/images/bg_influencer_apology_set.webp", // Пизулина — цензура
   9: "/images/bg_court_corridor_phones.webp",  // Борзыкин — следствие/суды
   10: "/images/bg_drone_factory.webp",         // Погожинга — дружина «Порох»
+  11: "/images/bg_prison_colony.webp",         // Фсинов — тюремное ведомство
 };
 
 const THEME_BACKGROUNDS = [
