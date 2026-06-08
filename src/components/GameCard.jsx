@@ -111,7 +111,7 @@ export default function GameCard({
           </div>
 
           {/* Текст карты */}
-          <div className="game-card-body" style={{ flex: 1, padding: "28px 18px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          <div className="game-card-body" style={{ flex: 1, padding: "22px 18px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
             {/* Атмосферный фон-подложка «мир Варонии» (заполняет пустоту) */}
             <div className="game-card-ambiance" />
             {bgImage && (
