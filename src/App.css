@@ -222,7 +222,7 @@ em, i { font-style: normal; }
 
 @media (max-width: 539px) {
   :root {
-    --mobile-safe-top-scale: 0.7;
+    --mobile-safe-top-scale: 0.85;
   }
 }
 
