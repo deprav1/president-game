@@ -25,7 +25,8 @@ import AchievementsList from "./components/AchievementsList.jsx";
 import DecisionLog from "./components/DecisionLog.jsx";
 import { ACHIEVEMENTS_DEF } from "./data/achievements.js";
 import { telegramStorage } from "./utils/telegramStorage.js";
-import { track, EVENTS, hashStr } from "./lib/analytics.js";
+import { track, EVENTS, hashStr, trackOutbound, appendUtm } from "./lib/analytics.js";
+import AdminAnalyticsPanel from "./components/AdminAnalyticsPanel.jsx";
 import { copyText } from "./lib/clipboard.js";
 import { discountFor } from "./lib/promo.js";
 import "./App.css";
@@ -49,6 +50,10 @@ const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId 
   if (promoCode?.code) p.set("promo", promoCode.code);
   return `https://naruzhu.am/?${p.toString()}`;
 };
+
+// Telegram-ник админа, которому доступна внутриигровая панель аналитики.
+// Меняется через VITE_ADMIN_USERNAME без правки кода.
+const ADMIN_USERNAME = (import.meta.env.VITE_ADMIN_USERNAME || "deprav").toLowerCase().replace(/^@/, "");
 
 // A/B-тест текста CTA-кнопки «Наружу» на карте.
 const CTA_VARIANTS = [
@@ -109,6 +114,18 @@ export default function ThePresident() {
   const [difficulty, setDifficulty]             = useState("normal");
   // Безопасный режим: скрывает всю рекламу VPN «Наружу» (промокоды, CTA, ревайв, оффер-карты).
   const [safeMode, setSafeMode]                 = useState(false);
+  // Внутриигровая панель аналитики для админа @deprav.
+  const [showAdmin, setShowAdmin]               = useState(false);
+  // Админ опознаётся по Telegram-нику; ?admin=<ник> — запасной вход для браузера/dev.
+  const isAdmin = (() => {
+    try {
+      const uname = (window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "").toLowerCase();
+      if (uname && uname === ADMIN_USERNAME) return true;
+      return new URLSearchParams(location.search).get("admin")?.toLowerCase().replace(/^@/, "") === ADMIN_USERNAME;
+    } catch {
+      return false;
+    }
+  })();
 
   useEffect(() => {
     async function loadData() {
@@ -819,6 +836,21 @@ export default function ThePresident() {
     haptic("medium");
   };
 
+  // Админ-переключатель режима VPN «Наружу». safeMode=true → реклама VPN скрыта.
+  // Пересобираем колоду на лету: VPN-карты исчезают/возвращаются, прогресс (стат, срок) сохраняется.
+  const toggleSafeMode = () => {
+    setSafeMode(prev => {
+      const next = !prev;
+      telegramStorage.setItem("varon_safe", next ? "1" : "0");
+      setDeck(buildDeck(next));
+      setCardIdx(0);
+      if (next) setPromoCode(null);
+      track(EVENTS.SAFE_MODE_TOGGLE, { enabled: next, source: "admin_panel" });
+      return next;
+    });
+    haptic("light");
+  };
+
   const restart = () => {
     track(EVENTS.RESTART);
     setStats({ oligarchs:50, army:50, people:50, west:50 });
@@ -856,8 +888,8 @@ export default function ThePresident() {
       months: Math.max(0, months - 1),
       promo: promoCode?.code || null,
     });
-    if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
-    else window.open(url, "_blank");
+    // Учитываем как внешний переход и открываем правильным способом.
+    trackOutbound(url, { kind: "naruzhu", source, content: content || null });
   };
 
   const copyPromo = async () => {
@@ -932,8 +964,18 @@ export default function ThePresident() {
     },
   };
   const PROMO_LINE = safeMode ? "" : `\n🔒 7 дней VPN «Наружу» бесплатно — промокод NARUZHU10: ${naruzhuUrl("share", "", Math.max(0, months - 1))}`;
-  const BOT_LINK   = "https://t.me/varonia_bot";
+  // Реферальная метка: friend, открывший ссылку, получит start_param = ref_<хэш>,
+  // что позволяет атрибутировать его к пригласившему игроку.
+  const refTag     = `ref_${hashStr(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest")}`;
+  // Deep-link в мини-апп с меткой источника — для учёта входящих переходов из share.
+  const BOT_LINK   = appendUtm("https://t.me/varonia_bot", { startapp: refTag });
   const SHARE_SIGNATURE = "Варони - симулятор президента, где возможно все.";
+  // Открывает системный share Telegram с переданным сообщением и размеченной ссылкой.
+  const openShare = (msg, kind) => {
+    const url = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;
+    track(EVENTS.SHARE_CLICK, { kind });
+    trackOutbound(url, { kind: `share_${kind}` });
+  };
 
   const shareGameOver = () => {
     const killerParam = PARAMS.find(p => stats[p.key] <= 0 || stats[p.key] >= 100);
@@ -941,10 +983,7 @@ export default function ThePresident() {
     const isHigh = stats[key] >= 100;
     const text   = SHARE_DEATH[key]?.[isHigh ? "high" : "low"] || `${tenure} мес. у власти в Варонии.`;
     const msg    = `${text}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
-    const url    = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;
-    track(EVENTS.SHARE_CLICK, { kind: "gameover" });
-    if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
-    else window.open(url, "_blank");
+    openShare(msg, "gameover");
   };
 
   const VICTORY_TEXTS = [
@@ -955,10 +994,7 @@ export default function ThePresident() {
   const shareVictory = () => {
     const text = VICTORY_TEXTS[Math.floor(Math.random() * VICTORY_TEXTS.length)];
     const msg  = `${text}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
-    const url  = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;
-    track(EVENTS.SHARE_CLICK, { kind: "victory" });
-    if (window.Telegram?.WebApp) window.Telegram.WebApp.openLink(url);
-    else window.open(url, "_blank");
+    openShare(msg, "victory");
   };
 
   // ─── РЕНДЕР ───────────────────────────────────────────────────────────────
@@ -1091,6 +1127,8 @@ export default function ThePresident() {
             unlockedEndings={unlockedEndings}
             referralCount={referralCount}
             safeMode={safeMode}
+            isAdmin={isAdmin}
+            onOpenAdmin={() => { setShowHub(false); setShowAdmin(true); }}
             onOpenNaruzhu={() => openNaruzhu("hub")}
             onReferralShared={() => {
               track(EVENTS.REFERRAL_SHARED);
@@ -1101,6 +1139,15 @@ export default function ThePresident() {
               });
             }}
             haptic={haptic}
+          />
+        )}
+
+        {/* ════════ ВНУТРИИГРОВАЯ АНАЛИТИКА — ТОЛЬКО ДЛЯ @deprav ════════ */}
+        {showAdmin && isAdmin && (
+          <AdminAnalyticsPanel
+            onClose={() => setShowAdmin(false)}
+            safeMode={safeMode}
+            onToggleSafeMode={toggleSafeMode}
           />
         )}
       </div>

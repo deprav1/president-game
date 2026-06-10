@@ -3,6 +3,7 @@ import { ACHIEVEMENTS_DEF } from "../data/achievements.js";
 import { ENDINGS } from "../data/endings.js";
 import { copyText } from "../lib/clipboard.js";
 import { discountFor } from "../lib/promo.js";
+import { trackOutbound, appendUtm, hashStr } from "../lib/analytics.js";
 
 const NARUZHU_YELLOW = "#FFD60A";
 const SHARE_BOT_URL = "https://t.me/varonia_bot";
@@ -26,7 +27,7 @@ const shareCountLabel = (count) => {
 // Модал «Покинуть Варонию»: рекорд, достижения, хроника финалов, оффер VPN Наружу.
 export default function HubOverlay({
   onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
-  safeMode = false,
+  safeMode = false, isAdmin = false, onOpenAdmin,
 }) {
   const promoCode = discountFor(bestScore);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
@@ -44,12 +45,12 @@ export default function HubOverlay({
   };
 
   const shareReferral = () => {
-    const tg = window.Telegram?.WebApp;
-    const userId = tg?.initDataUnsafe?.user?.id || "guest";
-    const refLink = `${SHARE_BOT_URL}?start=ref_${userId}`;
+    const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest";
+    // startapp ведёт прямо в мини-апп; ref_<хэш> атрибутирует приглашённого к пригласившему.
+    const refLink = appendUtm(SHARE_BOT_URL, { startapp: `ref_${hashStr(userId)}` });
     const msg = `${SHARE_SIGNATURE}\n\n${refLink}`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(msg)}`;
-    if (tg) tg.openLink(shareUrl); else window.open(shareUrl, "_blank");
+    trackOutbound(shareUrl, { kind: "share_referral", source: "hub" });
     onReferralShared();
     haptic("light");
   };
@@ -171,6 +172,16 @@ export default function HubOverlay({
           <button onClick={shareReferral} className="btn-hub-secondary">
             ПРИГЛАСИТЬ ДРУГА
           </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => { onOpenAdmin?.(); haptic("light"); }}
+              className="btn-hub-secondary"
+              style={{ borderColor: "#3a6ea5", color: "#8ec0ff" }}
+            >
+              📊 АНАЛИТИКА · @deprav
+            </button>
+          )}
         </div>
       </div>
     </div>
