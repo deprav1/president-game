@@ -26,6 +26,7 @@ const shareCountLabel = (count) => {
 // Модал «Покинуть Варонию»: рекорд, достижения, хроника финалов, оффер VPN Наружу.
 export default function HubOverlay({
   onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
+  safeMode = false,
 }) {
   const promoCode = discountFor(bestScore);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
@@ -115,6 +116,8 @@ export default function HubOverlay({
             </div>
           )}
 
+          {!safeMode && (
+          <>
           <div className="hub-naruzhu-pitch">
             <div className="font-typewriter" style={{ fontSize: 12, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
               VPN НАРУЖУ — ВЫХОД ИЗ ВАРОНИИ
@@ -150,6 +153,8 @@ export default function HubOverlay({
               Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>naruzhu.am</span>
             </div>
           </div>
+          </>
+          )}
 
           {referralCount > 0 && (
             <div className="font-typewriter" style={{ fontSize: 11, color: "#b89a5e", textAlign: "center", letterSpacing: 0.5 }}>
@@ -157,9 +162,11 @@ export default function HubOverlay({
             </div>
           )}
 
-          <button onClick={onOpenNaruzhu} className="btn-hub-cta">
-            ПОКИНУТЬ ВАРОНИЮ С НАРУЖУ
-          </button>
+          {!safeMode && (
+            <button onClick={onOpenNaruzhu} className="btn-hub-cta">
+              ПОКИНУТЬ ВАРОНИЮ С НАРУЖУ
+            </button>
+          )}
 
           <button onClick={shareReferral} className="btn-hub-secondary">
             ПРИГЛАСИТЬ ДРУГА

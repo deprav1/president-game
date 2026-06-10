@@ -60,6 +60,11 @@ const CTA_VARIANTS = [
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS, ...PANORAMA_CARDS, ...CHRONICLE_CARDS, ...PRECEDENT_CARDS];
 
+// Колода без рекламных карт «Наружу» — для безопасного режима (модерация, чувствительные показы).
+const SAFE_CARDS = ALL_CARDS.filter(c => c.cta !== "naruzhu");
+// Строит колоду с учётом безопасного режима: в нём VPN-карты не попадают в игру.
+const buildDeck = (safe) => shuffle(safe ? SAFE_CARDS : ALL_CARDS);
+
 const getPreviewCard = () => {
   if (!import.meta.env.DEV) return null;
   const raw = new URLSearchParams(location.search).get("advisor");
@@ -102,10 +107,12 @@ export default function ThePresident() {
   const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
   const [reviveAvailable, setReviveAvailable]   = useState(false);
   const [difficulty, setDifficulty]             = useState("normal");
+  // Безопасный режим: скрывает всю рекламу VPN «Наружу» (промокоды, CTA, ревайв, оффер-карты).
+  const [safeMode, setSafeMode]                 = useState(false);
 
   useEffect(() => {
     async function loadData() {
-      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty"];
+      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe"];
       const data = await telegramStorage.getItems(keys);
       const forcedPhase = new URLSearchParams(location.search).get("p");
       
@@ -152,6 +159,20 @@ export default function ThePresident() {
         track(EVENTS.CTA_VARIANT_ASSIGNED, { cta_variant: foundCta.id });
       }
       setCtaVariant(foundCta);
+
+      // Безопасный режим скрыт от обычных игроков. Управляется только разработчиком:
+      //   • сборка/пуш:   VITE_SAFE_MODE=1  → весь задеплоенный билд идёт без рекламы VPN;
+      //   • при загрузке: ?safe=1 / ?safe=0 в URL — принудительно вкл/выкл и запоминается.
+      // Если ничего не задано — берётся ранее запомненное значение.
+      const urlSafe = new URLSearchParams(location.search).get("safe");
+      const safe = import.meta.env.VITE_SAFE_MODE === "1"
+        ? true
+        : urlSafe === "1" ? true
+        : urlSafe === "0" ? false
+        : data["varon_safe"] === "1";
+      setSafeMode(safe);
+      if (urlSafe === "1" || urlSafe === "0") telegramStorage.setItem("varon_safe", safe ? "1" : "0");
+      if (!savedRun && safe) setDeck(buildDeck(true));
 
       setIsInitializing(false);
     }
@@ -802,7 +823,7 @@ export default function ThePresident() {
     track(EVENTS.RESTART);
     setStats({ oligarchs:50, army:50, people:50, west:50 });
     setMonths(1);
-    setDeck(shuffle(ALL_CARDS));
+    setDeck(buildDeck(safeMode));
     setCardIdx(0);
     setPhase("onboarding");
     setDeathMsg("");
@@ -910,7 +931,7 @@ export default function ThePresident() {
       high: `Меня назвали марионеткой Вашингтона. Националисты не оценили. ${tenure} мес.`,
     },
   };
-  const PROMO_LINE = `\n🔒 7 дней VPN «Наружу» бесплатно — промокод WARONIA: ${naruzhuUrl("share", "", Math.max(0, months - 1))}`;
+  const PROMO_LINE = safeMode ? "" : `\n🔒 7 дней VPN «Наружу» бесплатно — промокод NARUZHU10: ${naruzhuUrl("share", "", Math.max(0, months - 1))}`;
   const BOT_LINK   = "https://t.me/varonia_bot";
   const SHARE_SIGNATURE = "Варони - симулятор президента, где возможно все.";
 
@@ -985,6 +1006,7 @@ export default function ThePresident() {
             onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setVictoryEndingId(null); setPhase("card"); }}
             onPlayAsOther={() => { track(EVENTS.PLAY_AS_OTHER); haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
             onNaruzhu={() => openNaruzhu("onboarding")}
+            safeMode={safeMode}
           />
         )}
 
@@ -995,8 +1017,8 @@ export default function ThePresident() {
             tenureLabel={tenureLabel}
             deathMsg={deathMsg}
             killerKey={killerKey}
-            promoCode={promoCode}
-            canRevive={!hasUsedVpnRevive && reviveAvailable}
+            promoCode={safeMode ? null : promoCode}
+            canRevive={!safeMode && !hasUsedVpnRevive && reviveAvailable}
             onShare={shareGameOver}
             onRestart={restart}
             onVpnRevive={reviveViaVpn}
@@ -1012,7 +1034,7 @@ export default function ThePresident() {
             ending={ending}
             stats={stats}
             decisionLog={decisionLog}
-            promoCode={promoCode}
+            promoCode={safeMode ? null : promoCode}
             onCopyPromo={copyPromo}
             onOpenNaruzhu={() => openNaruzhu("victory_promo")}
             onShare={shareVictory}
@@ -1044,6 +1066,7 @@ export default function ThePresident() {
             hovered={hovered}
             setHovered={setHovered}
             ctaVariant={ctaVariant}
+            safeMode={safeMode}
             cardRef={cardRef}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
@@ -1067,6 +1090,7 @@ export default function ThePresident() {
             achievements={achievements}
             unlockedEndings={unlockedEndings}
             referralCount={referralCount}
+            safeMode={safeMode}
             onOpenNaruzhu={() => openNaruzhu("hub")}
             onReferralShared={() => {
               track(EVENTS.REFERRAL_SHARED);

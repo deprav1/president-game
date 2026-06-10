@@ -10,7 +10,7 @@ const DIFFICULTY_OPTIONS = [
 // Экран онбординга: досье, правила, выбор сложности, ввод имени / продолжение срока.
 export default function OnboardingScreen({
   presidentName, nameInput, onNameInput, onNameSubmit, onNewTerm, onPlayAsOther, onNaruzhu,
-  difficulty = "normal", onSelectDifficulty,
+  difficulty = "normal", onSelectDifficulty, safeMode = false,
 }) {
   const activeHint = (DIFFICULTY_OPTIONS.find(o => o.key === difficulty) || DIFFICULTY_OPTIONS[1]).hint;
   return (
@@ -81,17 +81,19 @@ export default function OnboardingScreen({
           )}
         </div>
 
-        {/* ── НАРУЖУ FOOTER ── */}
-        <div
-          onClick={onNaruzhu}
-          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNaruzhu(); } }}
-          role="button"
-          tabIndex={0}
-          className="naruzhu-footer-cta"
-        >
-          <div className="naruzhu-footer-kicker">VPN НАРУЖУ</div>
-          <div className="naruzhu-footer-copy">Свободный интернет за пределами Варонии</div>
-        </div>
+        {/* ── НАРУЖУ FOOTER (скрыт в безопасном режиме) ── */}
+        {!safeMode && (
+          <div
+            onClick={onNaruzhu}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNaruzhu(); } }}
+            role="button"
+            tabIndex={0}
+            className="naruzhu-footer-cta"
+          >
+            <div className="naruzhu-footer-kicker">VPN НАРУЖУ</div>
+            <div className="naruzhu-footer-copy">Свободный интернет за пределами Варонии</div>
+          </div>
+        )}
 
         <div className="font-typewriter" style={{
           position: "absolute", bottom: 4, right: 8,

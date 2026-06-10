@@ -82,7 +82,7 @@ const getCardBackground = (card) => {
 // Цвета карты вынесены в CSS (.game-card / .game-card.crisis и т.д.) — правятся там.
 // cardRef передаётся как обычный проп (для swipe-анимации в родителе).
 export default function GameCard({
-  isCrisis, advisor, currentCard, hovered, setHovered, ctaVariant,
+  isCrisis, advisor, currentCard, hovered, setHovered, ctaVariant, safeMode,
   cardRef, onTouchStart, onTouchMove, onTouchEnd, haptic, onChoose, onNaruzhu,
   ratingEnabled, cardRating, onRate,
 }) {
@@ -142,7 +142,7 @@ export default function GameCard({
             <p className="game-card-text">
               {currentCard.text}
             </p>
-            {currentCard.cta === "naruzhu" && (
+            {!safeMode && currentCard.cta === "naruzhu" && (
               <button
                 onClick={e => { e.stopPropagation(); haptic("light"); onNaruzhu(currentCard?.id || "card"); }}
                 style={{
