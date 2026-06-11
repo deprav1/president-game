@@ -38,7 +38,7 @@ const cardKey = (c) => (c ? hashStr(c.t || c.text || "") : null);
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
 
 // Строит UTM-размеченный URL на сайт «Наружу».
-const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId = "") => {
+const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId = "", yclid = "") => {
   const p = new URLSearchParams({
     utm_source: "varonia",
     utm_medium: "game",
@@ -48,6 +48,7 @@ const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId 
   if (months > 0) p.set("m", String(months));
   if (ctaId) p.set("ab", ctaId);
   if (promoCode?.code) p.set("promo", promoCode.code);
+  if (yclid) p.set("yclid", yclid);
   return `https://naruzhu.am/?${p.toString()}`;
 };
 
@@ -116,6 +117,8 @@ export default function ThePresident() {
   const [safeMode, setSafeMode]                 = useState(false);
   // Внутриигровая панель аналитики для админа @deprav.
   const [showAdmin, setShowAdmin]               = useState(false);
+  // Идентификатор клика Яндекс.Директ для отслеживания конверсий
+  const [yclid, setYclid]                       = useState("");
   // Админ опознаётся по Telegram-нику; ?admin=<ник> — запасной вход для браузера/dev.
   const isAdmin = (() => {
     try {
@@ -129,7 +132,7 @@ export default function ThePresident() {
 
   useEffect(() => {
     async function loadData() {
-      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe"];
+      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe", "varon_yclid"];
       const data = await telegramStorage.getItems(keys);
       const forcedPhase = new URLSearchParams(location.search).get("p");
       
@@ -190,6 +193,38 @@ export default function ThePresident() {
       setSafeMode(safe);
       if (urlSafe === "1" || urlSafe === "0") telegramStorage.setItem("varon_safe", safe ? "1" : "0");
       if (!savedRun && safe) setDeck(buildDeck(true));
+
+      // ─── Обработка yclid для рекламы в Яндекс.Директ ───
+      let savedYclid = data["varon_yclid"] || "";
+      
+      // Чтение из start_param Telegram-бота (переход вида t.me/bot?startapp=yc_12345)
+      try {
+        const tg = window.Telegram?.WebApp;
+        const startParam = tg?.initDataUnsafe?.start_param || "";
+        if (startParam.startsWith("yc_")) {
+          const parsedYclid = startParam.replace("yc_", "");
+          if (parsedYclid && parsedYclid !== savedYclid) {
+            savedYclid = parsedYclid;
+            telegramStorage.setItem("varon_yclid", parsedYclid);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to parse Telegram start_param:", e);
+      }
+
+      // Запасной вариант: чтение напрямую из URL (для веб-прокладок или прямого тестирования ?yclid=...)
+      try {
+        const urlParams = new URLSearchParams(location.search);
+        const urlYclid = urlParams.get("yclid");
+        if (urlYclid && urlYclid !== savedYclid) {
+          savedYclid = urlYclid;
+          telegramStorage.setItem("varon_yclid", urlYclid);
+        }
+      } catch (e) {
+        console.warn("Failed to parse URL query params:", e);
+      }
+
+      setYclid(savedYclid);
 
       setIsInitializing(false);
     }
@@ -880,7 +915,7 @@ export default function ThePresident() {
   // чтобы различать источник клика (онбординг / карта / хаб), конкретную карту,
   // прогресс игрока и выданный промокод для атрибуции конверсий.
   const openNaruzhu = (source = "hub", content = "") => {
-    const url = naruzhuUrl(source, content, Math.max(0, months - 1), promoCode, ctaVariant?.id);
+    const url = naruzhuUrl(source, content, Math.max(0, months - 1), promoCode, ctaVariant?.id, yclid);
     track(EVENTS.NARUZHU_CLICK, {
       source,
       content: content || null,
@@ -963,7 +998,7 @@ export default function ThePresident() {
       high: `Меня назвали марионеткой Вашингтона. Националисты не оценили. ${tenure} мес.`,
     },
   };
-  const PROMO_LINE = safeMode ? "" : `\n🔒 7 дней VPN «Наружу» бесплатно — промокод NARUZHU10: ${naruzhuUrl("share", "", Math.max(0, months - 1))}`;
+  const PROMO_LINE = safeMode ? "" : `\n🔒 7 дней VPN «Наружу» бесплатно — промокод NARUZHU10: ${naruzhuUrl("share", "", Math.max(0, months - 1), null, "", yclid)}`;
   // Реферальная метка: friend, открывший ссылку, получит start_param = ref_<хэш>,
   // что позволяет атрибутировать его к пригласившему игроку.
   const refTag     = `ref_${hashStr(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest")}`;
