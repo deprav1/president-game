@@ -21,20 +21,25 @@ export const telegramStorage = {
    * @returns {Promise<string|null>}
    */
   async getItem(key) {
+    const localFallback = () => {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    };
     const cloud = getCloudStorage();
     if (cloud) {
       return new Promise((resolve) => {
+        // Страховка: если колбэк CloudStorage не сработает за 3с (зависший
+        // клиент) — не блокируем работу, отдаём localStorage.
+        let done = false;
+        const finish = (val) => { if (!done) { done = true; resolve(val); } };
+        const timer = setTimeout(() => finish(localFallback()), 3000);
         cloud.getItem(key, (err, value) => {
+          clearTimeout(timer);
           if (err) {
             console.error('[CloudStorage] Error getting item:', err);
             // Если ошибка облака, пробуем достать из localStorage как запасной вариант
-            try {
-              resolve(localStorage.getItem(key));
-            } catch (e) {
-              resolve(null);
-            }
+            finish(localFallback());
           } else {
-            resolve(value || null);
+            finish(value || null);
           }
         });
       });

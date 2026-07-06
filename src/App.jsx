@@ -132,7 +132,7 @@ export default function ThePresident() {
 
   useEffect(() => {
     async function loadData() {
-      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe", "varon_yclid"];
+      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe", "varon_yclid", "varon_rated"];
       const data = await telegramStorage.getItems(keys);
       const forcedPhase = new URLSearchParams(location.search).get("p");
       
@@ -146,7 +146,6 @@ export default function ThePresident() {
       if (savedRun) {
         setStats(savedRun.stats || { oligarchs:50, army:50, people:50, west:50 });
         setMonths(savedRun.months || 1);
-        setDeck(savedRun.deck);
         setCardIdx(savedRun.cardIdx || 0);
         setPendingEvents(savedRun.pendingEvents || []);
         setPhase(savedRun.phase || "card");
@@ -155,6 +154,18 @@ export default function ThePresident() {
         setHasUsedSecondChance(savedRun.hasUsedSecondChance || false);
         setHasUsedVpnRevive(savedRun.hasUsedVpnRevive || false);
         setRescueCard(savedRun.rescueCard || null);
+
+        // Возобновление экрана проигрыша с работающей кнопкой VPN-ревайва:
+        // восстанавливаем сообщение о смерти, промокод и снапшот для отката.
+        // historyRef держит один снапшот → reviveViaVpn возьмёт hist[0].
+        if (savedRun.phase === "gameover") {
+          setDeathMsg(savedRun.deathMsg || "");
+          setPromoCode(discountFor((savedRun.months || 1) - 1));
+          if (savedRun.reviveAvailable && savedRun.reviveSnapshot) {
+            resumeReviveRef.current = savedRun.reviveSnapshot;
+            setReviveAvailable(true);
+          }
+        }
       }
 
       // Сложность: приоритет у возобновляемой партии, иначе — последний выбор игрока.
@@ -168,6 +179,13 @@ export default function ThePresident() {
       setBestScore(safeInt(data["varon_best"]));
       
       setReferralCount(safeInt(data["varon_refs"]));
+
+      // Оценки карт: читаем из уже загруженной пачки ключей (getItems), а не
+      // синхронно из промиса — иначе дедупликация оценок ломается между сессиями.
+      try {
+        const rated = JSON.parse(data["varon_rated"] || "[]");
+        if (Array.isArray(rated)) ratedCardsRef.current = new Set(rated);
+      } catch { /* ignore */ }
 
       try { setUnlockedEndings(JSON.parse(data["varon_ends"] || "[]")); } catch {}
 
@@ -192,7 +210,18 @@ export default function ThePresident() {
         : data["varon_safe"] === "1";
       setSafeMode(safe);
       if (urlSafe === "1" || urlSafe === "0") telegramStorage.setItem("varon_safe", safe ? "1" : "0");
-      if (!savedRun && safe) setDeck(buildDeck(true));
+      // Колода. Для возобновляемой партии — из сейва; в safe-режиме вырезаем
+      // VPN-карты «Наружу» из ещё не сыгранной части (индекс текущей карты не
+      // сдвигается, т.к. префикс до cardIdx сохраняется как есть).
+      if (savedRun) {
+        const savedIdx = savedRun.cardIdx || 0;
+        const savedDeck = Array.isArray(savedRun.deck) ? savedRun.deck : [];
+        setDeck(safe
+          ? [...savedDeck.slice(0, savedIdx), ...savedDeck.slice(savedIdx).filter(c => c.cta !== "naruzhu")]
+          : savedDeck);
+      } else if (safe) {
+        setDeck(buildDeck(true));
+      }
 
       // ─── Обработка yclid для рекламы в Яндекс.Директ ───
       let savedYclid = data["varon_yclid"] || "";
@@ -238,6 +267,9 @@ export default function ThePresident() {
   const lastDirRef    = useRef(null);
   // Хранит последние 3 снапшота состояния ДО каждого решения (для VPN-ревайва).
   const historyRef    = useRef([]);
+  // Снапшот для VPN-ревайва, восстановленный из сейва при возобновлении партии
+  // на экране проигрыша (historyRef живёт только в памяти и после перезагрузки пуст).
+  const resumeReviveRef = useRef(null);
 
   const haptic = useCallback((type = "light") => {
     const tg = window.Telegram?.WebApp;
@@ -365,6 +397,39 @@ export default function ThePresident() {
     return { ns, fl };
   }, [difficulty, months]);
 
+  // Сохранение проигрыша так, чтобы VPN-ревайв пережил перезагрузку мини-аппа.
+  // Ревайв откатывает 2 хода назад — эта же снапшот-логика используется в
+  // reviveViaVpn; здесь мы кладём выбранный снапшот в сейв. Если ревайв уже
+  // недоступен (safe-режим / уже использован / нет истории ходов) — сейв
+  // удаляется, как и раньше, и партия начнётся заново.
+  const persistGameOver = useCallback((finalStats, finalMonth, msg) => {
+    const hist = historyRef.current;
+    const reviveSnapshot = hist.length >= 2 ? hist[hist.length - 2] : hist[0];
+    const canReviveLater = !safeMode && !hasUsedVpnRevive && !!reviveSnapshot;
+    if (!canReviveLater) {
+      telegramStorage.removeItem("varon_save");
+      return;
+    }
+    try {
+      telegramStorage.setItem("varon_save", JSON.stringify({
+        stats: finalStats,
+        months: finalMonth,
+        deck,
+        cardIdx,
+        pendingEvents,
+        hasUsedSecondChance,
+        hasUsedVpnRevive,
+        rescueCard: null,
+        termsCompleted,
+        difficulty,
+        phase: "gameover",
+        deathMsg: msg,
+        reviveAvailable: true,
+        reviveSnapshot,
+      }));
+    } catch { /* Save failure should not block the game-over screen. */ }
+  }, [deck, cardIdx, pendingEvents, hasUsedSecondChance, hasUsedVpnRevive, termsCompleted, difficulty, safeMode]);
+
   const handleDeathOrRescue = useCallback((death, nextStats, nextMonth, nextPendingEvents = pendingEvents) => {
     hapticNotify("error");
     const score = nextMonth - 1;
@@ -373,7 +438,7 @@ export default function ThePresident() {
       setDeathMsg(death.msg);
       setPromoCode(discountFor(score));
       if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-      telegramStorage.removeItem("varon_save");
+      persistGameOver(nextStats, nextMonth, death.msg);
       track(EVENTS.GAME_OVER, { reason: "death", killer_key: death.key, is_low: death.low, tenure: score, score });
       setPhase("gameover");
     } else {
@@ -463,11 +528,12 @@ export default function ThePresident() {
             targetMonth: nextMonth
           },
           termsCompleted,
+          difficulty,
           phase: "second_chance"
         }));
       } catch { /* Save failure should not interrupt the current run. */ }
     }
-  }, [hasUsedSecondChance, hasUsedVpnRevive, bestScore, deck, cardIdx, pendingEvents, termsCompleted, hapticNotify]);
+  }, [hasUsedSecondChance, hasUsedVpnRevive, bestScore, deck, cardIdx, pendingEvents, termsCompleted, difficulty, hapticNotify, persistGameOver]);
 
   const completeVictory = useCallback((endObj, score, reason = "victory", terms = termsCompleted) => {
     hapticNotify("success");
@@ -522,16 +588,18 @@ export default function ThePresident() {
             hasUsedVpnRevive,
             rescueCard: null,
             termsCompleted,
+            difficulty,
             phase: "card"
           }));
         } catch { /* Save failure should not interrupt the current run. */ }
       } else {
         hapticNotify("error");
-        setDeathMsg("Вы отказались от сделки по спасению власти и предпочли с честью сложить полномочия.");
+        const declineMsg = "Вы отказались от сделки по спасению власти и предпочли с честью сложить полномочия.";
+        setDeathMsg(declineMsg);
         const score = rescueCard.targetMonth - 1;
         setPromoCode(discountFor(score));
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-        telegramStorage.removeItem("varon_save");
+        persistGameOver(rescueCard.targetStats, rescueCard.targetMonth, declineMsg);
         track(EVENTS.GAME_OVER, { reason: "second_chance_declined", tenure: score, score });
         setPhase("gameover");
       }
@@ -558,11 +626,12 @@ export default function ThePresident() {
       } else {
         track(EVENTS.ELECTION_CHOICE, { tactic: "skip" });
         hapticNotify("error");
-        setDeathMsg("Вы отказались от участия в выборах и добровольно ушли на покой. В Варонии наступила новая эпоха.");
+        const skipMsg = "Вы отказались от участия в выборах и добровольно ушли на покой. В Варонии наступила новая эпоха.";
+        setDeathMsg(skipMsg);
         const score = months - 1;
         setPromoCode(discountFor(score));
         if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-        telegramStorage.removeItem("varon_save");
+        persistGameOver(stats, months, skipMsg);
         track(EVENTS.GAME_OVER, { reason: "election_skip", tenure: score, score });
         setPhase("gameover");
         return;
@@ -610,6 +679,7 @@ export default function ThePresident() {
             hasUsedVpnRevive,
             rescueCard,
             termsCompleted: newTerms,
+            difficulty,
             phase: "constitution"
           }));
         } catch { /* Save failure should not interrupt the current run. */ }
@@ -630,6 +700,7 @@ export default function ThePresident() {
           hasUsedVpnRevive,
           rescueCard,
           termsCompleted: newTerms,
+          difficulty,
           phase: "card"
         }));
       } catch { /* Save failure should not interrupt the current run. */ }
@@ -745,7 +816,7 @@ export default function ThePresident() {
         track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(crisis), month: newMonth });
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty, persistGameOver]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -828,12 +899,8 @@ export default function ThePresident() {
 
   // Оценка карточек (тест-период, за флагом VITE_RATING_ENABLED).
   // card_id уже оценённых карт хранится локально → один игрок оценивает карту один раз.
-  const ratedCardsRef = useRef(null);
-  if (ratedCardsRef.current === null) {
-    let saved = [];
-    try { saved = JSON.parse(telegramStorage.getItem("varon_rated") || "[]"); } catch { /* ignore */ }
-    ratedCardsRef.current = new Set(Array.isArray(saved) ? saved : []);
-  }
+  // Наполняется в loadData из telegramStorage (async) — здесь только пустой старт.
+  const ratedCardsRef = useRef(new Set());
   // Подсветка значка для текущей карты (визуальный отклик «оценка учтена»).
   const [cardRating, setCardRating] = useState(null);
   useEffect(() => {
@@ -943,7 +1010,7 @@ export default function ThePresident() {
     track(EVENTS.VPN_REVIVE);
     openNaruzhu("revive");
     const hist = historyRef.current;
-    const snap = hist.length >= 2 ? hist[hist.length - 2] : hist[0];
+    const snap = (hist.length >= 2 ? hist[hist.length - 2] : hist[0]) || resumeReviveRef.current;
     if (!snap) return;
     setStats(snap.stats);
     setMonths(snap.months);
@@ -966,6 +1033,7 @@ export default function ThePresident() {
         hasUsedVpnRevive: true,
         rescueCard: null,
         termsCompleted,
+        difficulty,
         phase: "card",
       }));
     } catch { /* no-op */ }
