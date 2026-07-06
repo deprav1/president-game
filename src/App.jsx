@@ -543,13 +543,17 @@ export default function ThePresident() {
       let tacticLabel;
       if (side === "honest") {
         if (stats.people < 40) return;
-        fx = { oligarchs: 0, army: 0, people: 10, west: 10 };
+        // Ослаблено с +10/+10: у народа/Запада возле потолка честная кампания
+        // теперь может подтолкнуть к перегреву, а не быть строго лучшим выбором.
+        fx = { oligarchs: 0, army: 0, people: 6, west: 6 };
         tacticLabel = "Честные выборы";
       } else if (side === "admin") {
-        fx = { oligarchs: 5, army: 15, people: -11, west: -22 };
+        // Штраф по Западу смягчён с -22 до -14 — тактика стала жизнеспособной,
+        // когда нужно подтянуть силовиков ценой народа и репутации.
+        fx = { oligarchs: 6, army: 14, people: -11, west: -14 };
         tacticLabel = "Административный ресурс";
       } else if (side === "sponsor") {
-        fx = { oligarchs: 18, army: 0, people: -6, west: -8 };
+        fx = { oligarchs: 17, army: 0, people: -6, west: -8 };
         tacticLabel = "Сделка с олигархами";
       } else {
         track(EVENTS.ELECTION_CHOICE, { tactic: "skip" });

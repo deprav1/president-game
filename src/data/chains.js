@@ -342,6 +342,26 @@ export const EXTREMUM_EVENTS = {
       right: { label: "Смириться с их властью",   text: "Деньги решают всё, и это их деньги", fx: { oligarchs: 6,   army: -5, people: -12, west: 0 } },
     },
   },
+  people_cult: {
+    id: "people_cult",
+    delay: 2,
+    card: {
+      advisor: 2, // Власова (пресс-служба)
+      text: "Народная любовь к вам достигла религиозного накала: люди выходят на марши с вашими портретами. Власова шепчет, что элиты и силовики уже нервничают — такой культ личности им опаснее любой оппозиции.",
+      left:  { label: "Приглушить культ",     text: "Скромность спасёт от заговора", fx: { oligarchs: 6,  army: 6,   people: -18, west: 5  } },
+      right: { label: "Возглавить обожание",   text: "Народ любит — и пусть любит",   fx: { oligarchs: -8, army: -8,  people: 6,   west: -6 } },
+    },
+  },
+  west_puppet: {
+    id: "west_puppet",
+    delay: 2,
+    card: {
+      advisor: 3, // Сенин (спецслужбы)
+      text: "Сенин кладёт на стол папку: Z-военкоры и силовики в открытую называют вас «агентом Госдепа» за слишком тёплые отношения с Западом. В Генштабе шепчутся о спасении Родины от предателя.",
+      left:  { label: "Развернуться от Запада", text: "Докажем, что мы не марионетка", fx: { oligarchs: 5,  army: 10,  people: 8,  west: -20 } },
+      right: { label: "Продолжать сближение",   text: "Курс на Запад не сдаём",        fx: { oligarchs: -6, army: -10, people: -6, west: 6   } },
+    },
+  },
 };
 
 /**
@@ -352,5 +372,7 @@ export const getExtremumEvent = (stats, pending) => {
   const queued = id => pending.some(e => e.id === id);
   if (stats.army >= 88 && !queued("army_overreach")) return EXTREMUM_EVENTS.army_overreach;
   if (stats.oligarchs >= 88 && !queued("oligarch_capture")) return EXTREMUM_EVENTS.oligarch_capture;
+  if (stats.people >= 88 && !queued("people_cult")) return EXTREMUM_EVENTS.people_cult;
+  if (stats.west >= 88 && !queued("west_puppet")) return EXTREMUM_EVENTS.west_puppet;
   return null;
 };
