@@ -930,7 +930,7 @@ em, i { font-style: normal; }
 
 /* Эффект секретного водяного знака, пока картинка не загружена */
 .story-image-frame::before {
-  content: "SECRET DOSSIER";
+  content: "СЕКРЕТНОЕ ДОСЬЕ";
   position: absolute;
   font-family: var(--font-typewriter);
   font-size: 11px;

@@ -17,7 +17,7 @@ export default function OnboardingScreen({
     <div className="screen-scroll-container onboarding-screen">
       <div className="card-paper-container">
         <div className="onboarding-title-bar">
-          <div className="onboarding-title">Welcome to <span>ВАРОНИЯ</span></div>
+          <div className="onboarding-title">Добро пожаловать в <span>ВАРОНИЮ</span></div>
         </div>
         <div className="card-content-area">
           <div className="story-image-frame">
@@ -30,7 +30,7 @@ export default function OnboardingScreen({
           </div>
 
           <p className="onboarding-rules-copy">
-            Удержитесь у власти сколько сможете. Свапайте карточку для принятия решения, не позволяйте одной из четырех сторон слишком ослабнуть или окрепнуть.
+            Удержитесь у власти сколько сможете. Свайпайте карточку для принятия решения, не позволяйте одной из четырех сторон слишком ослабнуть или окрепнуть.
           </p>
         </div>
         <div className="onboarding-actions">

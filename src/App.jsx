@@ -1008,7 +1008,7 @@ export default function ThePresident() {
   const refTag     = `ref_${hashStr(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest")}`;
   // Deep-link в мини-апп с меткой источника — для учёта входящих переходов из share.
   const BOT_LINK   = appendUtm("https://t.me/varonia_bot", { startapp: refTag });
-  const SHARE_SIGNATURE = "Варони - симулятор президента, где возможно все.";
+  const SHARE_SIGNATURE = "Варония - президентский симулятор, где возможно всё.";
   // Открывает системный share Telegram с переданным сообщением и размеченной ссылкой.
   const openShare = (msg, kind) => {
     const url = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;

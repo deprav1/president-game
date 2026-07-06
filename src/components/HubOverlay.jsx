@@ -7,7 +7,7 @@ import { trackOutbound, appendUtm, hashStr } from "../lib/analytics.js";
 
 const NARUZHU_YELLOW = "#FFD60A";
 const SHARE_BOT_URL = "https://t.me/varonia_bot";
-const SHARE_SIGNATURE = "Варони - симулятор президента, где возможно все.";
+const SHARE_SIGNATURE = "Варония - президентский симулятор, где возможно всё.";
 
 const NARUZHU_FEATURES = [
   "YouTube, Instagram, Wikipedia без блокировок",

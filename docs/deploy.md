@@ -30,7 +30,8 @@
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
    - **Production branch:** `main`
-3. Deploy. Через ~1 мин будет URL вида `https://president-game.pages.dev`.
+3. Deploy. Через ~1 мин будет HTTPS-URL проекта. Текущий Timeweb URL:
+   `https://cb077728.tw1.ru/`.
    Это и есть HTTPS-URL для Telegram.
 
 Файлы `public/_headers` (кэш) и `public/_redirects` (SPA-fallback) Cloudflare
@@ -41,8 +42,8 @@
 1. **@BotFather** → `/newbot` (если бота ещё нет) → получить токен.
 2. **@BotFather** → `/newapp` → выбрать бота → задать название, описание,
    иконку (640×360) и **Web App URL** = ваш hosting-URL (например
-   `https://president-game.pages.dev`).
-3. Получите ссылку вида `https://t.me/ВашБот/ИмяApp` — это прямой запуск игры.
+   `https://cb077728.tw1.ru/`).
+3. Проверьте ссылку запуска `https://t.me/varonia_bot` — это прямой вход в игру.
 4. (Опционально) **@BotFather** → `/setmenubutton` → привязать кнопку меню
    бота к тому же URL, чтобы игра открывалась из чата с ботом.
 5. Проверка в клиенте Telegram (моб. + десктоп):
