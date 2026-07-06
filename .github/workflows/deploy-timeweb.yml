@@ -59,9 +59,13 @@ jobs:
 
           export SSHPASS="${SSH_PASSWORD}"
           SSH_OPTS="-p ${SSH_PORT} -o StrictHostKeyChecking=accept-new"
+          SCP_OPTS="-P ${SSH_PORT} -o StrictHostKeyChecking=accept-new"
+
+          tar -C dist -czf dist.tar.gz .
+          sshpass -e scp ${SCP_OPTS} dist.tar.gz "${SSH_USERNAME}@${SSH_HOST}:varonia-dist.tar.gz"
 
           # Веб-корень Timeweb — public_html в домашней папке аккаунта.
           # Перед заливкой чистим содержимое, чтобы index.htm-заглушка Timeweb
           # не перебивала Vite index.html.
-          tar -C dist -czf - . | sshpass -e ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
-            'mkdir -p public_html && find public_html -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf - -C public_html'
+          sshpass -e ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
+            'rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
