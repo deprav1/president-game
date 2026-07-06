@@ -41,31 +41,29 @@ jobs:
         env:
           SSH_HOST: ${{ secrets.SSH_HOST || secrets.FTP_SERVER }}
           SSH_USERNAME: ${{ secrets.SSH_USERNAME || secrets.FTP_USERNAME }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD || secrets.FTP_PASSWORD }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
         run: |
           set -euo pipefail
 
-          if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USERNAME}" ] || [ -z "${SSH_PASSWORD}" ]; then
-            echo "::error::Set SSH_HOST, SSH_USERNAME and SSH_PASSWORD repository secrets."
+          if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USERNAME}" ] || [ -z "${SSH_PRIVATE_KEY}" ]; then
+            echo "::error::Set SSH_HOST, SSH_USERNAME and SSH_PRIVATE_KEY repository secrets."
             exit 1
           fi
 
-          sudo apt-get update
-          sudo apt-get install -y sshpass
-
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
+          printf '%s\n' "${SSH_PRIVATE_KEY}" > ~/.ssh/timeweb_deploy_key
+          chmod 600 ~/.ssh/timeweb_deploy_key
 
-          export SSHPASS="${SSH_PASSWORD}"
-          SSH_OPTS="-p ${SSH_PORT} -o StrictHostKeyChecking=accept-new"
-          SCP_OPTS="-P ${SSH_PORT} -o StrictHostKeyChecking=accept-new"
+          SSH_OPTS="-p ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          SCP_OPTS="-P ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
           tar -C dist -czf dist.tar.gz .
-          sshpass -e scp ${SCP_OPTS} dist.tar.gz "${SSH_USERNAME}@${SSH_HOST}:varonia-dist.tar.gz"
+          scp ${SCP_OPTS} dist.tar.gz "${SSH_USERNAME}@${SSH_HOST}:varonia-dist.tar.gz"
 
           # Веб-корень Timeweb — public_html в домашней папке аккаунта.
           # Перед заливкой чистим содержимое, чтобы index.htm-заглушка Timeweb
           # не перебивала Vite index.html.
-          sshpass -e ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
+          ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
             'rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
