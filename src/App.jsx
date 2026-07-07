@@ -73,6 +73,9 @@ const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS, ...PANORAMA_CARDS
 
 // Колода без рекламных карт «Наружу» — для безопасного режима (модерация, чувствительные показы).
 const SAFE_CARDS = ALL_CARDS.filter(c => c.cta !== "naruzhu");
+// Маппинг card_id → карта для админ-панели (серверная аналитика хранит только
+// card_id-хэши; текст карт сопоставляем на клиенте, где данные и так есть).
+const CARDS_BY_ID = Object.fromEntries(ALL_CARDS.map(c => [cardKey(c), c]));
 // Строит колоду с учётом безопасного режима: в нём VPN-карты не попадают в игру.
 const buildDeck = (safe) => shuffle(safe ? SAFE_CARDS : ALL_CARDS);
 
@@ -1410,6 +1413,7 @@ export default function ThePresident() {
             onClose={() => setShowAdmin(false)}
             safeMode={safeMode}
             onToggleSafeMode={toggleSafeMode}
+            cardsById={CARDS_BY_ID}
           />
         )}
       </div>

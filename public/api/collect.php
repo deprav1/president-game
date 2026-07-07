@@ -17,6 +17,9 @@ header('Cache-Control: no-store');
 
 const MAX_BODY_BYTES = 16384;
 const MAX_CARDS      = 3000; // предел числа card_id в агрегате (защита от разрастания)
+const RL_WINDOW      = 60;   // окно лимита, сек
+const RL_MAX         = 120;  // макс. событий с одного IP за окно
+const RL_MAX_IPS     = 5000; // предел числа IP-бакетов (прунинг протухших сверх него)
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'OPTIONS') { http_response_code(204); exit; }
@@ -64,6 +67,34 @@ if (!isset($data['totals']) || !is_array($data['totals'])) {
     $data['totals'] = ['events' => 0, 'views' => 0, 'likes' => 0, 'dislikes' => 0, 'decisions' => 0];
 }
 if (!isset($data['byCard']) || !is_array($data['byCard'])) $data['byCard'] = [];
+
+// ── IP rate-limit (состояние в _rl того же файла, под тем же локом) ────────────
+// IP хэшируем (приватность + фикс. размер). При превышении событие не учитываем.
+$ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+$ip = trim(explode(',', (string)$ip)[0]);
+$ipKey = substr(sha1($ip), 0, 16);
+$nowTs = time();
+if (!isset($data['_rl']) || !is_array($data['_rl'])) $data['_rl'] = [];
+if (count($data['_rl']) > RL_MAX_IPS) {
+    foreach ($data['_rl'] as $k => $b) {
+        if ($nowTs - (int)($b['t'] ?? 0) > RL_WINDOW) unset($data['_rl'][$k]);
+    }
+}
+$bucket = $data['_rl'][$ipKey] ?? null;
+if (!$bucket || $nowTs - (int)($bucket['t'] ?? 0) > RL_WINDOW) {
+    $data['_rl'][$ipKey] = ['t' => $nowTs, 'n' => 1];
+} else {
+    $data['_rl'][$ipKey]['n'] = (int)$bucket['n'] + 1;
+    if ($data['_rl'][$ipKey]['n'] > RL_MAX) {
+        // Превышение: сохраняем обновлённый счётчик лимита, событие НЕ учитываем.
+        ftruncate($fp, 0); rewind($fp);
+        fwrite($fp, json_encode($data, JSON_UNESCAPED_UNICODE));
+        fflush($fp); flock($fp, LOCK_UN); fclose($fp);
+        http_response_code(429);
+        echo json_encode(['ok' => false, 'error' => 'Too many requests']);
+        exit;
+    }
+}
 
 $data['totals']['events'] = (int)$data['totals']['events'] + 1;
 

@@ -59,7 +59,7 @@ function Section({ title, children }) {
   );
 }
 
-export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggleSafeMode }) {
+export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggleSafeMode, cardsById = {} }) {
   const [snap, setSnap] = useState(() => getAnalyticsSnapshot());
   const [server, setServer] = useState({ state: DASHBOARD_URL ? "loading" : "off" });
 
@@ -109,6 +109,23 @@ export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggl
     () => Object.entries(snap.counts || {}).sort((a, b) => b[1] - a[1]),
     [snap.counts]
   );
+
+  // Топ карт по оценкам: серверные счётчики (byCard) + текст карт с клиента.
+  const topCards = useMemo(() => {
+    const byCard = server.state === "ok" ? server.data?.byCard : null;
+    if (!byCard || typeof byCard !== "object") return [];
+    return Object.entries(byCard)
+      .map(([id, s]) => {
+        const likes = s?.likes || 0;
+        const dislikes = s?.dislikes || 0;
+        const card = cardsById[id];
+        const text = (card?.t || card?.text || id).toString();
+        return { id, likes, dislikes, views: s?.views || 0, score: likes - dislikes, rated: likes + dislikes, text };
+      })
+      .filter((c) => c.rated > 0)
+      .sort((a, b) => b.score - a.score || b.rated - a.rated)
+      .slice(0, 8);
+  }, [server, cardsById]);
 
   const ftAttributed = ctx.utm_source || ctx.ref || ctx.start_param;
 
@@ -233,6 +250,22 @@ export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggl
                   <Row label="decisions" value={server.data?.totals?.decisions} />
                 </>
               )}
+            </Section>
+          )}
+
+          {server.state === "ok" && topCards.length > 0 && (
+            <Section title="Топ карт по оценкам (👍−👎)">
+              {topCards.map((c) => (
+                <div key={c.id} style={{ display: "flex", gap: 8, fontSize: 11, lineHeight: 1.6, alignItems: "baseline" }}>
+                  <span style={{ color: c.score >= 0 ? C.green : C.red, fontWeight: 700, minWidth: 34, flexShrink: 0 }}>
+                    {c.score > 0 ? `+${c.score}` : c.score}
+                  </span>
+                  <span style={{ color: C.ink, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.text.slice(0, 46)}
+                  </span>
+                  <span style={{ color: C.dim, flexShrink: 0 }}>👍{c.likes} 👎{c.dislikes}</span>
+                </div>
+              ))}
             </Section>
           )}
 
