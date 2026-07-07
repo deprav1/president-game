@@ -32,7 +32,7 @@ if ($expected === '' || !hash_equals($expected, (string)$provided)) {
     exit;
 }
 
-$file = $dir . '/analytics.json';
+$file = $dir . '/stats.json';
 $data = is_file($file) ? json_decode((string)@file_get_contents($file), true) : null;
 $totals = (is_array($data) && isset($data['totals']) && is_array($data['totals'])) ? $data['totals'] : [];
 $byCard = (is_array($data) && isset($data['byCard']) && is_array($data['byCard'])) ? $data['byCard'] : [];
