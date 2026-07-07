@@ -176,7 +176,6 @@ export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggl
             <Row label="anon_uid" value={ctx.anon_uid} />
             <Row label="platform" value={ctx.platform} />
             <Row label="telegram" value={ctx.is_telegram ? "да" : "нет"} />
-            <Row label="username" value={ctx.tg_username ? `@${ctx.tg_username}` : null} />
             <Row label="версия" value={ctx.app_version} />
           </Section>
 

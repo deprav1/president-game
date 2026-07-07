@@ -1444,6 +1444,62 @@ em, i { font-style: normal; }
 .flow-defeat  .flow-final-caption { color: #cdb8b4; }
 .flow-victory .flow-final-caption { color: #e6d6ac; }
 
+.result-record-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 130, 140, 0.2);
+  background:
+    linear-gradient(135deg, rgba(20, 22, 26, 0.94), rgba(8, 8, 8, 0.94)),
+    radial-gradient(circle at 0% 0%, rgba(120, 130, 140, 0.16), transparent 42%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.result-record-callout.victory {
+  border-color: rgba(212, 175, 55, 0.24);
+  background:
+    linear-gradient(135deg, rgba(26, 18, 4, 0.94), rgba(8, 8, 8, 0.94)),
+    radial-gradient(circle at 0% 0%, rgba(212, 175, 55, 0.15), transparent 42%);
+}
+
+.result-record-callout.record {
+  border-color: rgba(212, 175, 55, 0.52);
+  box-shadow:
+    inset 0 1px 0 rgba(245, 230, 160, 0.08),
+    0 0 18px rgba(212, 175, 55, 0.08);
+}
+
+.result-record-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #caa23a;
+}
+
+.result-record-title {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #e8dcc8;
+}
+
+.result-record-rank {
+  flex: 0 0 auto;
+  min-width: 42px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--color-gold);
+}
+
 /* Компактный режим для большинства смартфонов (iPhone 12/13/14/15, Pixel и т.д.) */
 @media (max-height: 900px) {
   .screen-scroll-container {
@@ -1810,6 +1866,130 @@ em, i { font-style: normal; }
 
 .hub-dossier-section {
   padding-top: 10px;
+}
+
+.leaderboard-panel {
+  width: 100%;
+  margin-bottom: 2px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background:
+    linear-gradient(160deg, rgba(10, 10, 10, 0.96), rgba(12, 9, 4, 0.92)),
+    radial-gradient(circle at 14% 0%, rgba(212, 175, 55, 0.08), transparent 38%);
+  box-shadow: inset 0 1px 0 rgba(245, 230, 160, 0.03);
+}
+
+.leaderboard-panel.compact {
+  margin: 0 0 12px;
+  padding: 9px;
+}
+
+.leaderboard-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #caa23a;
+}
+
+.leaderboard-count {
+  flex: 0 0 auto;
+  color: #715825;
+}
+
+.leaderboard-empty {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 7px;
+  border: 1px dashed rgba(212, 175, 55, 0.18);
+  color: #806f50;
+  font-family: var(--font-text);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.leaderboard-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.leaderboard-row {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  background: rgba(4, 4, 4, 0.72);
+}
+
+.leaderboard-row.highlight {
+  border-color: rgba(212, 175, 55, 0.55);
+  background:
+    linear-gradient(135deg, rgba(46, 32, 8, 0.72), rgba(8, 8, 8, 0.85)),
+    radial-gradient(circle at 0% 50%, rgba(212, 175, 55, 0.16), transparent 48%);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.08);
+}
+
+.leaderboard-rank {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--color-gold);
+}
+
+.leaderboard-main {
+  min-width: 0;
+}
+
+.leaderboard-name {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #eadfc9;
+}
+
+.leaderboard-meta {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  color: #8d7650;
+}
+
+.leaderboard-score {
+  min-width: 42px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  color: #d4af37;
+}
+
+.leaderboard-score span {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #806f50;
 }
 
 .hub-grid {

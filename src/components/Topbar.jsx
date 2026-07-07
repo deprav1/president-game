@@ -1,4 +1,4 @@
-// Верхняя панель: бренд, срок правления, статусы (кризис/выборы), кнопка хаба.
+// Верхняя панель: бренд, срок правления, статусы (кризис/выборы), кнопка досье.
 export default function Topbar({ isCrisis, presidentName, monthName, year, tenure, phase, onHubOpen }) {
   return (
     <header className={`game-topbar ${isCrisis ? "crisis" : ""}`}>
@@ -14,14 +14,14 @@ export default function Topbar({ isCrisis, presidentName, monthName, year, tenur
           </div>
         </div>
       </div>
-      {/* Кнопка «Покинуть Варонию» */}
+      {/* Кнопка досье и рекордов */}
       <button
         onClick={onHubOpen}
-        title="Покинуть Варонию · личное дело"
+        title="Досье и рекорды"
         className="hub-launch"
       >
         <span className="hub-dot" />
-        <span className="hub-launch-text">ПОКИНУТЬ<br/>ВАРОНИЮ</span>
+        <span className="hub-launch-text">ДОСЬЕ<br/>РЕКОРДЫ</span>
       </button>
     </header>
   );

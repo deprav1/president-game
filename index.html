@@ -27,28 +27,8 @@
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <!-- Yandex Metrica. Counter id подставляется Vite из VITE_YM_ID.
-         Если переменная не задана (dev без счётчика) — инициализация
-         пропускается, аналитика становится тихим no-op. -->
-    <script>
-      (function () {
-        var YM_ID = "%VITE_YM_ID%";
-        if (!YM_ID || YM_ID.indexOf("%") === 0) return;
-        (function (m, e, t, r, i, k, a) {
-          m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
-          m[i].l = 1 * new Date();
-          for (var j = 0; j < document.scripts.length; j++) { if (document.scripts[j].src === r) { return; } }
-          k = e.createElement(t); a = e.getElementsByTagName(t)[0];
-          k.async = 1; k.src = r; a.parentNode.insertBefore(k, a);
-        })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-        window.ym(Number(YM_ID), "init", {
-          clickmap: true,
-          trackLinks: true,
-          accurateTrackBounce: true,
-          webvisor: true,
-        });
-      })();
-    </script>
+    <!-- Yandex Metrica загружается из src/lib/analytics.js без inline-скрипта,
+         чтобы production CSP мог не разрешать 'unsafe-inline' для script-src. -->
   </head>
   <body>
     <div id="root"></div>

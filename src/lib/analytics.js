@@ -26,6 +26,7 @@ const YM_ID = import.meta.env.VITE_YM_ID
   : null;
 const SERVER_ENDPOINT = import.meta.env.VITE_ANALYTICS_ENDPOINT || "";
 const IS_DEV = import.meta.env.DEV;
+let metricaLoadStarted = false;
 
 // Контекст сессии — собирается один раз в initAnalytics(), мерджится в каждое событие.
 let context = {};
@@ -60,6 +61,7 @@ export const EVENTS = Object.freeze({
   PROMO_COPIED: "promo_copied",
   SHARE_CLICK: "share_click",
   REFERRAL_SHARED: "referral_shared",
+  LEADERBOARD_ENTRY: "leaderboard_entry",
   HUB_OPEN: "hub_open",
   ADMIN_PANEL_OPEN: "admin_panel_open",
   SAFE_MODE_TOGGLE: "safe_mode_toggle",
@@ -106,6 +108,24 @@ function ym(...args) {
     window.ym(YM_ID, ...args);
   } catch {
     /* Аналитика не должна влиять на игру. */
+  }
+}
+
+function ensureYandexMetrica() {
+  if (!YM_ID || typeof document === "undefined" || typeof window === "undefined" || metricaLoadStarted) return;
+  metricaLoadStarted = true;
+  try {
+    window.ym = window.ym || function ymQueue() {
+      (window.ym.a = window.ym.a || []).push(arguments);
+    };
+    window.ym.l = 1 * new Date();
+    if ([...document.scripts].some(script => script.src === "https://mc.yandex.ru/metrika/tag.js")) return;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://mc.yandex.ru/metrika/tag.js";
+    document.head.appendChild(script);
+  } catch {
+    /* Loading analytics must never block the game. */
   }
 }
 
@@ -201,6 +221,8 @@ function marksFromStartParam(startParam) {
  */
 export async function initAnalytics() {
   try {
+    ensureYandexMetrica();
+
     const tg = window.Telegram?.WebApp;
     const u = tg?.initDataUnsafe?.user;
     const startParam = tg?.initDataUnsafe?.start_param || null;
@@ -245,7 +267,6 @@ export async function initAnalytics() {
       ft_ts: firstTouch?.ts || null,
       locale: u?.language_code || navigator?.language || null,
       is_telegram: !!tg,
-      tg_username: u?.username || null,
     };
 
     ym("setUserID", anonUid);
@@ -258,6 +279,13 @@ export async function initAnalytics() {
       ref: context.ref,
       ft_source: context.ft_source,
       is_telegram: context.is_telegram,
+    });
+
+    ym("init", {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      webvisor: true,
     });
 
     // Отдельное событие приземления с источником — удобно для воронок по каналам.

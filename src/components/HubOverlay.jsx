@@ -4,6 +4,7 @@ import { ENDINGS } from "../data/endings.js";
 import { copyText } from "../lib/clipboard.js";
 import { discountFor } from "../lib/promo.js";
 import { trackOutbound, appendUtm, hashStr } from "../lib/analytics.js";
+import LeaderboardList from "./LeaderboardList.jsx";
 
 const NARUZHU_YELLOW = "#FFD60A";
 const SHARE_BOT_URL = "https://t.me/varonia_bot";
@@ -26,7 +27,7 @@ const shareCountLabel = (count) => {
 
 // Модал «Покинуть Варонию»: рекорд, достижения, хроника финалов, оффер VPN Наружу.
 export default function HubOverlay({
-  onClose, bestScore, achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
+  onClose, bestScore, leaderboard, globalLeaderboard = [], achievements, unlockedEndings, referralCount, onOpenNaruzhu, onReferralShared, haptic,
   safeMode = false, isAdmin = false, onOpenAdmin,
 }) {
   const promoCode = discountFor(bestScore);
@@ -115,6 +116,19 @@ export default function HubOverlay({
               </div>
             </div>
             </div>
+          )}
+
+          <LeaderboardList entries={leaderboard} limit={5} compact />
+
+          {globalLeaderboard.length > 0 && (
+            <LeaderboardList
+              entries={globalLeaderboard}
+              title="ГЛОБАЛЬНАЯ ДОСКА ПОЧЕТА"
+              countLabel="ТОП"
+              emptyLabel="Пока никто не вошёл в историю"
+              limit={5}
+              compact
+            />
           )}
 
           {!safeMode && (

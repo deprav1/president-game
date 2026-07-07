@@ -4,6 +4,7 @@ import { getAsset } from "../lib/assets.js";
 import { victoryVerdict } from "../data/verdicts.js";
 import StatIcon from "./StatIcon.jsx";
 import DecisionLog from "./DecisionLog.jsx";
+import LeaderboardList from "./LeaderboardList.jsx";
 
 const ENDING_IMG_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"];
 const ENDING_NO_ICON_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker"];
@@ -11,12 +12,21 @@ const ENDING_NO_ICON_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker"];
 // Экран победы: финал (концовка), итоговые шкалы, достижения, история, промокод.
 export default function VictoryScreen({
   tenure, ending, stats, decisionLog, promoCode, onCopyPromo, onOpenNaruzhu, onShare, onRestart,
+  leaderboard, resultEntry,
+  globalLeaderboard = [], globalResult = null,
 }) {
   const verdict = useMemo(() => (
     ending?.id === "democratic_transition"
       ? "Впервые власть в Варонии закончилась не переворотом, а календарём."
       : victoryVerdict()
   ), [ending?.id]);
+  const recordLabel = resultEntry?.isRecord
+    ? "НОВЫЙ РЕКОРД"
+    : resultEntry?.rank
+      ? `МЕСТО #${resultEntry.rank}`
+      : "ИТОГ ПРАВЛЕНИЯ";
+  const resultTenure = resultEntry?.score ?? tenure;
+
   return (
     <div className="screen-scroll-container">
       <div className="flow-victory" style={{ paddingBottom: 16 }}>
@@ -39,6 +49,16 @@ export default function VictoryScreen({
         </div>
 
         <div className="card-content-area">
+          <div className={`result-record-callout victory ${resultEntry?.isRecord ? "record" : ""}`}>
+            <div>
+              <div className="result-record-kicker">{recordLabel}</div>
+              <div className="result-record-title">{resultTenure} месяцев у власти</div>
+            </div>
+            {resultEntry?.rank && (
+              <div className="result-record-rank">#{resultEntry.rank}</div>
+            )}
+          </div>
+
           {ending && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ padding: "0 4px" }}>
@@ -76,7 +96,7 @@ export default function VictoryScreen({
           {promoCode && (
             <div className="hub-promo-box" style={{ marginBottom: 14 }}>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                Вы продержались {tenure} мес.
+                Вы продержались {resultTenure} мес.
               </div>
               <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
                 Получите скидку {promoCode.percent}%
@@ -107,6 +127,26 @@ export default function VictoryScreen({
                 </span>
               </div>
             </div>
+          )}
+
+          <LeaderboardList
+            entries={leaderboard}
+            highlightId={resultEntry?.id}
+            title="ЛИЧНАЯ ДОСКА ПОЧЕТА"
+            limit={5}
+            compact
+          />
+
+          {globalLeaderboard.length > 0 && (
+            <LeaderboardList
+              entries={globalLeaderboard}
+              highlightId={globalResult?.entryId}
+              title="ГЛОБАЛЬНАЯ ДОСКА ПОЧЕТА"
+              countLabel="ТОП"
+              emptyLabel="Пока никто не вошёл в историю"
+              limit={5}
+              compact
+            />
           )}
         </div>
 

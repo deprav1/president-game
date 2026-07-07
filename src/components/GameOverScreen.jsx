@@ -1,14 +1,23 @@
 import { useMemo } from "react";
 import { getAsset } from "../lib/assets.js";
 import { defeatVerdict } from "../data/verdicts.js";
+import LeaderboardList from "./LeaderboardList.jsx";
 
 // Экран поражения: причина, вердикт, VPN-ревайв, скидка, достижения, шеринг/рестарт.
 export default function GameOverScreen({
   tenure, tenureLabel, deathMsg, killerKey,
   promoCode, canRevive, onShare, onRestart, onVpnRevive,
-  onCopyPromo, onOpenNaruzhu,
+  onCopyPromo, onOpenNaruzhu, leaderboard, resultEntry,
+  globalLeaderboard = [], globalResult = null,
 }) {
   const verdict = useMemo(() => defeatVerdict(killerKey), [killerKey]);
+  const recordLabel = resultEntry?.isRecord
+    ? "НОВЫЙ РЕКОРД"
+    : resultEntry?.rank
+      ? `МЕСТО #${resultEntry.rank}`
+      : "ИТОГ ПРАВЛЕНИЯ";
+  const resultTenure = resultEntry?.score ?? tenure;
+
   return (
     <div className="screen-scroll-container">
       <div className="flow-defeat" style={{ paddingBottom: 16 }}>
@@ -29,6 +38,16 @@ export default function GameOverScreen({
         </div>
 
         <div className="card-content-area">
+          <div className={`result-record-callout ${resultEntry?.isRecord ? "record" : ""}`}>
+            <div>
+              <div className="result-record-kicker">{recordLabel}</div>
+              <div className="result-record-title">{resultTenure} месяцев у власти</div>
+            </div>
+            {resultEntry?.rank && (
+              <div className="result-record-rank">#{resultEntry.rank}</div>
+            )}
+          </div>
+
           <div style={{
             background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.12)",
             borderRadius: 12, padding: "14px 18px", marginBottom: 12,
@@ -74,7 +93,7 @@ export default function GameOverScreen({
           {promoCode && (
             <div className="hub-promo-box" style={{ marginBottom: 12 }}>
               <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                Вы продержались {tenure} мес.
+                Вы продержались {resultTenure} мес.
               </div>
               <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
                 Получите скидку {promoCode.percent}%
@@ -105,6 +124,26 @@ export default function GameOverScreen({
                 </span>
               </div>
             </div>
+          )}
+
+          <LeaderboardList
+            entries={leaderboard}
+            highlightId={resultEntry?.id}
+            title="ЛИЧНАЯ ДОСКА ПОЧЕТА"
+            limit={5}
+            compact
+          />
+
+          {globalLeaderboard.length > 0 && (
+            <LeaderboardList
+              entries={globalLeaderboard}
+              highlightId={globalResult?.entryId}
+              title="ГЛОБАЛЬНАЯ ДОСКА ПОЧЕТА"
+              countLabel="ТОП"
+              emptyLabel="Пока никто не вошёл в историю"
+              limit={5}
+              compact
+            />
           )}
         </div>
 

@@ -21,14 +21,19 @@ import SecondChanceScreen from "./components/SecondChanceScreen.jsx";
 import HubOverlay from "./components/HubOverlay.jsx";
 import GameCard from "./components/GameCard.jsx";
 import StatPill from "./components/StatPill.jsx";
-import AchievementsList from "./components/AchievementsList.jsx";
-import DecisionLog from "./components/DecisionLog.jsx";
-import { ACHIEVEMENTS_DEF } from "./data/achievements.js";
 import { telegramStorage } from "./utils/telegramStorage.js";
-import { track, EVENTS, hashStr, trackOutbound, appendUtm } from "./lib/analytics.js";
+import { track, EVENTS, hashStr, trackOutbound, appendUtm, getAnalyticsSnapshot } from "./lib/analytics.js";
+import { globalLeaderboardEnabled, fetchGlobalLeaderboard, submitGlobalScore } from "./lib/globalLeaderboard.js";
 import AdminAnalyticsPanel from "./components/AdminAnalyticsPanel.jsx";
 import { copyText } from "./lib/clipboard.js";
 import { discountFor } from "./lib/promo.js";
+import {
+  addLeaderboardEntry,
+  createLeaderboardEntry,
+  normalizeLeaderboard,
+  normalizeLeaderboardScore,
+  parseStoredLeaderboard,
+} from "./lib/leaderboard.js";
 import "./App.css";
 
 // Стабильный короткий id карты для аналитики (у карт нет своего id —
@@ -104,6 +109,10 @@ export default function ThePresident() {
   const [achievements, setAchievements]   = useState([]);
   const [showHub, setShowHub]             = useState(false);
   const [bestScore, setBestScore]         = useState(0);
+  const [leaderboard, setLeaderboard]     = useState([]);
+  const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
+  const [globalResult, setGlobalResult]   = useState(null);
+  const [lastResult, setLastResult]       = useState(null);
   const [referralCount, setReferralCount] = useState(0);
   const [promoCode, setPromoCode]         = useState(null);
   const [ctaVariant, setCtaVariant]       = useState(CTA_VARIANTS[0]);
@@ -132,7 +141,7 @@ export default function ThePresident() {
 
   useEffect(() => {
     async function loadData() {
-      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe", "varon_yclid", "varon_rated"];
+      const keys = ["varon_save", "varon_cta_ab", "varon_pname", "varon_ach", "varon_best", "varon_leaderboard", "varon_refs", "varon_ends", "varon_difficulty", "varon_safe", "varon_yclid", "varon_rated"];
       const data = await telegramStorage.getItems(keys);
       const forcedPhase = new URLSearchParams(location.search).get("p");
       
@@ -161,6 +170,7 @@ export default function ThePresident() {
         if (savedRun.phase === "gameover") {
           setDeathMsg(savedRun.deathMsg || "");
           setPromoCode(discountFor((savedRun.months || 1) - 1));
+          setLastResult(savedRun.lastResult || null);
           if (savedRun.reviveAvailable && savedRun.reviveSnapshot) {
             resumeReviveRef.current = savedRun.reviveSnapshot;
             setReviveAvailable(true);
@@ -174,9 +184,27 @@ export default function ThePresident() {
         : (DIFFICULTIES.includes(data["varon_difficulty"]) ? data["varon_difficulty"] : "normal");
       setDifficulty(savedDifficulty);
 
-      setPresidentName(data["varon_pname"] || "");
+      const savedPresidentName = data["varon_pname"] || "";
+      const savedBestScore = normalizeLeaderboardScore(safeInt(data["varon_best"]));
+      setPresidentName(savedPresidentName);
       try { setAchievements(JSON.parse(data["varon_ach"] || "[]")); } catch {}
-      setBestScore(safeInt(data["varon_best"]));
+      setBestScore(savedBestScore);
+
+      let savedLeaderboard = parseStoredLeaderboard(data["varon_leaderboard"] || "[]");
+      if (!savedLeaderboard.length && savedBestScore > 0) {
+        savedLeaderboard = normalizeLeaderboard([
+          createLeaderboardEntry({
+            id: "legacy-best",
+            name: savedPresidentName || "Президент",
+            score: savedBestScore,
+            difficulty: savedDifficulty,
+            outcome: "legacy",
+            reason: "legacy_best",
+          })
+        ]);
+        telegramStorage.setItem("varon_leaderboard", JSON.stringify(savedLeaderboard));
+      }
+      setLeaderboard(savedLeaderboard);
       
       setReferralCount(safeInt(data["varon_refs"]));
 
@@ -299,6 +327,89 @@ export default function ThePresident() {
     if (nextMonth >= 49) unlockAchievement("survive_48");
   }, [unlockAchievement]);
 
+  const recordResult = useCallback((score, outcome, meta = {}) => {
+    const normalizedScore = normalizeLeaderboardScore(safeInt(score));
+    const isRecord = normalizedScore > bestScore;
+    if (isRecord) {
+      setBestScore(normalizedScore);
+      telegramStorage.setItem("varon_best", String(normalizedScore));
+    }
+
+    const { leaderboard: nextLeaderboard, entry, rank, isTopTen } = addLeaderboardEntry(leaderboard, {
+      name: presidentName || nameInput || "Президент",
+      score: normalizedScore,
+      difficulty,
+      outcome,
+      endingId: meta.endingId,
+      endingTitle: meta.endingTitle,
+      reason: meta.reason,
+      killerKey: meta.killerKey,
+    });
+    const result = { ...entry, rank, isRecord, isTopTen };
+
+    setLeaderboard(nextLeaderboard);
+    setLastResult(result);
+    telegramStorage.setItem("varon_leaderboard", JSON.stringify(nextLeaderboard));
+
+    // Общий рейтинг: шлём результат на сервер (fire-and-forget, не блокирует UI).
+    if (globalLeaderboardEnabled) {
+      const uid = getAnalyticsSnapshot().context?.anon_uid || "";
+      submitGlobalScore({
+        uid,
+        name: presidentName || nameInput || "Президент",
+        score: normalizedScore,
+        difficulty,
+        outcome,
+        endingId: meta.endingId,
+        endingTitle: meta.endingTitle,
+        reason: meta.reason,
+        killerKey: meta.killerKey,
+      }).then((globalRes) => {
+        if (!globalRes) return;
+        setGlobalLeaderboard(globalRes.leaderboard);
+        setGlobalResult({
+          entryId: globalRes.entryId,
+          rank: globalRes.rank,
+          isTopN: globalRes.isTopN,
+          improved: globalRes.improved,
+        });
+        track(EVENTS.LEADERBOARD_ENTRY, {
+          score: normalizedScore,
+          rank: globalRes.rank,
+          is_top_ten: globalRes.isTopN,
+          leaderboard_trust: "server_global",
+          scope: "global",
+          difficulty,
+          outcome,
+        });
+      });
+    }
+
+    track(EVENTS.LEADERBOARD_ENTRY, {
+      score: normalizedScore,
+      rank,
+      is_record: isRecord,
+      is_top_ten: isTopTen,
+      leaderboard_trust: "client_local",
+      difficulty,
+      outcome,
+      reason: meta.reason || null,
+      ending_id: meta.endingId || null,
+    });
+
+    return result;
+  }, [bestScore, difficulty, leaderboard, nameInput, presidentName]);
+
+  // Подгружаем глобальную таблицу при старте (если включена серверная доска).
+  useEffect(() => {
+    if (!globalLeaderboardEnabled) return;
+    let alive = true;
+    fetchGlobalLeaderboard().then((entries) => {
+      if (alive && entries) setGlobalLeaderboard(entries);
+    });
+    return () => { alive = false; };
+  }, []);
+
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     if (!tg) return;
@@ -402,7 +513,7 @@ export default function ThePresident() {
   // reviveViaVpn; здесь мы кладём выбранный снапшот в сейв. Если ревайв уже
   // недоступен (safe-режим / уже использован / нет истории ходов) — сейв
   // удаляется, как и раньше, и партия начнётся заново.
-  const persistGameOver = useCallback((finalStats, finalMonth, msg) => {
+  const persistGameOver = useCallback((finalStats, finalMonth, msg, resultEntry = null) => {
     const hist = historyRef.current;
     const reviveSnapshot = hist.length >= 2 ? hist[hist.length - 2] : hist[0];
     const canReviveLater = !safeMode && !hasUsedVpnRevive && !!reviveSnapshot;
@@ -424,6 +535,7 @@ export default function ThePresident() {
         difficulty,
         phase: "gameover",
         deathMsg: msg,
+        lastResult: resultEntry,
         reviveAvailable: true,
         reviveSnapshot,
       }));
@@ -437,9 +549,9 @@ export default function ThePresident() {
     if (hasUsedSecondChance) {
       setDeathMsg(death.msg);
       setPromoCode(discountFor(score));
-      if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-      persistGameOver(nextStats, nextMonth, death.msg);
-      track(EVENTS.GAME_OVER, { reason: "death", killer_key: death.key, is_low: death.low, tenure: score, score });
+      const result = recordResult(score, "defeat", { reason: "death", killerKey: death.key });
+      persistGameOver(nextStats, nextMonth, death.msg, result);
+      track(EVENTS.GAME_OVER, { reason: "death", killer_key: death.key, is_low: death.low, tenure: score, score, leaderboard_rank: result.rank });
       setPhase("gameover");
     } else {
       const paramKey = death.key;
@@ -533,11 +645,15 @@ export default function ThePresident() {
         }));
       } catch { /* Save failure should not interrupt the current run. */ }
     }
-  }, [hasUsedSecondChance, hasUsedVpnRevive, bestScore, deck, cardIdx, pendingEvents, termsCompleted, difficulty, hapticNotify, persistGameOver]);
+  }, [hasUsedSecondChance, hasUsedVpnRevive, deck, cardIdx, pendingEvents, termsCompleted, difficulty, hapticNotify, persistGameOver, recordResult]);
 
   const completeVictory = useCallback((endObj, score, reason = "victory", terms = termsCompleted) => {
     hapticNotify("success");
-    if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
+    const result = recordResult(score, "victory", {
+      reason,
+      endingId: endObj.id,
+      endingTitle: endObj.title,
+    });
     setPromoCode(discountFor(score));
     setVictoryEndingId(endObj.id);
     telegramStorage.removeItem("varon_save");
@@ -549,10 +665,10 @@ export default function ThePresident() {
       track(EVENTS.ENDING_UNLOCKED, { ending_id: endObj.id });
       return next;
     });
-    track(EVENTS.VICTORY, { ending_id: endObj.id, tenure: score, terms, reason });
+    track(EVENTS.VICTORY, { ending_id: endObj.id, tenure: score, terms, reason, leaderboard_rank: result.rank });
     unlockAchievement("victory");
     setPhase("victory");
-  }, [bestScore, hapticNotify, termsCompleted, unlockAchievement]);
+  }, [hapticNotify, recordResult, termsCompleted, unlockAchievement]);
 
   const choose = useCallback((side, via = "click") => {
     if (choosing.current) return;
@@ -598,9 +714,9 @@ export default function ThePresident() {
         setDeathMsg(declineMsg);
         const score = rescueCard.targetMonth - 1;
         setPromoCode(discountFor(score));
-        if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-        persistGameOver(rescueCard.targetStats, rescueCard.targetMonth, declineMsg);
-        track(EVENTS.GAME_OVER, { reason: "second_chance_declined", tenure: score, score });
+        const result = recordResult(score, "defeat", { reason: "second_chance_declined" });
+        persistGameOver(rescueCard.targetStats, rescueCard.targetMonth, declineMsg, result);
+        track(EVENTS.GAME_OVER, { reason: "second_chance_declined", tenure: score, score, leaderboard_rank: result.rank });
         setPhase("gameover");
       }
       return;
@@ -630,9 +746,9 @@ export default function ThePresident() {
         setDeathMsg(skipMsg);
         const score = months - 1;
         setPromoCode(discountFor(score));
-        if (score > bestScore) { setBestScore(score); telegramStorage.setItem("varon_best", String(score)); }
-        persistGameOver(stats, months, skipMsg);
-        track(EVENTS.GAME_OVER, { reason: "election_skip", tenure: score, score });
+        const result = recordResult(score, "defeat", { reason: "election_skip" });
+        persistGameOver(stats, months, skipMsg, result);
+        track(EVENTS.GAME_OVER, { reason: "election_skip", tenure: score, score, leaderboard_rank: result.rank });
         setPhase("gameover");
         return;
       }
@@ -816,7 +932,7 @@ export default function ThePresident() {
         track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(crisis), month: newMonth });
       }
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, bestScore, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty, persistGameOver]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty, persistGameOver, recordResult]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -937,6 +1053,7 @@ export default function ThePresident() {
     telegramStorage.setItem("varon_pname", name);
     track(EVENTS.NAME_SUBMIT, { is_default_name: !nameInput.trim() });
     track(EVENTS.GAME_START, { from: "name_submit" });
+    setLastResult(null);
     setVictoryEndingId(null);
     setPhase("card");
     haptic("medium");
@@ -973,6 +1090,8 @@ export default function ThePresident() {
     setVictoryEndingId(null);
     setPendingEvents([]);
     setDecisionLog([]);
+    setLastResult(null);
+    setGlobalResult(null);
     setHasUsedSecondChance(false);
     setHasUsedVpnRevive(false);
     setReviveAvailable(false);
@@ -1071,6 +1190,9 @@ export default function ThePresident() {
     },
   };
   const PROMO_LINE = safeMode ? "" : `\n🔒 7 дней VPN «Наружу» бесплатно — промокод NARUZHU10: ${naruzhuUrl("share", "", Math.max(0, months - 1), null, "", yclid)}`;
+  const LEADERBOARD_SHARE_LINE = lastResult?.rank
+    ? `\nЛичная доска почета: #${lastResult.rank}, ${lastResult.score} мес.`
+    : "";
   // Реферальная метка: friend, открывший ссылку, получит start_param = ref_<хэш>,
   // что позволяет атрибутировать его к пригласившему игроку.
   const refTag     = `ref_${hashStr(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest")}`;
@@ -1089,7 +1211,7 @@ export default function ThePresident() {
     const key    = killerParam?.key || "people";
     const isHigh = stats[key] >= 100;
     const text   = SHARE_DEATH[key]?.[isHigh ? "high" : "low"] || `${tenure} мес. у власти в Варонии.`;
-    const msg    = `${text}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
+    const msg    = `${text}${LEADERBOARD_SHARE_LINE}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
     openShare(msg, "gameover");
   };
 
@@ -1100,7 +1222,7 @@ export default function ThePresident() {
   ];
   const shareVictory = () => {
     const text = VICTORY_TEXTS[Math.floor(Math.random() * VICTORY_TEXTS.length)];
-    const msg  = `${text}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
+    const msg  = `${text}${LEADERBOARD_SHARE_LINE}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
     openShare(msg, "victory");
   };
 
@@ -1146,7 +1268,7 @@ export default function ThePresident() {
             onNameSubmit={handleNameSubmit}
             difficulty={difficulty}
             onSelectDifficulty={selectDifficulty}
-            onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setVictoryEndingId(null); setPhase("card"); }}
+            onNewTerm={() => { track(EVENTS.GAME_START, { from: "new_term" }); haptic("medium"); setLastResult(null); setGlobalResult(null); setVictoryEndingId(null); setPhase("card"); }}
             onPlayAsOther={() => { track(EVENTS.PLAY_AS_OTHER); haptic("light"); setPresidentName(""); telegramStorage.removeItem("varon_pname"); }}
             onNaruzhu={() => openNaruzhu("onboarding")}
             safeMode={safeMode}
@@ -1162,6 +1284,10 @@ export default function ThePresident() {
             killerKey={killerKey}
             promoCode={safeMode ? null : promoCode}
             canRevive={!safeMode && !hasUsedVpnRevive && reviveAvailable}
+            leaderboard={leaderboard}
+            resultEntry={lastResult}
+            globalLeaderboard={globalLeaderboard}
+            globalResult={globalResult}
             onShare={shareGameOver}
             onRestart={restart}
             onVpnRevive={reviveViaVpn}
@@ -1178,6 +1304,10 @@ export default function ThePresident() {
             stats={stats}
             decisionLog={decisionLog}
             promoCode={safeMode ? null : promoCode}
+            leaderboard={leaderboard}
+            resultEntry={lastResult}
+            globalLeaderboard={globalLeaderboard}
+            globalResult={globalResult}
             onCopyPromo={copyPromo}
             onOpenNaruzhu={() => openNaruzhu("victory_promo")}
             onShare={shareVictory}
@@ -1230,6 +1360,8 @@ export default function ThePresident() {
           <HubOverlay
             onClose={() => setShowHub(false)}
             bestScore={bestScore}
+            leaderboard={leaderboard}
+            globalLeaderboard={globalLeaderboard}
             achievements={achievements}
             unlockedEndings={unlockedEndings}
             referralCount={referralCount}

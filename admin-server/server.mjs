@@ -3,6 +3,7 @@ import { readFile, writeFile, appendFile, mkdir } from "node:fs/promises";
 import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createLeaderboardEntry, sortLeaderboard } from "../src/lib/leaderboard.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -10,6 +11,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const DATA_DIR = path.join(__dirname, "data");
 const EVENTS_FILE = path.join(DATA_DIR, "events.ndjson");
 const OVERRIDES_FILE = path.join(DATA_DIR, "card-overrides.json");
+const LEADERBOARD_FILE = path.join(DATA_DIR, "leaderboard.json");
 
 const PORT = Number(process.env.ADMIN_PORT || process.env.PORT || 3100);
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
@@ -17,6 +19,16 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
 const ALLOWED_ORIGIN = process.env.ANALYTICS_ALLOWED_ORIGIN || "*";
 const YANDEX_COUNTER_ID = process.env.YANDEX_COUNTER_ID || process.env.VITE_YM_ID || "109695119";
 const YANDEX_TOKEN = process.env.YANDEX_METRICA_TOKEN || "";
+const COLLECT_RATE_WINDOW_MS = 60_000;
+const COLLECT_RATE_MAX = 120;
+const SUBMIT_RATE_WINDOW_MS = 60_000;
+const SUBMIT_RATE_MAX = 20;
+// Сколько результатов храним/отдаём в глобальной таблице.
+const GLOBAL_LEADERBOARD_MAX = 100;
+const GLOBAL_LEADERBOARD_RETURN = 50;
+const FORBIDDEN_OBJECT_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+const collectRateBuckets = new Map();
+const submitRateBuckets = new Map();
 
 const DECKS = [
   ["base", "CARDS", "../src/data/cards.js"],
@@ -55,6 +67,65 @@ function send(res, status, body, headers = {}) {
     ...headers,
   });
   res.end(data);
+}
+
+function safeObjectKey(value, maxLength = 80) {
+  const key = String(value || "").trim().slice(0, maxLength);
+  if (!key || FORBIDDEN_OBJECT_KEYS.has(key)) return "";
+  return key;
+}
+
+function sanitizePayload(value, depth = 0) {
+  if (value == null || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") return value.slice(0, 500);
+  if (depth >= 3) return null;
+  if (Array.isArray(value)) return value.slice(0, 25).map(item => sanitizePayload(item, depth + 1));
+  if (typeof value !== "object") return null;
+
+  const clean = Object.create(null);
+  for (const [rawKey, rawVal] of Object.entries(value).slice(0, 60)) {
+    const key = safeObjectKey(rawKey, 80);
+    if (!key) continue;
+    clean[key] = sanitizePayload(rawVal, depth + 1);
+  }
+  return clean;
+}
+
+function originAllowed(req) {
+  if (!ALLOWED_ORIGIN || ALLOWED_ORIGIN === "*") return true;
+  const origin = req.headers.origin || "";
+  const allowed = ALLOWED_ORIGIN.split(",").map(item => item.trim()).filter(Boolean);
+  return !origin || allowed.includes(origin);
+}
+
+function corsHeaders(req) {
+  const origin = req.headers.origin || "";
+  const allowOrigin = ALLOWED_ORIGIN === "*"
+    ? "*"
+    : (originAllowed(req) && origin ? origin : ALLOWED_ORIGIN.split(",")[0]?.trim() || "null");
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
+  };
+}
+
+function rateLimited(buckets, req, windowMs, max) {
+  const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+  const now = Date.now();
+  const bucket = buckets.get(ip);
+  if (!bucket || now - bucket.startedAt > windowMs) {
+    buckets.set(ip, { startedAt: now, count: 1 });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > max;
+}
+
+function collectRateLimited(req) {
+  return rateLimited(collectRateBuckets, req, COLLECT_RATE_WINDOW_MS, COLLECT_RATE_MAX);
 }
 
 function parseBody(req) {
@@ -162,12 +233,12 @@ async function readEvents() {
 }
 
 function aggregateEvents(events) {
-  const byCard = {};
+  const byCard = Object.create(null);
   const totals = { events: events.length, views: 0, likes: 0, dislikes: 0, decisions: 0 };
   for (const event of events) {
     const name = event.event;
     const payload = event.payload || {};
-    const cardId = payload.card_id;
+    const cardId = safeObjectKey(payload.card_id, 80);
     if (!cardId) continue;
     byCard[cardId] ||= { views: 0, likes: 0, dislikes: 0, decisions: 0, lastSeen: null };
     if (name === "card_view") {
@@ -266,23 +337,124 @@ async function saveOverride(body) {
 }
 
 async function collect(req, res) {
-  const cors = {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+  const cors = corsHeaders(req);
   if (req.method === "OPTIONS") {
     res.writeHead(204, cors);
     res.end();
     return;
   }
   if (req.method !== "POST") return send(res, 405, { ok: false, error: "Method not allowed" }, cors);
+  if (!originAllowed(req)) return send(res, 403, { ok: false, error: "Origin not allowed" }, cors);
+  if (collectRateLimited(req)) return send(res, 429, { ok: false, error: "Too many events" }, cors);
   const body = await parseBody(req);
-  const event = String(body.event || "");
+  const event = safeObjectKey(body.event, 80);
   if (!event) return send(res, 400, { ok: false, error: "event is required" }, cors);
   await ensureDataDir();
-  await appendFile(EVENTS_FILE, `${JSON.stringify({ event, payload: body.payload || {}, ts: body.ts || new Date().toISOString() })}\n`, "utf8");
+  await appendFile(EVENTS_FILE, `${JSON.stringify({ event, payload: sanitizePayload(body.payload || {}), ts: body.ts || new Date().toISOString() })}\n`, "utf8");
   return send(res, 200, { ok: true }, cors);
+}
+
+// ─── ГЛОБАЛЬНАЯ ТАБЛИЦА РЕКОРДОВ ──────────────────────────────────────────────
+// Файловое хранилище top-100. Записи сериализуются через цепочку промисов,
+// чтобы конкурентные POST не затирали друг друга (один процесс Node).
+let leaderboardWriteChain = Promise.resolve();
+function withLeaderboardLock(fn) {
+  const run = leaderboardWriteChain.then(fn, fn);
+  leaderboardWriteChain = run.then(() => {}, () => {});
+  return run;
+}
+
+async function readLeaderboard() {
+  const raw = await readJsonSafe(LEADERBOARD_FILE, []);
+  return Array.isArray(raw) ? raw : [];
+}
+
+// Наружу uid игрока не отдаём — только публичные поля рекорда.
+function publicEntry(entry) {
+  if (!entry || typeof entry !== "object") return entry;
+  const rest = { ...entry };
+  delete rest.uid;
+  return rest;
+}
+
+async function submitLeaderboardEntry(body) {
+  // uid — анонимный идентификатор игрока (хэш). Если есть — храним 1 лучший
+  // результат на игрока, чтобы один человек не забивал всю таблицу.
+  const uid = safeObjectKey(body.uid, 64);
+  // finishedAt задаём на сервере — клиентскому времени не доверяем.
+  const entry = createLeaderboardEntry({
+    name: body.name,
+    score: body.score,
+    difficulty: body.difficulty,
+    outcome: body.outcome,
+    endingId: body.endingId,
+    endingTitle: body.endingTitle,
+    reason: body.reason,
+    killerKey: body.killerKey,
+    finishedAt: new Date().toISOString(),
+  });
+
+  return withLeaderboardLock(async () => {
+    const current = await readLeaderboard();
+
+    if (uid) {
+      const prev = current.find(item => item && item.uid === uid);
+      if (prev && Number(prev.score) >= entry.score) {
+        // Не улучшение — возвращаем текущее место игрока, ничего не пишем.
+        const sortedExisting = sortLeaderboard(current);
+        const existingRank = sortedExisting.findIndex(item => item.id === prev.id) + 1;
+        return {
+          leaderboard: sortedExisting.slice(0, GLOBAL_LEADERBOARD_RETURN).map(publicEntry),
+          entryId: prev.id,
+          rank: existingRank,
+          isTopN: existingRank > 0 && existingRank <= GLOBAL_LEADERBOARD_RETURN,
+          improved: false,
+        };
+      }
+    }
+
+    const pool = uid ? current.filter(item => !item || item.uid !== uid) : current;
+    const stored = { ...entry, uid: uid || null };
+    const sorted = sortLeaderboard([...pool, stored]);
+    const rank = sorted.findIndex(item => item.id === stored.id) + 1;
+    const trimmed = sorted.slice(0, GLOBAL_LEADERBOARD_MAX);
+
+    await ensureDataDir();
+    await writeFile(LEADERBOARD_FILE, `${JSON.stringify(trimmed)}\n`, "utf8");
+
+    return {
+      leaderboard: sorted.slice(0, GLOBAL_LEADERBOARD_RETURN).map(publicEntry),
+      entryId: stored.id,
+      rank,
+      isTopN: rank > 0 && rank <= GLOBAL_LEADERBOARD_RETURN,
+      improved: true,
+    };
+  });
+}
+
+async function leaderboard(req, res) {
+  const cors = corsHeaders(req);
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, cors);
+    res.end();
+    return;
+  }
+  if (!originAllowed(req)) return send(res, 403, { ok: false, error: "Origin not allowed" }, cors);
+
+  if (req.method === "GET") {
+    const entries = sortLeaderboard(await readLeaderboard())
+      .slice(0, GLOBAL_LEADERBOARD_RETURN)
+      .map(publicEntry);
+    return send(res, 200, { ok: true, leaderboard: entries }, cors);
+  }
+
+  if (req.method !== "POST") return send(res, 405, { ok: false, error: "Method not allowed" }, cors);
+  if (rateLimited(submitRateBuckets, req, SUBMIT_RATE_WINDOW_MS, SUBMIT_RATE_MAX)) {
+    return send(res, 429, { ok: false, error: "Too many submissions" }, cors);
+  }
+  const body = await parseBody(req);
+  const result = await submitLeaderboardEntry(body);
+  return send(res, 200, { ok: true, ...result }, cors);
 }
 
 function serveStatic(req, res) {
@@ -302,6 +474,7 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname === "/api/collect") return collect(req, res);
+    if (url.pathname === "/api/leaderboard") return leaderboard(req, res);
     if (!requireAuth(req, res)) return;
     if (url.pathname === "/api/dashboard" && req.method === "GET") return send(res, 200, await dashboardPayload());
     if (url.pathname === "/api/cards" && req.method === "GET") return send(res, 200, { cards: await loadCards() });
