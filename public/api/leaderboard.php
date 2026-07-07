@@ -25,6 +25,9 @@ const MAX_SCORE        = 999;
 const STORE_MAX        = 100;  // сколько храним
 const RETURN_MAX       = 50;   // сколько отдаём
 const MAX_BODY_BYTES   = 16384;
+const RL_WINDOW        = 60;   // окно rate-limit POST, сек
+const RL_MAX           = 30;   // макс. отправок результата с одного IP за окно
+const RL_MAX_IPS       = 5000; // предел числа IP-бакетов (прунинг протухших сверх него)
 
 $DIFF_RANK   = ['easy' => 1, 'normal' => 2, 'hardcore' => 3];
 $OUTCOMES    = ['victory' => true, 'defeat' => true, 'legacy' => true];
@@ -49,6 +52,43 @@ function ensure_store() {
     if (!is_file($ht)) {
         @file_put_contents($ht, "Require all denied\nDeny from all\n");
     }
+}
+
+// IP rate-limit для POST. Состояние — отдельный файл lb-rl.json (доска хранится
+// массивом, поэтому счётчики держим отдельно). IP хэшируем. Сбой хранилища не
+// блокирует игроков (возвращаем false). true → лимит превышен.
+function rate_limited($window, $max) {
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $ip = trim(explode(',', (string)$ip)[0]);
+    $key = substr(sha1($ip), 0, 16);
+    $now = time();
+    $fp = @fopen(store_dir() . '/lb-rl.json', 'c+');
+    if (!$fp) return false;
+    $limited = false;
+    if (flock($fp, LOCK_EX)) {
+        $cur = stream_get_contents($fp);
+        $map = $cur !== '' ? json_decode($cur, true) : null;
+        if (!is_array($map)) $map = [];
+        if (count($map) > RL_MAX_IPS) {
+            foreach ($map as $k => $b) {
+                if ($now - (int)($b['t'] ?? 0) > $window) unset($map[$k]);
+            }
+        }
+        $b = $map[$key] ?? null;
+        if (!$b || $now - (int)($b['t'] ?? 0) > $window) {
+            $map[$key] = ['t' => $now, 'n' => 1];
+        } else {
+            $map[$key]['n'] = (int)$b['n'] + 1;
+            if ($map[$key]['n'] > $max) $limited = true;
+        }
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($map));
+        fflush($fp);
+        flock($fp, LOCK_UN);
+    }
+    fclose($fp);
+    return $limited;
 }
 
 function clamp_score($v) {
@@ -147,6 +187,12 @@ if ($method !== 'POST') {
     respond(['ok' => false, 'error' => 'Method not allowed']);
 }
 
+ensure_store();
+if (rate_limited(RL_WINDOW, RL_MAX)) {
+    http_response_code(429);
+    respond(['ok' => false, 'error' => 'Too many submissions']);
+}
+
 $raw = file_get_contents('php://input');
 if ($raw === false) $raw = '';
 if (strlen($raw) > MAX_BODY_BYTES) {
@@ -163,7 +209,6 @@ $uid   = clean_str($body['uid'] ?? '', 64);
 $entry = normalize_entry($body, gmdate('Y-m-d\TH:i:s.000\Z'));
 
 // Открываем на чтение+запись с эксклюзивным локом (создаём при отсутствии).
-ensure_store();
 $fp = @fopen($file, 'c+');
 if (!$fp) {
     http_response_code(500);
