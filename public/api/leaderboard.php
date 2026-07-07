@@ -38,7 +38,7 @@ function store_dir() {
 }
 
 function data_file() {
-    return store_dir() . '/leaderboard.json';
+    return store_dir() . '/records.json';
 }
 
 // Гарантируем каталог хранилища и запрет прямого HTTP-доступа к нему (в файле uid).
