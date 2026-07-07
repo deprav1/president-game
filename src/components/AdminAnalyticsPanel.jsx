@@ -72,8 +72,18 @@ export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggl
   // Сводка с admin-server (если настроен и доступен). Не блокирует панель.
   useEffect(() => {
     if (!DASHBOARD_URL) return;
+    // Токен админа для чтения серверной сводки: разово задаётся через ?atoken=…
+    // и хранится локально — секрет НЕ попадает в публичный бандл.
+    let token = "";
+    try {
+      const fromUrl = new URLSearchParams(location.search).get("atoken");
+      if (fromUrl) localStorage.setItem("varon_admin_token", fromUrl);
+      token = localStorage.getItem("varon_admin_token") || "";
+    } catch { /* приватный режим — просто без токена */ }
     let alive = true;
-    fetch(DASHBOARD_URL, { headers: { Accept: "application/json" } })
+    fetch(DASHBOARD_URL, {
+      headers: { Accept: "application/json", ...(token ? { "X-Admin-Token": token } : {}) },
+    })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data) => { if (alive) setServer({ state: "ok", data }); })
       .catch((e) => { if (alive) setServer({ state: "error", error: String(e.message || e) }); });

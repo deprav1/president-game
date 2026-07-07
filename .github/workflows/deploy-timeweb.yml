@@ -35,6 +35,12 @@ jobs:
           # хостинге (public/api/leaderboard.php). Данные хранятся вне webroot,
           # поэтому переживают деплой. Пусто — глобальный рейтинг выключен.
           VITE_LEADERBOARD_ENDPOINT: "/api/leaderboard.php"
+          # Серверный сбор игровой аналитики (same-origin PHP на том же хостинге).
+          # collect.php копит скользящий агрегат в lb-data; dashboard.php отдаёт
+          # сводку в админ-панель под токеном (lb-data/analytics-token.txt).
+          # Явный dashboard задаём, т.к. авто-вывод из endpoint не сматчит «.php».
+          VITE_ANALYTICS_ENDPOINT: "/api/collect.php"
+          VITE_ANALYTICS_DASHBOARD: "/api/dashboard.php"
           # Безопасный режим (скрыт от игроков): собирает билд без рекламы VPN
           # «Наружу» — например, для модерации Яндекс.Директа.
           # Закомментируйте, чтобы вернуть обычный билд с рекламой.
