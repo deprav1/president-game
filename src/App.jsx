@@ -10,6 +10,7 @@ import { PANORAMA_CARDS } from "./data/panoramaCards.js";
 import { CHRONICLE_CARDS } from "./data/chronicleCards.js";
 import { PRECEDENT_CARDS } from "./data/precedentCards.js";
 import { getAsset } from "./lib/assets.js";
+import { getCardBackground } from "./lib/cardBackgrounds.js";
 import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast, DIFFICULTIES } from "./lib/gameHelpers.js";
 import Topbar from "./components/Topbar.jsx";
 import OnboardingScreen from "./components/OnboardingScreen.jsx";
@@ -41,6 +42,10 @@ import "./App.css";
 const cardKey = (c) => (c ? hashStr(c.t || c.text || "") : null);
 
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
+
+const preloadImageUrls = (urls) => {
+  urls.forEach(src => { const img = new Image(); img.src = src; });
+};
 
 // Строит UTM-размеченный URL на сайт «Наружу».
 const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId = "", yclid = "") => {
@@ -482,13 +487,13 @@ export default function ThePresident() {
     };
   }, []);
 
-  // Предзагрузка всех портретов и фонов карт на старте — свайп без мерцания.
-  // Картинки в WebP лёгкие (~10-60 КБ), суммарно безопасно для Mini App.
+  // На старте греем только повторяемые портреты и явно заданные bgImage.
+  // Тематические фоны подбираются динамически, поэтому их греем ближе к показу.
   useEffect(() => {
     const urls = new Set();
     ADVISORS.forEach(a => a?.avatar && urls.add(getAsset(a.avatar)));
-    [...CARDS, ...CRISIS_CARDS].forEach(c => c?.bgImage && urls.add(getAsset(c.bgImage)));
-    urls.forEach(src => { const img = new Image(); img.src = src; });
+    [...ALL_CARDS, ...CRISIS_CARDS].forEach(c => c?.bgImage && urls.add(getAsset(c.bgImage)));
+    preloadImageUrls(urls);
   }, []);
 
   const previewCard = getPreviewCard();
@@ -496,6 +501,24 @@ export default function ThePresident() {
   const advisor     = currentCard ? (ADVISORS[currentCard.advisor] || ADVISORS[0]) : ADVISORS[0];
   const year        = 2024 + Math.floor((months - 1) / 12);
   const monthName   = MONTHS[(months - 1) % 12];
+
+  // Подгружаем фон текущей и ближайших карт, чтобы свайп не ловил пустую подложку,
+  // но не тащил всю библиотеку фонов на старте Telegram Mini App.
+  useEffect(() => {
+    const urls = new Set();
+    const warmCards = [currentCard];
+    if (!isCrisis && deck.length) {
+      warmCards.push(deck[(cardIdx + 1) % deck.length], deck[(cardIdx + 2) % deck.length]);
+    }
+
+    warmCards.forEach(card => {
+      const bg = getCardBackground(card);
+      if (bg) urls.add(getAsset(bg));
+      if (card?.assetImage) urls.add(getAsset(card.assetImage));
+    });
+
+    preloadImageUrls(urls);
+  }, [cardIdx, currentCard, deck, isCrisis]);
 
   const checkDeath = s => {
     for (const p of PARAMS) {
