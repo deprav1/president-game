@@ -1,0 +1,213 @@
+<?php
+/**
+ * Глобальная таблица рекордов «Президент» — same-origin endpoint.
+ *
+ * Живёт на том же статическом хосте, что и игра (Timeweb, nginx+PHP), поэтому
+ * отдельный Node-сервер не нужен и CORS не требуется. Контракт совместим с
+ * клиентом src/lib/globalLeaderboard.js:
+ *   GET  → { ok, leaderboard: [...] }              (top-50, без uid)
+ *   POST → { ok, leaderboard, rank, isTopN, improved, entryId }
+ *
+ * ВАЖНО: файл данных лежит ВНЕ webroot (в домашней папке аккаунта), т.к. деплой
+ * очищает public_html при каждом пуше — иначе рекорды стирались бы.
+ *
+ * Ограничение доверия (как и у Node-версии): счёт приходит от клиента и лишь
+ * клампится. Дедуп «1 лучший на uid» мешает одному игроку забить таблицу, но
+ * uid тоже клиентский. Для призового соревнования нужен proof-of-play.
+ */
+
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+
+const MAX_SCORE        = 999;
+const STORE_MAX        = 100;  // сколько храним
+const RETURN_MAX       = 50;   // сколько отдаём
+const MAX_BODY_BYTES   = 16384;
+
+$DIFF_RANK   = ['easy' => 1, 'normal' => 2, 'hardcore' => 3];
+$OUTCOMES    = ['victory' => true, 'defeat' => true, 'legacy' => true];
+
+// ── Путь к хранилищу вне webroot ──────────────────────────────────────────────
+function data_file() {
+    $root = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
+    $base = $root !== '' ? dirname($root) : dirname(__DIR__, 2);
+    return $base . '/varonia_leaderboard.json';
+}
+
+function clamp_score($v) {
+    $n = (int) $v;
+    if ($n < 0) return 0;
+    if ($n > MAX_SCORE) return MAX_SCORE;
+    return $n;
+}
+
+function clean_str($v, $max) {
+    $s = trim((string) $v);
+    return mb_substr($s, 0, $max, 'UTF-8');
+}
+
+function make_id() {
+    $b = random_bytes(16);
+    $b[6] = chr((ord($b[6]) & 0x0f) | 0x40);
+    $b[8] = chr((ord($b[8]) & 0x3f) | 0x80);
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($b), 4));
+}
+
+function normalize_entry($raw, $serverTime) {
+    global $DIFF_RANK, $OUTCOMES;
+    $name = clean_str($raw['name'] ?? '', 24);
+    if ($name === '') $name = 'Президент';
+    $diff = $raw['difficulty'] ?? '';
+    if (!isset($DIFF_RANK[$diff])) $diff = 'normal';
+    $out = $raw['outcome'] ?? '';
+    if (!isset($OUTCOMES[$out])) $out = 'defeat';
+    $endingId = isset($raw['endingId']) && $raw['endingId'] !== '' ? clean_str($raw['endingId'], 64) : null;
+    return [
+        'id'          => make_id(),
+        'name'        => $name,
+        'score'       => clamp_score($raw['score'] ?? 0),
+        'difficulty'  => $diff,
+        'outcome'     => $out,
+        'endingId'    => $endingId,
+        'endingTitle' => clean_str($raw['endingTitle'] ?? '', 80),
+        'reason'      => clean_str($raw['reason'] ?? '', 80),
+        'killerKey'   => clean_str($raw['killerKey'] ?? '', 40),
+        'finishedAt'  => $serverTime,
+    ];
+}
+
+function sort_board(&$arr) {
+    global $DIFF_RANK;
+    usort($arr, function ($a, $b) use ($DIFF_RANK) {
+        $ds = (int)$b['score'] - (int)$a['score'];
+        if ($ds !== 0) return $ds;
+        $dd = ($DIFF_RANK[$b['difficulty']] ?? 0) - ($DIFF_RANK[$a['difficulty']] ?? 0);
+        if ($dd !== 0) return $dd;
+        $at = strtotime($a['finishedAt'] ?? '') ?: 0;
+        $bt = strtotime($b['finishedAt'] ?? '') ?: 0;
+        return $at - $bt; // раньше поставивший — выше при равенстве
+    });
+}
+
+// uid наружу не отдаём.
+function public_entry($e) {
+    unset($e['uid']);
+    return $e;
+}
+
+// ── Чтение/запись под эксклюзивным локом ──────────────────────────────────────
+function read_board($fp) {
+    $raw = stream_get_contents($fp);
+    if ($raw === false || $raw === '') return [];
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
+function respond($payload) {
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+if ($method === 'OPTIONS') { http_response_code(204); exit; }
+
+$file = data_file();
+
+if ($method === 'GET') {
+    $board = [];
+    if (is_file($file) && ($fp = @fopen($file, 'r'))) {
+        if (flock($fp, LOCK_SH)) { $board = read_board($fp); flock($fp, LOCK_UN); }
+        fclose($fp);
+    }
+    sort_board($board);
+    $out = array_map('public_entry', array_slice($board, 0, RETURN_MAX));
+    respond(['ok' => true, 'leaderboard' => array_values($out)]);
+}
+
+if ($method !== 'POST') {
+    http_response_code(405);
+    respond(['ok' => false, 'error' => 'Method not allowed']);
+}
+
+$raw = file_get_contents('php://input', false, null, 0, MAX_BODY_BYTES + 1);
+if ($raw === false || strlen($raw) > MAX_BODY_BYTES) {
+    http_response_code(413);
+    respond(['ok' => false, 'error' => 'Payload too large']);
+}
+$body = json_decode($raw, true);
+if (!is_array($body)) {
+    http_response_code(400);
+    respond(['ok' => false, 'error' => 'Invalid JSON']);
+}
+
+$uid   = clean_str($body['uid'] ?? '', 64);
+$entry = normalize_entry($body, gmdate('Y-m-d\TH:i:s.000\Z'));
+
+// Открываем на чтение+запись с эксклюзивным локом (создаём при отсутствии).
+$fp = @fopen($file, 'c+');
+if (!$fp) {
+    http_response_code(500);
+    respond(['ok' => false, 'error' => 'Storage unavailable']);
+}
+if (!flock($fp, LOCK_EX)) {
+    fclose($fp);
+    http_response_code(500);
+    respond(['ok' => false, 'error' => 'Lock failed']);
+}
+
+$board = read_board($fp);
+
+// Дедуп «1 лучший результат на uid».
+if ($uid !== '') {
+    $prev = null;
+    foreach ($board as $item) {
+        if (isset($item['uid']) && $item['uid'] === $uid) { $prev = $item; break; }
+    }
+    if ($prev && (int)$prev['score'] >= (int)$entry['score']) {
+        $existing = $board;
+        sort_board($existing);
+        $rank = 0;
+        foreach ($existing as $i => $it) { if ($it['id'] === $prev['id']) { $rank = $i + 1; break; } }
+        flock($fp, LOCK_UN); fclose($fp);
+        respond([
+            'ok' => true,
+            'leaderboard' => array_values(array_map('public_entry', array_slice($existing, 0, RETURN_MAX))),
+            'entryId' => $prev['id'],
+            'rank' => $rank,
+            'isTopN' => $rank > 0 && $rank <= RETURN_MAX,
+            'improved' => false,
+        ]);
+    }
+    // Улучшение — выкидываем прошлую запись этого uid.
+    $board = array_values(array_filter($board, function ($it) use ($uid) {
+        return !isset($it['uid']) || $it['uid'] !== $uid;
+    }));
+}
+
+$stored = $entry;
+$stored['uid'] = $uid !== '' ? $uid : null;
+$board[] = $stored;
+sort_board($board);
+
+$rank = 0;
+foreach ($board as $i => $it) { if ($it['id'] === $stored['id']) { $rank = $i + 1; break; } }
+
+$board = array_slice($board, 0, STORE_MAX);
+
+// Атомарная запись: перезаписываем содержимое под тем же локом.
+ftruncate($fp, 0);
+rewind($fp);
+fwrite($fp, json_encode($board, JSON_UNESCAPED_UNICODE));
+fflush($fp);
+flock($fp, LOCK_UN);
+fclose($fp);
+
+respond([
+    'ok' => true,
+    'leaderboard' => array_values(array_map('public_entry', array_slice($board, 0, RETURN_MAX))),
+    'entryId' => $stored['id'],
+    'rank' => $rank,
+    'isTopN' => $rank > 0 && $rank <= RETURN_MAX,
+    'improved' => true,
+]);
