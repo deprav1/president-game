@@ -23,12 +23,16 @@ const COLLECT_RATE_WINDOW_MS = 60_000;
 const COLLECT_RATE_MAX = 120;
 const SUBMIT_RATE_WINDOW_MS = 60_000;
 const SUBMIT_RATE_MAX = 20;
+// Чтение таблицы читает файл на каждый запрос → тоже ограничиваем (щедрее записи).
+const READ_RATE_WINDOW_MS = 60_000;
+const READ_RATE_MAX = 60;
 // Сколько результатов храним/отдаём в глобальной таблице.
 const GLOBAL_LEADERBOARD_MAX = 100;
 const GLOBAL_LEADERBOARD_RETURN = 50;
 const FORBIDDEN_OBJECT_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 const collectRateBuckets = new Map();
 const submitRateBuckets = new Map();
+const readRateBuckets = new Map();
 
 const DECKS = [
   ["base", "CARDS", "../src/data/cards.js"],
@@ -115,6 +119,13 @@ function corsHeaders(req) {
 function rateLimited(buckets, req, windowMs, max) {
   const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
   const now = Date.now();
+  // Периодически убираем протухшие бакеты, чтобы Map не рос бесконечно от
+  // уникальных IP. Чистим только когда накопилось много — операция O(n) редкая.
+  if (buckets.size > 5000) {
+    for (const [key, b] of buckets) {
+      if (now - b.startedAt > windowMs) buckets.delete(key);
+    }
+  }
   const bucket = buckets.get(ip);
   if (!bucket || now - bucket.startedAt > windowMs) {
     buckets.set(ip, { startedAt: now, count: 1 });
@@ -442,6 +453,9 @@ async function leaderboard(req, res) {
   if (!originAllowed(req)) return send(res, 403, { ok: false, error: "Origin not allowed" }, cors);
 
   if (req.method === "GET") {
+    if (rateLimited(readRateBuckets, req, READ_RATE_WINDOW_MS, READ_RATE_MAX)) {
+      return send(res, 429, { ok: false, error: "Too many requests" }, cors);
+    }
     const entries = sortLeaderboard(await readLeaderboard())
       .slice(0, GLOBAL_LEADERBOARD_RETURN)
       .map(publicEntry);

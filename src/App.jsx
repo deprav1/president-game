@@ -335,6 +335,17 @@ export default function ThePresident() {
       telegramStorage.setItem("varon_best", String(normalizedScore));
     }
 
+    // Проигрыш на первом месяце (счёт 0) не заносим на доску и не шлём в
+    // глобальный рейтинг — только возвращаем пустой результат для экрана финала.
+    if (normalizedScore <= 0) {
+      const emptyResult = {
+        id: "", name: presidentName || nameInput || "Президент",
+        score: 0, difficulty, outcome, rank: 0, isRecord: false, isTopTen: false,
+      };
+      setLastResult(emptyResult);
+      return emptyResult;
+    }
+
     const { leaderboard: nextLeaderboard, entry, rank, isTopTen } = addLeaderboardEntry(leaderboard, {
       name: presidentName || nameInput || "Президент",
       score: normalizedScore,
@@ -1131,6 +1142,18 @@ export default function ThePresident() {
     const hist = historyRef.current;
     const snap = (hist.length >= 2 ? hist[hist.length - 2] : hist[0]) || resumeReviveRef.current;
     if (!snap) return;
+    // Ревайв отменяет ту смерть → снимаем её запись с личной доски, чтобы одно
+    // непрерывное прохождение не двоилось. Продолженная партия запишет свой
+    // финальный результат сама. (Глобальную доску сервер чинит сам: хранит
+    // 1 лучший результат на игрока, поэтому старый низкий счёт вытеснится.)
+    if (lastResult?.id) {
+      setLeaderboard(prev => {
+        const next = prev.filter(e => e.id !== lastResult.id);
+        telegramStorage.setItem("varon_leaderboard", JSON.stringify(next));
+        return next;
+      });
+    }
+    setLastResult(null);
     setStats(snap.stats);
     setMonths(snap.months);
     setDeck(snap.deck);
