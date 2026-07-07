@@ -1,0 +1,4 @@
+# Каталог хранилища глобальной доски рекордов. Прямой HTTP-доступ запрещён:
+# в leaderboard.json лежат uid игроков (endpoint отдаёт данные без uid).
+Require all denied
+Deny from all

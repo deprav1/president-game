@@ -8,8 +8,10 @@
  *   GET  → { ok, leaderboard: [...] }              (top-50, без uid)
  *   POST → { ok, leaderboard, rank, isTopN, improved, entryId }
  *
- * ВАЖНО: файл данных лежит ВНЕ webroot (в домашней папке аккаунта), т.к. деплой
- * очищает public_html при каждом пуше — иначе рекорды стирались бы.
+ * ВАЖНО: домашняя папка аккаунта на этом хостинге не пишется (open_basedir пуст,
+ * но нет прав на запись), поэтому данные лежат в public_html/lb-data/. Деплой
+ * настроен НЕ удалять lb-data (см. .github/workflows/deploy-timeweb.yml), так что
+ * рекорды переживают пуши. Прямой HTTP-доступ к файлу закрыт .htaccess (в нём uid).
  *
  * Ограничение доверия (как и у Node-версии): счёт приходит от клиента и лишь
  * клампится. Дедуп «1 лучший на uid» мешает одному игроку забить таблицу, но
@@ -27,11 +29,26 @@ const MAX_BODY_BYTES   = 16384;
 $DIFF_RANK   = ['easy' => 1, 'normal' => 2, 'hardcore' => 3];
 $OUTCOMES    = ['victory' => true, 'defeat' => true, 'legacy' => true];
 
-// ── Путь к хранилищу вне webroot ──────────────────────────────────────────────
-function data_file() {
+// ── Путь к хранилищу (public_html/lb-data, переживает деплой) ──────────────────
+function store_dir() {
     $root = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
-    $base = $root !== '' ? dirname($root) : dirname(__DIR__, 2);
-    return $base . '/varonia_leaderboard.json';
+    // DOCUMENT_ROOT = public_html; если пусто — поднимаемся от api/ на уровень выше.
+    $base = $root !== '' ? $root : dirname(__DIR__);
+    return $base . '/lb-data';
+}
+
+function data_file() {
+    return store_dir() . '/leaderboard.json';
+}
+
+// Гарантируем каталог хранилища и запрет прямого HTTP-доступа к нему (в файле uid).
+function ensure_store() {
+    $dir = store_dir();
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $ht = $dir . '/.htaccess';
+    if (!is_file($ht)) {
+        @file_put_contents($ht, "Require all denied\nDeny from all\n");
+    }
 }
 
 function clamp_score($v) {
@@ -146,6 +163,7 @@ $uid   = clean_str($body['uid'] ?? '', 64);
 $entry = normalize_entry($body, gmdate('Y-m-d\TH:i:s.000\Z'));
 
 // Открываем на чтение+запись с эксклюзивным локом (создаём при отсутствии).
+ensure_store();
 $fp = @fopen($file, 'c+');
 if (!$fp) {
     http_response_code(500);

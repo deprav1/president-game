@@ -68,6 +68,8 @@ jobs:
 
           # Веб-корень Timeweb — public_html в домашней папке аккаунта.
           # Перед заливкой чистим содержимое, чтобы index.htm-заглушка Timeweb
-          # не перебивала Vite index.html.
+          # не перебивала Vite index.html. ВАЖНО: каталог lb-data НЕ трогаем — в
+          # нём лежит JSON глобальной доски рекордов (домашняя папка не пишется,
+          # поэтому данные хранятся в webroot и должны пережить деплой).
           ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
-            'rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
+            'rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
