@@ -130,8 +130,9 @@ if ($method !== 'POST') {
     respond(['ok' => false, 'error' => 'Method not allowed']);
 }
 
-$raw = file_get_contents('php://input', false, null, 0, MAX_BODY_BYTES + 1);
-if ($raw === false || strlen($raw) > MAX_BODY_BYTES) {
+$raw = file_get_contents('php://input');
+if ($raw === false) $raw = '';
+if (strlen($raw) > MAX_BODY_BYTES) {
     http_response_code(413);
     respond(['ok' => false, 'error' => 'Payload too large']);
 }
