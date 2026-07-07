@@ -54,7 +54,7 @@ $dir  = $root . '/lb-data';
 if (!is_dir($dir)) @mkdir($dir, 0755, true);
 $ht = $dir . '/.htaccess';
 if (!is_file($ht)) @file_put_contents($ht, "Require all denied\nDeny from all\n");
-$file = $dir . '/stats.json';
+$file = $dir . '/metrics.json';
 
 $fp = @fopen($file, 'c+');
 if (!$fp) { http_response_code(500); echo json_encode(['ok' => false, 'error' => 'Storage unavailable']); exit; }
