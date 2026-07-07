@@ -1,0 +1,1 @@
+<?php header("Content-Type: text/plain"); echo "PHP_OK_".(7*6);
