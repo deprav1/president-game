@@ -85,6 +85,10 @@ jobs:
           # остаётся выкл). На сервере `cp -a` смёржит их в public_html/lb-data,
           # сохранив данные доски (JSON доски мы из очистки исключаем).
           mkdir -p dist/lb-data
+          cat > dist/lb-data/.htaccess <<'EOF'
+          Require all denied
+          Deny from all
+          EOF
           if [ -n "${BOT_TOKEN}" ]; then printf '%s' "${BOT_TOKEN}" > dist/lb-data/bot-token.txt; fi
           if [ -n "${ANALYTICS_TOKEN}" ]; then printf '%s' "${ANALYTICS_TOKEN}" > dist/lb-data/analytics-token.txt; fi
 
