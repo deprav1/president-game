@@ -72,8 +72,11 @@ jobs:
           printf '%s\n' "${SSH_PRIVATE_KEY}" > ~/.ssh/timeweb_deploy_key
           chmod 600 ~/.ssh/timeweb_deploy_key
 
-          SSH_OPTS="-p ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-          SCP_OPTS="-P ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          # Таймауты: зависшее SSH-соединение (Timeweb иногда придушивает) должно
+          # падать за ~60с, а не висеть до общего таймаута job'а.
+          SSH_TIMEOUTS="-o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
+          SSH_OPTS="-p ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${SSH_TIMEOUTS}"
+          SCP_OPTS="-P ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${SSH_TIMEOUTS}"
 
           # Токены активации кладём в dist/lb-data ДО архивации — уедут тем же
           # архивом и ОДНИМ SSH-подключением (несколько быстрых SSH подряд Timeweb
