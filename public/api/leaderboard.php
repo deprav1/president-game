@@ -45,7 +45,7 @@ function store_dir() {
 }
 
 function data_file() {
-    return store_dir() . '/board-live.json';
+    return store_dir() . '/board-v2.json';
 }
 
 // Гарантируем каталог хранилища и запрет прямого HTTP-доступа к нему (в файле uid).
