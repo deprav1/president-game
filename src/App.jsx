@@ -1194,6 +1194,7 @@ export default function ThePresident() {
     const copied = await copyText(promoCode.code);
     track(EVENTS.PROMO_COPIED, { promo: promoCode.code, success: copied });
     haptic(copied ? "light" : "medium");
+    if (copied) openNaruzhu("promo_copy");
   };
 
   // VPN-ревайв: открывает размеченную ссылку, откатывает последние 2 решения.

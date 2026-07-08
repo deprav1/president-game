@@ -43,6 +43,12 @@ export default function HubOverlay({
   const copyPromo = async () => {
     const copied = await copyText(promoCode.code);
     haptic(copied ? "light" : "medium");
+    if (copied) onOpenNaruzhu?.();
+  };
+
+  const openNaruzhu = (e) => {
+    e.stopPropagation();
+    onOpenNaruzhu?.();
   };
 
   const shareReferral = () => {
@@ -165,7 +171,16 @@ export default function HubOverlay({
               {promoCode.code}
             </div>
             <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
-              Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>vepen.online</span>
+              Копировать · Активация на{" "}
+              <span
+                onClick={openNaruzhu}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNaruzhu(e); } }}
+                role="button"
+                tabIndex={0}
+                style={{ color: NARUZHU_YELLOW, textDecoration: "underline", cursor: "pointer" }}
+              >
+                vepen.online
+              </span>
             </div>
           </div>
           </>
