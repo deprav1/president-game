@@ -83,6 +83,11 @@ const SAFE_CARDS = ALL_CARDS.filter(c => c.cta !== "naruzhu");
 const CARDS_BY_ID = Object.fromEntries(ALL_CARDS.map(c => [cardKey(c), c]));
 // Строит колоду с учётом безопасного режима: в нём VPN-карты не попадают в игру.
 const buildDeck = (safe) => shuffle(safe ? SAFE_CARDS : ALL_CARDS);
+const APP_PHASES = new Set(["onboarding", "card", "gameover", "victory", "election", "constitution", "second_chance"]);
+const getInitialPhase = () => {
+  const phase = new URLSearchParams(location.search).get("p");
+  return APP_PHASES.has(phase) ? phase : "onboarding";
+};
 
 const getPreviewCard = () => {
   if (!import.meta.env.DEV) return null;
@@ -103,7 +108,7 @@ export default function ThePresident() {
   const [deck, setDeck]                 = useState(() => shuffle(ALL_CARDS));
   const [cardIdx, setCardIdx]           = useState(0);
   const [pendingEvents, setPendingEvents] = useState([]);
-  const [phase, setPhase]               = useState(() => new URLSearchParams(location.search).get("p") || "onboarding");
+  const [phase, setPhase]               = useState(getInitialPhase);
   const [deathMsg, setDeathMsg]         = useState("");
   const [hovered, setHovered]           = useState(null);
   const [flashParams, setFlashParams]   = useState({});
@@ -156,7 +161,7 @@ export default function ThePresident() {
       
       let savedRun = null;
       try { savedRun = validateSave(JSON.parse(data["varon_save"] || "null")); } catch {}
-      if (forcedPhase) savedRun = null;
+      if (APP_PHASES.has(forcedPhase)) savedRun = null;
 
       track(EVENTS.APP_OPEN, { is_returning: !!savedRun });
       if (savedRun) track(EVENTS.RUN_RESUMED, { month: savedRun.months, phase: savedRun.phase });
@@ -975,7 +980,10 @@ export default function ThePresident() {
       }
 
       const nextIdx = cardIdx + 1;
-      const nextDeck = chainCard ? [chainCard, ...deck.slice(nextIdx)] : deck;
+      const currentDeckIdx = deck.length ? cardIdx % deck.length : 0;
+      const nextDeck = chainCard
+        ? [chainCard, ...deck.slice(currentDeckIdx + 1), ...deck.slice(0, currentDeckIdx + 1)]
+        : deck;
       const nextCardIdx = chainCard ? 0 : nextIdx;
       if (chainCard) setDeck(nextDeck);
       setCardIdx(nextCardIdx);
@@ -1061,7 +1069,7 @@ export default function ThePresident() {
       cardRef.current.style.transition = "";
       cardRef.current.style.opacity = "";
     }
-  }, [cardIdx, isCrisis]);
+  }, [phase, cardIdx, isCrisis, currentCard]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {

@@ -13,6 +13,9 @@ export const safeInt = (raw, fallback = 0) => {
  */
 export const validateSave = (save) => {
   if (!save || typeof save !== "object") return null;
+  const validPhases = new Set(["onboarding", "card", "gameover", "victory", "election", "constitution", "second_chance"]);
+  const phase = save.phase || "card";
+  if (!validPhases.has(phase)) return null;
   if (!Array.isArray(save.deck) || save.deck.length === 0) return null;
   const s = save.stats;
   if (!s || typeof s !== "object") return null;
@@ -29,6 +32,7 @@ export const validateSave = (save) => {
     if (!rc.targetStats || typeof rc.targetStats !== "object") return null;
     if (typeof rc.targetMonth !== "number") return null;
   }
+  if (phase === "second_chance" && !save.rescueCard) return null;
   return save;
 };
 
