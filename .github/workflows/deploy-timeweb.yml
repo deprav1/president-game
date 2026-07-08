@@ -75,6 +75,16 @@ jobs:
           SSH_OPTS="-p ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
           SCP_OPTS="-P ${SSH_PORT} -i ~/.ssh/timeweb_deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
+          # Токены активации кладём в dist/lb-data ДО архивации — уедут тем же
+          # архивом и ОДНИМ SSH-подключением (несколько быстрых SSH подряд Timeweb
+          # придушивает → деплой зависал). В репозиторий не попадают: пишутся из
+          # секретов прямо на раннере. Пустой секрет → файл не создаём (проверка
+          # остаётся выкл). На сервере `cp -a` смёржит их в public_html/lb-data,
+          # сохранив данные доски (JSON доски мы из очистки исключаем).
+          mkdir -p dist/lb-data
+          if [ -n "${BOT_TOKEN}" ]; then printf '%s' "${BOT_TOKEN}" > dist/lb-data/bot-token.txt; fi
+          if [ -n "${ANALYTICS_TOKEN}" ]; then printf '%s' "${ANALYTICS_TOKEN}" > dist/lb-data/analytics-token.txt; fi
+
           tar -C dist -czf dist.tar.gz .
           scp ${SCP_OPTS} dist.tar.gz "${SSH_USERNAME}@${SSH_HOST}:varonia-dist.tar.gz"
 
@@ -85,17 +95,3 @@ jobs:
           # поэтому данные хранятся в webroot и должны пережить деплой).
           ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
             'rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
-
-          # Установка секрет-токенов в lb-data (вне webroot по HTTP — закрыт .htaccess).
-          # Секрет передаём через stdin в `cat >`, чтобы он не попал в список процессов.
-          # Пустой секрет → файл не трогаем (соответствующая проверка остаётся выключенной).
-          if [ -n "${BOT_TOKEN}" ]; then
-            printf '%s' "${BOT_TOKEN}" | ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
-              'mkdir -p public_html/lb-data && cat > public_html/lb-data/bot-token.txt && chmod 600 public_html/lb-data/bot-token.txt'
-            echo "bot-token.txt установлен (проверка подписи топа включена)."
-          fi
-          if [ -n "${ANALYTICS_TOKEN}" ]; then
-            printf '%s' "${ANALYTICS_TOKEN}" | ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
-              'mkdir -p public_html/lb-data && cat > public_html/lb-data/analytics-token.txt && chmod 600 public_html/lb-data/analytics-token.txt'
-            echo "analytics-token.txt установлен (дашборд аналитики открыт по токену)."
-          fi
