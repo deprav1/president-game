@@ -111,3 +111,16 @@ jobs:
             sleep 5
           done
           [ "${ok}" = 1 ] || { echo "::error::Deploy failed after 3 attempts (Timeweb SSH)."; exit 1; }
+
+          # Регистрируем вебхук бота (обработчик /start → кнопка «Играть»). Секрет
+          # вебхука = первые 32 hex sha256(токена) — тот же расчёт в public/api/bot.php.
+          # Идемпотентно: повторный setWebhook на тот же URL безвреден.
+          if [ -n "${BOT_TOKEN}" ]; then
+            WH_SECRET=$(printf '%s' "${BOT_TOKEN}" | sha256sum | cut -c1-32)
+            curl -sS --max-time 20 "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
+              --data-urlencode "url=https://cb077728.tw1.ru/api/bot.php" \
+              --data-urlencode "secret_token=${WH_SECRET}" \
+              --data-urlencode 'allowed_updates=["message"]' >/dev/null \
+              && echo "Telegram webhook set (/start → кнопка «Играть»)." \
+              || echo "::warning::setWebhook не удался (проверь токен)."
+          fi
