@@ -89,12 +89,25 @@ jobs:
           if [ -n "${ANALYTICS_TOKEN}" ]; then printf '%s' "${ANALYTICS_TOKEN}" > dist/lb-data/analytics-token.txt; fi
 
           tar -C dist -czf dist.tar.gz .
-          scp ${SCP_OPTS} dist.tar.gz "${SSH_USERNAME}@${SSH_HOST}:varonia-dist.tar.gz"
 
           # Веб-корень Timeweb — public_html в домашней папке аккаунта.
           # Перед заливкой чистим содержимое, чтобы index.htm-заглушка Timeweb
           # не перебивала Vite index.html. ВАЖНО: каталог lb-data НЕ трогаем — в
           # нём лежит JSON глобальной доски рекордов (домашняя папка не пишется,
           # поэтому данные хранятся в webroot и должны пережить деплой).
-          ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" \
-            'rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
+          #
+          # scp/ssh обёрнуты в timeout + ретраи: SSH к Timeweb периодически виснет
+          # (удалённая команда стопорится, ServerAlive это не ловит). timeout рвёт
+          # зависшую попытку за 120с, до 3 попыток → деплой само-восстанавливается.
+          REMOTE_CMD='rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
+          ok=0
+          for attempt in 1 2 3; do
+            echo "Deploy attempt ${attempt}..."
+            if timeout 120 scp ${SCP_OPTS} dist.tar.gz "${SSH_USERNAME}@${SSH_HOST}:varonia-dist.tar.gz" \
+               && timeout 120 ssh ${SSH_OPTS} "${SSH_USERNAME}@${SSH_HOST}" "${REMOTE_CMD}"; then
+              ok=1; break
+            fi
+            echo "Attempt ${attempt} failed or timed out, retrying in 5s..."
+            sleep 5
+          done
+          [ "${ok}" = 1 ] || { echo "::error::Deploy failed after 3 attempts (Timeweb SSH)."; exit 1; }
