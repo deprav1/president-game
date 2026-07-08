@@ -1044,16 +1044,11 @@ em, i { font-style: normal; }
   object-fit: cover;
   object-position: center 20%; /* держим лицо в кадре при кропе */
   display: block;
-  /* Края иллюстрации растворяются в тёмный фон со всех сторон, кроме верха,
-     чтобы чёрный фон портрета и карта читались как единое изображение. */
-  -webkit-mask-image:
-    linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.92) 66%, transparent 100%),
-    linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.92) 66%, transparent 100%),
-    linear-gradient(to right, transparent, #000 15%, #000 85%, transparent);
-  mask-composite: intersect;
+  /* Низ иллюстрации растворяется в тёмный фон карты (портрет «плавает» без шва).
+     Одна маска-градиент — без mask-composite: двойная маска с composite ломалась
+     в Telegram iOS/WKWebView (Safari) и скрывала портрет целиком. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, rgba(0, 0, 0, 0.9) 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, rgba(0, 0, 0, 0.9) 70%, transparent 100%);
 }
 /* Лёгкая «посадка» под имя — чтобы текст читался поверх растворённого низа. */
 .game-card-hero::after {
