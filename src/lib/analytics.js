@@ -8,8 +8,9 @@
  *  - Если VITE_YM_ID пуст (dev/тест без счётчика) — track() становится no-op,
  *    но в dev-режиме дублирует событие в console для отладки.
  *
- * Counter id берётся из import.meta.env.VITE_YM_ID. Сам сниппет Metrica
- * подключается в index.html (тоже из env), здесь — только обёртка вызовов.
+ * Counter id берётся из import.meta.env.VITE_YM_ID. Сниппет Metrica грузится
+ * из этого модуля (ensureYandexMetrica), без inline-скрипта в index.html —
+ * счётчик инициализируется ПЕРВЫМ ym-вызовом, до setUserID/userParams/reachGoal.
  *
  * Атрибуция (входящие метки): initAnalytics() разбирает UTM/ref из URL,
  * Telegram start_param и referrer, сохраняет first-touch и мерджит всё это
@@ -119,6 +120,15 @@ function ensureYandexMetrica() {
       (window.ym.a = window.ym.a || []).push(arguments);
     };
     window.ym.l = 1 * new Date();
+    // Инициализируем счётчик ПЕРВЫМ вызовом в очереди — иначе setUserID/userParams
+    // и ранние reachGoal (app_open, attribution, быстрый naruzhu_click), попавшие
+    // в очередь до init, Metrica может отбросить → потеря ранних конверсий.
+    ym("init", {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      webvisor: true,
+    });
     if ([...document.scripts].some(script => script.src === "https://mc.yandex.ru/metrika/tag.js")) return;
     const script = document.createElement("script");
     script.async = true;
@@ -279,13 +289,6 @@ export async function initAnalytics() {
       ref: context.ref,
       ft_source: context.ft_source,
       is_telegram: context.is_telegram,
-    });
-
-    ym("init", {
-      clickmap: true,
-      trackLinks: true,
-      accurateTrackBounce: true,
-      webvisor: true,
     });
 
     // Отдельное событие приземления с источником — удобно для воронок по каналам.
