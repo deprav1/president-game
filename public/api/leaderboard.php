@@ -13,9 +13,12 @@
  * настроен НЕ удалять lb-data (см. .github/workflows/deploy-timeweb.yml), так что
  * рекорды переживают пуши. Прямой HTTP-доступ к файлу закрыт .htaccess (в нём uid).
  *
- * Ограничение доверия (как и у Node-версии): счёт приходит от клиента и лишь
- * клампится. Дедуп «1 лучший на uid» мешает одному игроку забить таблицу, но
- * uid тоже клиентский. Для призового соревнования нужен proof-of-play.
+ * Защита от накрутки: если на хостинге лежит lb-data/bot-token.txt (токен бота,
+ * вне репозитория) — POST требует валидный Telegram initData, подпись которого
+ * проверяется этим токеном, и uid берётся ИЗ подписи (подделка/ротация uid и
+ * анонимный curl-спам исключены). Файла токена нет → мягкий режим (uid клиента).
+ * Что НЕ закрыто даже так: реальный игрок может завысить СВОЙ счёт (клиентский
+ * счёт лишь клампится до 999) — для этого нужен proof-of-play (пересчёт на сервере).
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -28,6 +31,7 @@ const MAX_BODY_BYTES   = 16384;
 const RL_WINDOW        = 60;   // окно rate-limit POST, сек
 const RL_MAX           = 30;   // макс. отправок результата с одного IP за окно
 const RL_MAX_IPS       = 5000; // предел числа IP-бакетов (прунинг протухших сверх него)
+const INIT_DATA_MAX_AGE = 86400; // макс. возраст Telegram initData, сек (антиреплей)
 
 $DIFF_RANK   = ['easy' => 1, 'normal' => 2, 'hardcore' => 3];
 $OUTCOMES    = ['victory' => true, 'defeat' => true, 'legacy' => true];
@@ -89,6 +93,43 @@ function rate_limited($window, $max) {
     }
     fclose($fp);
     return $limited;
+}
+
+// djb2-хэш в base36 — тот же, что hashStr на клиенте (lib/analytics.js), чтобы
+// серверный uid совпадал с anon_uid игрока (tg_<hash>).
+function tg_djb2($str) {
+    $h = 5381;
+    $s = (string)$str;
+    $len = strlen($s);
+    for ($i = 0; $i < $len; $i++) {
+        $h = (($h * 33) + ord($s[$i])) & 0xFFFFFFFF; // (h<<5)+h == h*33, unsigned 32-bit
+    }
+    if ($h === 0) return '0';
+    $digits = '0123456789abcdefghijklmnopqrstuvwxyz';
+    $out = '';
+    while ($h > 0) { $out = $digits[$h % 36] . $out; $h = intdiv($h, 36); }
+    return $out;
+}
+
+// Проверка подписи Telegram WebApp initData (HMAC-SHA256 токеном бота).
+// Возвращает telegram user id при успехе, иначе null. Алгоритм — по офиц. докам.
+function tg_verify($initData, $botToken, $maxAge) {
+    if (!is_string($initData) || $initData === '') return null;
+    parse_str($initData, $pairs); // URL-декодит значения
+    if (!isset($pairs['hash'])) return null;
+    $hash = $pairs['hash'];
+    unset($pairs['hash']);
+    ksort($pairs);
+    $chunks = [];
+    foreach ($pairs as $k => $v) { $chunks[] = $k . '=' . $v; }
+    $dcs = implode("\n", $chunks);
+    $secret = hash_hmac('sha256', $botToken, 'WebAppData', true);
+    $calc = hash_hmac('sha256', $dcs, $secret);
+    if (!hash_equals($calc, (string)$hash)) return null;
+    if ($maxAge > 0 && isset($pairs['auth_date']) && time() - (int)$pairs['auth_date'] > $maxAge) return null;
+    $user = isset($pairs['user']) ? json_decode($pairs['user'], true) : null;
+    if (!is_array($user) || !isset($user['id'])) return null;
+    return (int)$user['id'];
 }
 
 function clamp_score($v) {
@@ -205,7 +246,21 @@ if (!is_array($body)) {
     respond(['ok' => false, 'error' => 'Invalid JSON']);
 }
 
-$uid   = clean_str($body['uid'] ?? '', 64);
+// Защита от накрутки: если задан токен бота (lb-data/bot-token.txt, вне репо) —
+// требуем валидный Telegram initData и берём uid ИЗ него (подделать нельзя без
+// токена). Токена нет → мягкий режим: доверяем uid клиента (как раньше).
+$botToken = @file_get_contents(store_dir() . '/bot-token.txt');
+$botToken = is_string($botToken) ? trim($botToken) : '';
+if ($botToken !== '') {
+    $tgId = tg_verify($body['initData'] ?? '', $botToken, INIT_DATA_MAX_AGE);
+    if ($tgId === null) {
+        http_response_code(403);
+        respond(['ok' => false, 'error' => 'Telegram verification required']);
+    }
+    $uid = 'tg_' . tg_djb2($tgId);
+} else {
+    $uid = clean_str($body['uid'] ?? '', 64);
+}
 $entry = normalize_entry($body, gmdate('Y-m-d\TH:i:s.000\Z'));
 
 // Открываем на чтение+запись с эксклюзивным локом (создаём при отсутствии).

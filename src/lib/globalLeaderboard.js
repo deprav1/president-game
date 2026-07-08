@@ -46,11 +46,14 @@ export async function fetchGlobalLeaderboard() {
 export async function submitGlobalScore(entry) {
   if (!ENDPOINT || typeof fetch !== "function") return null;
   try {
+    // Подписанный Telegram initData — сервер проверяет подпись токеном бота и
+    // берёт uid из него (защита от подмены uid и анонимного curl-спама).
+    const initData = (typeof window !== "undefined" && window.Telegram?.WebApp?.initData) || "";
     const res = await fetch(ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       keepalive: true,
-      body: JSON.stringify(entry),
+      body: JSON.stringify({ ...entry, initData }),
     });
     if (!res.ok) return null;
     const data = await res.json();
