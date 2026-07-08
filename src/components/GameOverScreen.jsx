@@ -151,6 +151,21 @@ export default function GameOverScreen({
           <button onClick={onShare} className="btn-emerald" style={{ width: "100%" }}>
             📤 ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ
           </button>
+          {promoCode && (
+            <button
+              onClick={onOpenNaruzhu}
+              style={{
+                width: "100%", padding: "11px 14px", borderRadius: 8,
+                background: "linear-gradient(135deg, rgba(255,214,10,0.18), rgba(255,214,10,0.06))",
+                border: "1px solid rgba(255,214,10,0.55)",
+                color: "#FFD60A", fontFamily: "var(--font-mono)",
+                fontSize: 11, fontWeight: 700, letterSpacing: 1.2,
+                cursor: "pointer", boxShadow: "0 0 12px rgba(255,214,10,0.12)",
+              }}
+            >
+              🔓 ЗАБРАТЬ ПРОМОКОД · VPN «НАРУЖУ»
+            </button>
+          )}
           <button onClick={onRestart} className="btn-velvet" style={{ width: "100%" }}>
             НОВЫЙ СРОК
           </button>
