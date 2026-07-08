@@ -165,7 +165,7 @@ export default function HubOverlay({
               {promoCode.code}
             </div>
             <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
-              Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>naruzhu.am</span>
+              Нажмите для копирования · <span style={{ color: NARUZHU_YELLOW }}>vepen.online</span>
             </div>
           </div>
           </>

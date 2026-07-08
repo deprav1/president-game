@@ -59,7 +59,7 @@ const naruzhuUrl = (campaign, content = "", months = 0, promoCode = null, ctaId 
   if (ctaId) p.set("ab", ctaId);
   if (promoCode?.code) p.set("promo", promoCode.code);
   if (yclid) p.set("yclid", yclid);
-  return `https://naruzhu.am/?${p.toString()}`;
+  return `https://vepen.online/?${p.toString()}`;
 };
 
 // Telegram-ник админа, которому доступна внутриигровая панель аналитики.

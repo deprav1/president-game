@@ -120,7 +120,7 @@ export default function GameOverScreen({
                   tabIndex={0}
                   style={{ color: "#FFD60A", textDecoration: "underline", cursor: "pointer" }}
                 >
-                  naruzhu.am
+                  vepen.online
                 </span>
               </div>
             </div>

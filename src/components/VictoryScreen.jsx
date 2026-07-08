@@ -123,7 +123,7 @@ export default function VictoryScreen({
                   tabIndex={0}
                   style={{ color: "#d4af37", textDecoration: "underline", cursor: "pointer" }}
                 >
-                  naruzhu.am
+                  vepen.online
                 </span>
               </div>
             </div>
