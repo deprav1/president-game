@@ -136,12 +136,13 @@ export default function ThePresident() {
   const [showAdmin, setShowAdmin]               = useState(false);
   // Идентификатор клика Яндекс.Директ для отслеживания конверсий
   const [yclid, setYclid]                       = useState("");
-  // Админ опознаётся по Telegram-нику; ?admin=<ник> — запасной вход для браузера/dev.
+  // Админ опознаётся по Telegram-нику. URL-фолбэк оставлен только для dev-сборки.
   const isAdmin = (() => {
     try {
       const uname = (window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "").toLowerCase();
       if (uname && uname === ADMIN_USERNAME) return true;
-      return new URLSearchParams(location.search).get("admin")?.toLowerCase().replace(/^@/, "") === ADMIN_USERNAME;
+      return import.meta.env.DEV
+        && new URLSearchParams(location.search).get("admin")?.toLowerCase().replace(/^@/, "") === ADMIN_USERNAME;
     } catch {
       return false;
     }
