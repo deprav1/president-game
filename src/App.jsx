@@ -194,12 +194,18 @@ export default function ThePresident() {
       setDifficulty(savedDifficulty);
 
       const savedPresidentName = data["varon_pname"] || "";
-      const savedBestScore = normalizeLeaderboardScore(safeInt(data["varon_best"]));
+      // Одноразовый сброс личной доски и рекорда: открыть мини-апп с ?resetlb=1.
+      const resetLb = new URLSearchParams(location.search).get("resetlb") === "1";
+      if (resetLb) {
+        telegramStorage.removeItem("varon_leaderboard");
+        telegramStorage.removeItem("varon_best");
+      }
+      const savedBestScore = resetLb ? 0 : normalizeLeaderboardScore(safeInt(data["varon_best"]));
       setPresidentName(savedPresidentName);
       try { setAchievements(JSON.parse(data["varon_ach"] || "[]")); } catch {}
       setBestScore(savedBestScore);
 
-      let savedLeaderboard = parseStoredLeaderboard(data["varon_leaderboard"] || "[]");
+      let savedLeaderboard = resetLb ? [] : parseStoredLeaderboard(data["varon_leaderboard"] || "[]");
       if (!savedLeaderboard.length && savedBestScore > 0) {
         savedLeaderboard = normalizeLeaderboard([
           createLeaderboardEntry({
