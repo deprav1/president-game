@@ -11,7 +11,7 @@ import { CHRONICLE_CARDS } from "./data/chronicleCards.js";
 import { PRECEDENT_CARDS } from "./data/precedentCards.js";
 import { getAsset } from "./lib/assets.js";
 import { getCardBackground } from "./lib/cardBackgrounds.js";
-import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast, DIFFICULTIES } from "./lib/gameHelpers.js";
+import { safeInt, validateSave, scaleStatEffect, shuffle, telegramVersionAtLeast, DIFFICULTIES, overtimePressure } from "./lib/gameHelpers.js";
 import Topbar from "./components/Topbar.jsx";
 import OnboardingScreen from "./components/OnboardingScreen.jsx";
 import GameOverScreen from "./components/GameOverScreen.jsx";
@@ -534,16 +534,28 @@ export default function ThePresident() {
     return null;
   };
 
-  const applyFx = useCallback((fx, currentStats) => {
-    const ns = {}, fl = {};
-    PARAMS.forEach(p => {
+  const getFxDeltas = useCallback((fx, includePressure = true) => {
+    // В овертайме (эндшпиль после 2 сроков) поверх эффекта карты каждый ход
+    // учитывается ступенчатое пассивное давление — шкалы постепенно ползут к смерти.
+    const pressure = includePressure ? overtimePressure(months, difficulty) : null;
+    return Object.fromEntries(PARAMS.map(p => {
       const val = fx[p.key] || 0;
       const scaled = scaleStatEffect(p.key, val, difficulty, months);
-      ns[p.key] = Math.max(0, Math.min(100, currentStats[p.key] + scaled));
-      if (scaled !== 0) fl[p.key] = true;
+      const push = pressure ? (pressure[p.key] || 0) : 0;
+      return [p.key, scaled + push];
+    }));
+  }, [difficulty, months]);
+
+  const applyFx = useCallback((fx, currentStats, includePressure = true) => {
+    const ns = {}, fl = {};
+    const deltas = getFxDeltas(fx, includePressure);
+    PARAMS.forEach(p => {
+      const delta = deltas[p.key] || 0;
+      ns[p.key] = Math.max(0, Math.min(100, currentStats[p.key] + delta));
+      if (delta !== 0) fl[p.key] = true;
     });
     return { ns, fl };
-  }, [difficulty, months]);
+  }, [getFxDeltas]);
 
   // Сохранение проигрыша так, чтобы VPN-ревайв пережил перезагрузку мини-аппа.
   // Ревайв откатывает 2 хода назад — эта же снапшот-логика используется в
@@ -711,9 +723,28 @@ export default function ThePresident() {
     if (choosing.current) return;
 
     if (phase === "constitution") {
-      const score = months - 1;
-      const endObj = side === "leave" ? ENDINGS.democratic_transition : getVictoryEnding(stats, score);
-      completeVictory(endObj, score, side === "leave" ? "constitutional_exit" : "constitutional_breach", termsCompleted);
+      // Развилка после двух сроков (месяц 96):
+      //  • «Уйти по конституции» — почётная победа (демократический переход).
+      //  • «Остаться у власти» — эндшпиль: конституция «устаёт», игра продолжается
+      //    с нарастающим усложнением до неизбежного падения. Счёт = месяцы. Это
+      //    турнирный путь: чем дольше цепляешься за власть, тем выше в рейтинге.
+      if (side === "leave") {
+        completeVictory(ENDINGS.democratic_transition, months - 1, "constitutional_exit", termsCompleted);
+        return;
+      }
+      track(EVENTS.ENDGAME_ENTER, { month: months });
+      hapticNotify("warning");
+      setIsCrisis(false);
+      setCrisisCard(null);
+      setHovered(null);
+      setPhase("card");
+      try {
+        telegramStorage.setItem("varon_save", JSON.stringify({
+          stats, months, deck, cardIdx, pendingEvents,
+          hasUsedSecondChance, hasUsedVpnRevive, rescueCard,
+          termsCompleted, difficulty, phase: "card",
+        }));
+      } catch { /* Save failure should not interrupt the current run. */ }
       return;
     }
 
@@ -721,7 +752,7 @@ export default function ThePresident() {
       track(EVENTS.SECOND_CHANCE_CHOICE, { accepted: side === "agree" });
       if (side === "agree") {
         hapticNotify("success");
-        const { ns, fl } = applyFx(rescueCard.fx, rescueCard.targetStats);
+        const { ns, fl } = applyFx(rescueCard.fx, rescueCard.targetStats, false);
         setFlashParams(fl);
         setTimeout(() => setFlashParams({}), 600);
         setStats(ns);
@@ -817,7 +848,10 @@ export default function ThePresident() {
         return;
       }
 
-      if (newTerms >= 2) {
+      // Конституционный предел показываем РОВНО ОДИН РАЗ — в конце 2-го срока.
+      // Если игрок выбрал «остаться у власти» (эндшпиль), последующие выборы
+      // (3-й срок и далее) просто продолжают партию без повторной развилки.
+      if (newTerms === 2) {
         hapticNotify("success");
         setPhase("constitution");
         setIsCrisis(false);
@@ -1216,7 +1250,7 @@ export default function ThePresident() {
 
   // Превью с реальным сбалансированным масштабом
   const previewFxReal = hovered && currentCard
-    ? Object.fromEntries(PARAMS.map(p => [p.key, scaleStatEffect(p.key, currentCard[hovered].fx[p.key] || 0, difficulty, months)]))
+    ? getFxDeltas(currentCard[hovered].fx)
     : null;
 
   // ─── SHARE-ТЕКСТЫ ─────────────────────────────────────────────────────────

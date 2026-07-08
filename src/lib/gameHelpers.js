@@ -35,6 +35,57 @@ export const validateSave = (save) => {
 /** Доступные уровни сложности (порядок = слева направо в селекторе). */
 export const DIFFICULTIES = ["easy", "normal", "hardcore"];
 
+// ─── ЭНДШПИЛЬ / ТУРНИРНЫЙ ОВЕРТАЙМ ────────────────────────────────────────────
+// После двух сроков (месяц 96) игрок может «остаться у власти» и продолжить
+// править. С этого момента начинается нарастающее усложнение: каждые 10 циклов
+// (месяцев) ступень эскалации растёт БЕЗ ПОТОЛКА, поэтому на любой сложности игра
+// со временем становится неудержимой и заканчивается неизбежным падением. Счёт в
+// таблице рекордов = сколько месяцев удалось продержаться → честный турнирный
+// рейтинг выживания. Кривая начинается мягко, чтобы третий срок был playable,
+// но без потолка догоняет даже аккуратную стратегию.
+export const OVERTIME_START_MONTH = 96;
+export const OVERTIME_STEP_MONTHS = 10;
+
+// Тюнинг кривой (можно править, не трогая логику):
+const OVERTIME_NEG_PER_STEP = 0.01;    // насколько раскачивается негатив карт за ступень
+const OVERTIME_POS_DECAY_PER_STEP = 0.005; // насколько гаснет позитив карт за ступень
+const OVERTIME_POS_FLOOR = 0.75;       // минимальный множитель позитива (не отыграться в ноль)
+const OVERTIME_PRESSURE_PW = 0.07;     // давление на народ/Запад (вниз) за ступень
+const OVERTIME_PRESSURE_ARMY = 0.05;   // давление на силовиков (вверх) за ступень
+const OVERTIME_PRESSURE_OLI = 0.035;   // давление на олигархов (вверх) за ступень
+// Множитель давления по сложности — чтобы порядок был естественным (на easy
+// продержаться дольше), но проигрыш неизбежен на всех.
+const OVERTIME_DIFF_MULT = { easy: 0.45, normal: 0.75, hardcore: 0.85 };
+
+/** Ступень эскалации овертайма (0 до месяца 96, дальше +1 каждые 10 циклов, без потолка). */
+export const overtimeStep = (months = 1) => {
+  if (months <= OVERTIME_START_MONTH) return 0;
+  return Math.ceil((months - OVERTIME_START_MONTH) / OVERTIME_STEP_MONTHS);
+};
+
+/**
+ * Пассивное давление «система против тебя» в овертайме. По мере роста ступеней
+ * шкалы всё сильнее ползут к смерти: народ и Запад — вниз (усталость от вечного
+ * правления, углубление изоляции), силовики и элиты — вверх (наглеют,
+ * капитализируют хаос). Применяется СЫРЫМ, поверх эффектов карты, поэтому
+ * удержать все четыре шкалы в коридоре 1–99 со временем физически нельзя.
+ * Возвращает объект дельт или null (вне овертайма).
+ */
+export const overtimePressure = (months = 1, difficulty = "normal") => {
+  const step = overtimeStep(months);
+  if (step <= 0) return null;
+  const g = OVERTIME_DIFF_MULT[difficulty] ?? 1;
+  const peopleWest = Math.floor(step * OVERTIME_PRESSURE_PW * g);
+  const army = Math.floor(step * OVERTIME_PRESSURE_ARMY * g);
+  const oligarchs = Math.floor(step * OVERTIME_PRESSURE_OLI * g);
+  return {
+    people: peopleWest ? -peopleWest : 0,
+    west: peopleWest ? -peopleWest : 0,
+    army,
+    oligarchs,
+  };
+};
+
 /**
  * Масштабирует эффект изменения параметра с учетом гейм-дизайнерского баланса
  * и выбранного уровня сложности.
@@ -80,6 +131,16 @@ export const scaleStatEffect = (key, val, difficulty = "normal", months = 1) => 
 
   // «Медовый месяц» — щадящий старт для новых игроков.
   if (val < 0 && months <= 12) mult *= 0.7;
+
+  // Овертайм (эндшпиль после 2 сроков): негатив карт раскачивается всё сильнее,
+  // позитив — гаснет, поэтому чинить шкалы становится всё труднее. Растёт без
+  // потолка → вместе с пассивным давлением (overtimePressure) гарантирует
+  // неизбежное падение на любой сложности.
+  const otStep = overtimeStep(months);
+  if (otStep > 0) {
+    if (val < 0) mult *= 1 + otStep * OVERTIME_NEG_PER_STEP;
+    else         mult *= Math.max(OVERTIME_POS_FLOOR, 1 - otStep * OVERTIME_POS_DECAY_PER_STEP);
+  }
 
   return Math.round(val * mult);
 };

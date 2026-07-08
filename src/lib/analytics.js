@@ -49,6 +49,7 @@ export const EVENTS = Object.freeze({
   EXTREMUM_EVENT: "extremum_event",
   ELECTION_VIEW: "election_view",
   ELECTION_CHOICE: "election_choice",
+  ENDGAME_ENTER: "endgame_enter",
   SECOND_CHANCE_VIEW: "second_chance_view",
   SECOND_CHANCE_CHOICE: "second_chance_choice",
   GAME_OVER: "game_over",
