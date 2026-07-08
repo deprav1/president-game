@@ -8,7 +8,7 @@
  *
  * Защита: setWebhook регистрируется с secret_token = первые 32 hex sha256(токена
  * бота); Telegram шлёт его в заголовке X-Telegram-Bot-Api-Secret-Token — сверяем.
- * Токен бота лежит в lb-data/bot-token.txt (вне репозитория, закрыт .htaccess).
+ * Токен бота лежит в lb-data/bot-token.php (вне репозитория, PHP-return secret).
  * Регистрацию вебхука делает CI на деплое (см. deploy-timeweb.yml).
  */
 
@@ -17,10 +17,15 @@ header('Cache-Control: no-store');
 
 const GAME_URL = 'https://cb077728.tw1.ru/';
 
+function read_secret($path) {
+    if (!is_file($path)) return '';
+    $value = @include $path;
+    return is_string($value) ? trim($value) : '';
+}
+
 $root = isset($_SERVER['DOCUMENT_ROOT']) && $_SERVER['DOCUMENT_ROOT'] !== ''
     ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : dirname(__DIR__);
-$botToken = @file_get_contents($root . '/lb-data/bot-token.txt');
-$botToken = is_string($botToken) ? trim($botToken) : '';
+$botToken = read_secret($root . '/lb-data/bot-token.php');
 
 // Бот не настроен — тихо выходим (вебхук всё равно не зарегистрирован без токена).
 if ($botToken === '') { http_response_code(200); echo 'ok'; exit; }

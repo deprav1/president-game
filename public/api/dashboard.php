@@ -5,8 +5,8 @@
  * Читает агрегат lb-data/analytics.json (пишет collect.php) и отдаёт totals,
  * которые показывает AdminAnalyticsPanel (events/views/likes/dislikes/decisions).
  *
- * ЗАЩИТА: требуется токен, совпадающий с содержимым lb-data/analytics-token.txt
- * (файл вне репозитория, закрыт .htaccess). Токен приходит в заголовке
+ * ЗАЩИТА: требуется токен, совпадающий с lb-data/analytics-token.php
+ * (PHP-return secret вне репозитория). Токен приходит в заголовке
  * X-Admin-Token или ?token=. Файла токена нет → доступ закрыт (безопасный дефолт).
  * Токен задаётся один раз вручную (Timeweb file manager); в публичный бандл он
  * не попадает — панель шлёт его из localStorage (см. ?atoken= в AdminAnalyticsPanel).
@@ -23,8 +23,14 @@ $root = isset($_SERVER['DOCUMENT_ROOT']) && $_SERVER['DOCUMENT_ROOT'] !== ''
     ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : dirname(__DIR__);
 $dir = $root . '/lb-data';
 
-$tokenFile = $dir . '/analytics-token.txt';
-$expected  = is_file($tokenFile) ? trim((string)@file_get_contents($tokenFile)) : '';
+function read_secret($path) {
+    if (!is_file($path)) return '';
+    $value = @include $path;
+    return is_string($value) ? trim($value) : '';
+}
+
+$tokenFile = $dir . '/analytics-token.php';
+$expected  = read_secret($tokenFile);
 $provided  = $_SERVER['HTTP_X_ADMIN_TOKEN'] ?? ($_GET['token'] ?? '');
 if ($expected === '' || !hash_equals($expected, (string)$provided)) {
     http_response_code(403);

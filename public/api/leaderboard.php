@@ -13,8 +13,8 @@
  * настроен НЕ удалять lb-data (см. .github/workflows/deploy-timeweb.yml), так что
  * рекорды переживают пуши. Прямой HTTP-доступ к файлу закрыт .htaccess (в нём uid).
  *
- * Защита от накрутки: если на хостинге лежит lb-data/bot-token.txt (токен бота,
- * вне репозитория) — POST требует валидный Telegram initData, подпись которого
+ * Защита от накрутки: если на хостинге лежит lb-data/bot-token.php (PHP-return
+ * secret вне репозитория) — POST требует валидный Telegram initData, подпись которого
  * проверяется этим токеном, и uid берётся ИЗ подписи (подделка/ротация uid и
  * анонимный curl-спам исключены). Файла токена нет → мягкий режим (uid клиента).
  * Что НЕ закрыто даже так: реальный игрок может завысить СВОЙ счёт (клиентский
@@ -56,6 +56,12 @@ function ensure_store() {
     if (!is_file($ht)) {
         @file_put_contents($ht, "Require all denied\nDeny from all\n");
     }
+}
+
+function read_secret($path) {
+    if (!is_file($path)) return '';
+    $value = @include $path;
+    return is_string($value) ? trim($value) : '';
 }
 
 // IP rate-limit для POST. Состояние — отдельный файл lb-rl.json (доска хранится
@@ -246,11 +252,10 @@ if (!is_array($body)) {
     respond(['ok' => false, 'error' => 'Invalid JSON']);
 }
 
-// Защита от накрутки: если задан токен бота (lb-data/bot-token.txt, вне репо) —
+// Защита от накрутки: если задан токен бота (lb-data/bot-token.php, вне репо) —
 // требуем валидный Telegram initData и берём uid ИЗ него (подделать нельзя без
 // токена). Токена нет → мягкий режим: доверяем uid клиента (как раньше).
-$botToken = @file_get_contents(store_dir() . '/bot-token.txt');
-$botToken = is_string($botToken) ? trim($botToken) : '';
+$botToken = read_secret(store_dir() . '/bot-token.php');
 if ($botToken !== '') {
     $tgId = tg_verify($body['initData'] ?? '', $botToken, INIT_DATA_MAX_AGE);
     if ($tgId === null) {

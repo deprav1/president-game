@@ -37,7 +37,7 @@ jobs:
           VITE_LEADERBOARD_ENDPOINT: "/api/leaderboard.php"
           # Серверный сбор игровой аналитики (same-origin PHP на том же хостинге).
           # collect.php копит скользящий агрегат в lb-data; dashboard.php отдаёт
-          # сводку в админ-панель под токеном (lb-data/analytics-token.txt).
+          # сводку в админ-панель под токеном (lb-data/analytics-token.php).
           # Явный dashboard задаём, т.к. авто-вывод из endpoint не сматчит «.php».
           VITE_ANALYTICS_ENDPOINT: "/api/collect.php"
           VITE_ANALYTICS_DASHBOARD: "/api/dashboard.php"
@@ -89,8 +89,14 @@ jobs:
           Require all denied
           Deny from all
           EOF
-          if [ -n "${BOT_TOKEN}" ]; then printf '%s' "${BOT_TOKEN}" > dist/lb-data/bot-token.txt; fi
-          if [ -n "${ANALYTICS_TOKEN}" ]; then printf '%s' "${ANALYTICS_TOKEN}" > dist/lb-data/analytics-token.txt; fi
+          if [ -n "${BOT_TOKEN}" ]; then
+            BOT_TOKEN_B64=$(printf '%s' "${BOT_TOKEN}" | base64 | tr -d '\n')
+            printf "<?php return base64_decode('%s');\n" "${BOT_TOKEN_B64}" > dist/lb-data/bot-token.php
+          fi
+          if [ -n "${ANALYTICS_TOKEN}" ]; then
+            ANALYTICS_TOKEN_B64=$(printf '%s' "${ANALYTICS_TOKEN}" | base64 | tr -d '\n')
+            printf "<?php return base64_decode('%s');\n" "${ANALYTICS_TOKEN_B64}" > dist/lb-data/analytics-token.php
+          fi
 
           tar -C dist -czf dist.tar.gz .
 
@@ -103,7 +109,7 @@ jobs:
           # scp/ssh обёрнуты в timeout + ретраи: SSH к Timeweb периодически виснет
           # (удалённая команда стопорится, ServerAlive это не ловит). timeout рвёт
           # зависшую попытку за 120с, до 3 попыток → деплой само-восстанавливается.
-          REMOTE_CMD='rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
+          REMOTE_CMD='rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && rm -f public_html/lb-data/bot-token.txt public_html/lb-data/analytics-token.txt public_html/lb-data/bot-token.php public_html/lb-data/analytics-token.php && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
           ok=0
           for attempt in 1 2 3; do
             echo "Deploy attempt ${attempt}..."
