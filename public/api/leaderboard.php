@@ -193,9 +193,10 @@ function sort_board(&$arr) {
     });
 }
 
-// uid наружу не отдаём.
+// uid и tgId наружу не отдаём (tgId — приватный Telegram-id для призовых
+// уведомлений через notify-top.php; в GET/ответах его нет).
 function public_entry($e) {
-    unset($e['uid']);
+    unset($e['uid'], $e['tgId']);
     return $e;
 }
 
@@ -256,6 +257,7 @@ if (!is_array($body)) {
 // требуем валидный Telegram initData и берём uid ИЗ него (подделать нельзя без
 // токена). Токена нет → мягкий режим: доверяем uid клиента (как раньше).
 $botToken = read_secret(store_dir() . '/bot-token.php');
+$verifiedTgId = null; // реальный Telegram-id из подписи — для призовых уведомлений
 if ($botToken !== '') {
     $tgId = tg_verify($body['initData'] ?? '', $botToken, INIT_DATA_MAX_AGE);
     if ($tgId === null) {
@@ -263,6 +265,7 @@ if ($botToken !== '') {
         respond(['ok' => false, 'error' => 'Telegram verification required']);
     }
     $uid = 'tg_' . tg_djb2($tgId);
+    $verifiedTgId = $tgId;
 } else {
     $uid = clean_str($body['uid'] ?? '', 64);
 }
@@ -289,6 +292,18 @@ if ($uid !== '') {
         if (isset($item['uid']) && $item['uid'] === $uid) { $prev = $item; break; }
     }
     if ($prev && (int)$prev['score'] >= (int)$entry['score']) {
+        // Бэкфилл tgId для старых записей (сделаны до его сохранения): игрок
+        // прислал любой результат → его лучшая запись получает приватный tgId.
+        if ($verifiedTgId !== null && empty($prev['tgId'])) {
+            foreach ($board as &$it) {
+                if ($it['id'] === $prev['id']) { $it['tgId'] = $verifiedTgId; break; }
+            }
+            unset($it);
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode($board, JSON_UNESCAPED_UNICODE));
+            fflush($fp);
+        }
         $existing = $board;
         sort_board($existing);
         $rank = 0;
@@ -311,6 +326,7 @@ if ($uid !== '') {
 
 $stored = $entry;
 $stored['uid'] = $uid !== '' ? $uid : null;
+if ($verifiedTgId !== null) $stored['tgId'] = $verifiedTgId;
 $board[] = $stored;
 sort_board($board);
 
