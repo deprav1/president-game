@@ -26,6 +26,28 @@ const GLOBAL_LIMIT = 50;
 /** Включён ли глобальный рейтинг в текущей сборке. */
 export const globalLeaderboardEnabled = !!ENDPOINT;
 
+// Endpoint чекина при входе (лежит рядом с leaderboard.php).
+const CHECKIN_ENDPOINT = ENDPOINT ? ENDPOINT.replace(/leaderboard(\.php)?\/?$/, "checkin$1") : "";
+
+/**
+ * Чекин при входе в игру: шлёт подписанный Telegram initData (fire-and-forget).
+ * Сервер по нему бэкфиллит tgId игрока на доске и доставляет призовые
+ * уведомления из очереди (см. api/checkin.php). Любой сбой игнорируется.
+ */
+export function checkinGlobal() {
+  if (!CHECKIN_ENDPOINT || typeof fetch !== "function") return;
+  try {
+    const initData = (typeof window !== "undefined" && window.Telegram?.WebApp?.initData) || "";
+    if (!initData) return;
+    fetch(CHECKIN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({ initData }),
+    }).catch(() => {});
+  } catch { /* чекин не должен влиять на игру */ }
+}
+
 /** Загрузить текущую глобальную таблицу. Возвращает массив или null при сбое. */
 export async function fetchGlobalLeaderboard() {
   if (!ENDPOINT || typeof fetch !== "function") return null;

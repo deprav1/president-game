@@ -24,7 +24,7 @@ import GameCard from "./components/GameCard.jsx";
 import StatPill from "./components/StatPill.jsx";
 import { telegramStorage } from "./utils/telegramStorage.js";
 import { track, EVENTS, hashStr, trackOutbound, appendUtm, getAnalyticsSnapshot } from "./lib/analytics.js";
-import { globalLeaderboardEnabled, fetchGlobalLeaderboard, submitGlobalScore } from "./lib/globalLeaderboard.js";
+import { globalLeaderboardEnabled, fetchGlobalLeaderboard, submitGlobalScore, checkinGlobal } from "./lib/globalLeaderboard.js";
 import AdminAnalyticsPanel from "./components/AdminAnalyticsPanel.jsx";
 import { copyText } from "./lib/clipboard.js";
 import { discountFor } from "./lib/promo.js";
@@ -432,8 +432,11 @@ export default function ThePresident() {
   }, [bestScore, difficulty, leaderboard, nameInput, presidentName]);
 
   // Подгружаем глобальную таблицу при старте (если включена серверная доска).
+  // Заодно чекин входа: бэкфилл tgId на доске + доставка призовых уведомлений
+  // из очереди (fire-and-forget, на игру не влияет).
   useEffect(() => {
     if (!globalLeaderboardEnabled) return;
+    checkinGlobal();
     let alive = true;
     fetchGlobalLeaderboard().then((entries) => {
       if (alive && entries) setGlobalLeaderboard(entries);

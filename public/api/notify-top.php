@@ -7,7 +7,13 @@
  *   limit   — скольким верхним игрокам слать (default 3, max 25);
  *   text    — текст сообщения, плейсхолдеры {name} {score} {rank};
  *   button  — подпись кнопки, открывающей игру (опционально; пусто = без кнопки);
- *   dry_run — true: НИЧЕГО не шлём, возвращаем список будущих получателей.
+ *   dry_run — true: НИЧЕГО не шлём, возвращаем список будущих получателей;
+ *   mode    — "send" (default): отправить сейчас тем, у кого есть tgId;
+ *             "queue": поставить топ-N в призовую очередь — каждый получит
+ *               сообщение при следующем ВХОДЕ в игру (см. checkin.php), tgId
+ *               заранее не нужен; текст фиксируется на момент постановки;
+ *             "queue_status": статусы очереди (pending/sent);
+ *             "queue_clear": снять очередь.
  *
  * Ограничения Telegram: бот может писать только тем, кто его запускал (START) —
  * остальным sendMessage вернёт ошибку, она попадёт в ответ per-получатель.
@@ -55,6 +61,30 @@ $limit  = max(1, min((int)($body['limit'] ?? 3), MAX_RECIPIENTS));
 $text   = trim((string)($body['text'] ?? ''));
 $button = trim((string)($body['button'] ?? ''));
 $dryRun = !empty($body['dry_run']);
+$mode   = (string)($body['mode'] ?? 'send');
+$qfile  = $dir . '/prize-queue.json';
+
+// ── Управление призовой очередью (доставка при входе — checkin.php) ────────────
+if ($mode === 'queue_status') {
+    $queue = is_file($qfile) ? json_decode((string)@file_get_contents($qfile), true) : null;
+    $out = [];
+    if (is_array($queue) && isset($queue['recipients'])) {
+        foreach ($queue['recipients'] as $r) {
+            $out[] = [
+                'rank' => $r['rank'] ?? 0, 'name' => $r['name'] ?? '',
+                'score' => $r['score'] ?? 0, 'status' => $r['status'] ?? '',
+                'sentAt' => $r['sentAt'] ?? null,
+            ];
+        }
+    }
+    respond(200, ['ok' => true, 'queued' => $out, 'createdAt' => $queue['createdAt'] ?? null]);
+}
+if ($mode === 'queue_clear') {
+    $existed = is_file($qfile);
+    if ($existed) @unlink($qfile);
+    respond(200, ['ok' => true, 'cleared' => $existed]);
+}
+if ($mode !== 'send' && $mode !== 'queue') respond(400, ['ok' => false, 'error' => 'Unknown mode']);
 if ($text === '' && !$dryRun) respond(400, ['ok' => false, 'error' => 'text is required']);
 
 // ── Топ доски (тот же файл и сортировка, что в leaderboard.php) ────────────────
@@ -78,12 +108,41 @@ foreach ($top as $i => $e) {
         'score' => (int)($e['score'] ?? 0),
         'canMessage' => !empty($e['tgId']),
         'tgId' => !empty($e['tgId']) ? (int)$e['tgId'] : null,
+        'uid'  => (string)($e['uid'] ?? ''),
     ];
 }
 
+// Постановка в очередь: текст резолвим сейчас (топ зафиксирован на этот момент),
+// доставит checkin.php при следующем входе игрока — tgId заранее не нужен.
+if ($mode === 'queue') {
+    $queued = [];
+    foreach ($recipients as $r) {
+        if ($r['uid'] === '') continue;
+        $queued[] = [
+            'uid'    => $r['uid'],
+            'rank'   => $r['rank'],
+            'name'   => $r['name'],
+            'score'  => $r['score'],
+            'text'   => strtr($text, ['{name}' => $r['name'], '{score}' => (string)$r['score'], '{rank}' => (string)$r['rank']]),
+            'button' => $button,
+            'status' => 'pending',
+        ];
+    }
+    if ($dryRun) {
+        $preview = array_map(function ($r) { unset($r['uid']); return $r; }, $queued);
+        respond(200, ['ok' => true, 'dry_run' => true, 'mode' => 'queue', 'would_queue' => $preview]);
+    }
+    @file_put_contents($qfile, json_encode([
+        'createdAt' => gmdate('Y-m-d\TH:i:s\Z'),
+        'recipients' => $queued,
+    ], JSON_UNESCAPED_UNICODE), LOCK_EX);
+    $out = array_map(function ($r) { unset($r['uid']); return $r; }, $queued);
+    respond(200, ['ok' => true, 'mode' => 'queue', 'queued' => $out]);
+}
+
 if ($dryRun) {
-    // tgId в dry-run не раскрываем — только факт достижимости.
-    $out = array_map(function ($r) { unset($r['tgId']); return $r; }, $recipients);
+    // tgId/uid в dry-run не раскрываем — только факт достижимости.
+    $out = array_map(function ($r) { unset($r['tgId'], $r['uid']); return $r; }, $recipients);
     respond(200, ['ok' => true, 'dry_run' => true, 'recipients' => $out]);
 }
 
