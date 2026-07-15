@@ -101,15 +101,16 @@ jobs:
           tar -C dist -czf dist.tar.gz .
 
           # Веб-корень Timeweb — public_html в домашней папке аккаунта.
-          # Перед заливкой чистим содержимое, чтобы index.htm-заглушка Timeweb
-          # не перебивала Vite index.html. ВАЖНО: каталог lb-data НЕ трогаем — в
-          # нём лежит JSON глобальной доски рекордов (домашняя папка не пишется,
-          # поэтому данные хранятся в webroot и должны пережить деплой).
+          # ВАЖНО: деплой удаляет ТОЛЬКО собственные файлы Варонии (то, что лежит
+          # в свежем dist), а всё чужое в public_html — например, другие игры в
+          # своих папках (public_html/<игра>/) — НЕ трогает. lb-data мёржится
+          # (в нём живые данные доски/аналитики), заглушка index.htm Timeweb
+          # удаляется явно, чтобы не перебивала Vite index.html.
           #
           # scp/ssh обёрнуты в timeout + ретраи: SSH к Timeweb периодически виснет
           # (удалённая команда стопорится, ServerAlive это не ловит). timeout рвёт
           # зависшую попытку за 120с, до 3 попыток → деплой само-восстанавливается.
-          REMOTE_CMD='rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && find public_html -mindepth 1 -maxdepth 1 ! -name lb-data -exec rm -rf -- {} + && rm -f public_html/lb-data/bot-token.txt public_html/lb-data/analytics-token.txt public_html/lb-data/bot-token.php public_html/lb-data/analytics-token.php && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
+          REMOTE_CMD='rm -rf varonia-deploy-tmp && mkdir -p varonia-deploy-tmp public_html && tar -xzf varonia-dist.tar.gz -C varonia-deploy-tmp && for f in varonia-deploy-tmp/* varonia-deploy-tmp/.[!.]*; do [ -e "$f" ] || continue; n=$(basename "$f"); [ "$n" = "lb-data" ] && continue; rm -rf "public_html/$n"; done && rm -f public_html/index.htm public_html/lb-data/bot-token.txt public_html/lb-data/analytics-token.txt public_html/lb-data/bot-token.php public_html/lb-data/analytics-token.php && cp -a varonia-deploy-tmp/. public_html/ && rm -rf varonia-deploy-tmp varonia-dist.tar.gz'
           ok=0
           for attempt in 1 2 3; do
             echo "Deploy attempt ${attempt}..."
