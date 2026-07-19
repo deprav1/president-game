@@ -1,4 +1,5 @@
 import { difficultyLabel, formatLeaderboardDate, outcomeLabel } from "../lib/leaderboard.js";
+import { formatMonths } from "../lib/text.js";
 
 export default function LeaderboardList({
   entries = [],
@@ -57,8 +58,7 @@ function LeaderboardRow({ entry, rank, isHighlighted }) {
         <div className="leaderboard-meta">{meta}</div>
       </div>
       <div className="leaderboard-score">
-        {entry.score}
-        <span>мес.</span>
+        {formatMonths(entry.score, { short: true })}
       </div>
     </li>
   );

@@ -69,6 +69,14 @@ export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggl
     return unsub;
   }, []);
 
+  useEffect(() => {
+    const handleEscape = event => {
+      if (event.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
   // Сводка с admin-server (если настроен и доступен). Не блокирует панель.
   useEffect(() => {
     if (!DASHBOARD_URL) return;
@@ -133,6 +141,9 @@ export default function AdminAnalyticsPanel({ onClose, safeMode = false, onToggl
     <div className="hub-overlay" onClick={onClose}>
       <div
         className="hub-card font-typewriter"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Панель аналитики"
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: "88vh", overflowY: "auto" }}
       >

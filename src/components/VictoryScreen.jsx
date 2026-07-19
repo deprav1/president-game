@@ -5,6 +5,8 @@ import { victoryVerdict } from "../data/verdicts.js";
 import StatIcon from "./StatIcon.jsx";
 import DecisionLog from "./DecisionLog.jsx";
 import LeaderboardList from "./LeaderboardList.jsx";
+import PromoCard from "./PromoCard.jsx";
+import { formatMonths } from "../lib/text.js";
 
 const ENDING_IMG_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker", "perestroika", "legenda"];
 const ENDING_NO_ICON_IDS = ["zastoy", "oprichnina", "kooperativ", "bunker"];
@@ -43,7 +45,7 @@ export default function VictoryScreen({
           )}
           <div className="flow-final-hero-text">
             <div className="flow-victory-title">ВЫ ВОШЛИ В ИСТОРИЮ</div>
-            <div className="flow-final-tenure">{tenure} МЕСЯЦЕВ У ВЛАСТИ</div>
+            <div className="flow-final-tenure">{formatMonths(tenure, { uppercase: true })} У ВЛАСТИ</div>
             <div className="flow-final-caption">«{verdict}»</div>
           </div>
         </div>
@@ -52,7 +54,7 @@ export default function VictoryScreen({
           <div className={`result-record-callout victory ${resultEntry?.isRecord ? "record" : ""}`}>
             <div>
               <div className="result-record-kicker">{recordLabel}</div>
-              <div className="result-record-title">{resultTenure} месяцев у власти</div>
+              <div className="result-record-title">{formatMonths(resultTenure)} у власти</div>
             </div>
             {resultEntry?.rank && (
               <div className="result-record-rank">#{resultEntry.rank}</div>
@@ -93,41 +95,12 @@ export default function VictoryScreen({
 
           <DecisionLog decisionLog={decisionLog} />
 
-          {promoCode && (
-            <div className="hub-promo-box" style={{ marginBottom: 14 }}>
-              <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1.5, marginBottom: 4 }}>
-                Вы продержались {resultTenure} мес.
-              </div>
-              <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
-                Получите скидку {promoCode.percent}%
-              </div>
-              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
-                Попробуйте 7 дней бесплатно
-              </div>
-              <div
-                className="hub-promo-code"
-                style={{ letterSpacing: 2.5 }}
-                onClick={onCopyPromo}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onCopyPromo(); } }}
-                role="button"
-                tabIndex={0}
-              >
-                {promoCode.code}
-              </div>
-              <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
-                Копировать · Активация на{" "}
-                <span
-                  onClick={e => { e.stopPropagation(); onOpenNaruzhu?.(); }}
-                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onOpenNaruzhu?.(); } }}
-                  role="button"
-                  tabIndex={0}
-                  style={{ color: "#d4af37", textDecoration: "underline", cursor: "pointer" }}
-                >
-                  vepen.online
-                </span>
-              </div>
-            </div>
-          )}
+          <PromoCard
+            months={resultTenure}
+            promoCode={promoCode}
+            onCopy={onCopyPromo}
+            onOpen={onOpenNaruzhu}
+          />
 
           <LeaderboardList
             entries={leaderboard}
@@ -150,12 +123,12 @@ export default function VictoryScreen({
           )}
         </div>
 
-        <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={onShare} className="btn-emerald" style={{ width: "100%" }}>
-            📤 ПОДЕЛИТЬСЯ ПОБЕДОЙ
+        <div className="outcome-actions">
+          <button onClick={onShare} className="btn-secondary">
+            ПОДЕЛИТЬСЯ ФИНАЛОМ
           </button>
-          <button onClick={onRestart} className="btn-gold" style={{ width: "100%" }}>
-            НОВАЯ ЭПОХА
+          <button onClick={onRestart} className="btn-gold">
+            НОВОЕ ПРАВЛЕНИЕ
           </button>
         </div>
       </div>

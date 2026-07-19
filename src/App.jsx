@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { PARAMS } from "./data/params.js";
 import { ADVISORS } from "./data/advisors.js";
 import { CARDS, CRISIS_CARDS, ELECTION_CARD, MONTHS } from "./data/cards.js";
-import { CHAINS, getTriggeredChain, getExtremumEvent } from "./data/chains.js";
+import { CHAINS, EXTREMUM_EVENTS, getTriggeredChain, getExtremumEvent } from "./data/chains.js";
 import { ENDINGS, getVictoryEnding } from "./data/endings.js";
 import { NARUZHU_CARDS } from "./data/naruzhuCards.js";
 import { EXTRA_CARDS } from "./data/extraCards.js";
@@ -22,12 +22,14 @@ import SecondChanceScreen from "./components/SecondChanceScreen.jsx";
 import HubOverlay from "./components/HubOverlay.jsx";
 import GameCard from "./components/GameCard.jsx";
 import StatPill from "./components/StatPill.jsx";
+import AchievementToast from "./components/AchievementToast.jsx";
 import { telegramStorage } from "./utils/telegramStorage.js";
 import { track, EVENTS, hashStr, trackOutbound, appendUtm, getAnalyticsSnapshot } from "./lib/analytics.js";
 import { globalLeaderboardEnabled, fetchGlobalLeaderboard, submitGlobalScore, checkinGlobal } from "./lib/globalLeaderboard.js";
 import AdminAnalyticsPanel from "./components/AdminAnalyticsPanel.jsx";
 import { copyText } from "./lib/clipboard.js";
 import { discountFor } from "./lib/promo.js";
+import { ACHIEVEMENTS_DEF } from "./data/achievements.js";
 import {
   addLeaderboardEntry,
   createLeaderboardEntry,
@@ -39,7 +41,7 @@ import "./App.css";
 
 // Стабильный короткий id карты для аналитики (у карт нет своего id —
 // хэшируем текст). Покрывает обычные карты (t) и rescue-карту (text).
-const cardKey = (c) => (c ? hashStr(c.t || c.text || "") : null);
+const cardKey = (c) => (c ? (c.id || hashStr(c.t || c.text || "")) : null);
 
 const WOOD_BG   = `url("${getAsset('/images/game_background.webp')}") center/cover no-repeat`;
 
@@ -68,22 +70,123 @@ const ADMIN_USERNAME = (import.meta.env.VITE_ADMIN_USERNAME || "deprav").toLower
 
 // A/B-тест текста CTA-кнопки «Наружу» на карте.
 const CTA_VARIANTS = [
-  { id: "exit",     label: "🌐 VPN Наружу — выйти из Варонии" },
-  { id: "download", label: "🌐 Скачать VPN Наружу бесплатно" },
-  { id: "bypass",   label: "🔓 Обойти блокировку — VPN Наружу" },
+  { id: "exit",     label: "VPN «НАРУЖУ» — ВЫЙТИ ИЗ ВАРОНИИ" },
+  { id: "download", label: "VPN «НАРУЖУ» — СКАЧАТЬ БЕСПЛАТНО" },
+  { id: "bypass",   label: "VPN «НАРУЖУ» — ОБОЙТИ БЛОКИРОВКУ" },
 ];
 
 // Собираем общую колоду: базовые + дополнительные + Наружу-карты
 const ALL_CARDS = [...CARDS, ...EXTRA_CARDS, ...NARUZHU_CARDS, ...PANORAMA_CARDS, ...CHRONICLE_CARDS, ...PRECEDENT_CARDS];
+
+// В сейве не храним полные объекты карт: Telegram CloudStorage ограничивает
+// значение примерно 4 КБ. Каталог получает стабильные индексы, а порядок
+// колоды сериализуется компактной строкой вроде «12,4,98,…».
+const CARD_CATALOG = Array.from(new Map([
+  ...ALL_CARDS,
+  ...Object.values(CHAINS).map(event => event.card),
+  ...Object.values(EXTREMUM_EVENTS).map(event => event.card),
+].map(card => [cardKey(card), card])).values());
+const CARD_CATALOG_INDEX = new Map(CARD_CATALOG.map((card, index) => [cardKey(card), index]));
+// Старые сейвы и серверная аналитика использовали хэш текста до появления
+// стабильных id. Оставляем обратное сопоставление на время миграции.
+CARD_CATALOG.forEach((card, index) => {
+  const legacyKey = hashStr(card?.t || card?.text || "");
+  if (!CARD_CATALOG_INDEX.has(legacyKey)) CARD_CATALOG_INDEX.set(legacyKey, index);
+});
+const CATALOG_VERSION = "2026-07-v1";
+const serializeDeck = deck => (Array.isArray(deck) ? deck
+  .map(card => CARD_CATALOG_INDEX.get(cardKey(card)))
+  .filter(index => Number.isInteger(index))
+  .join(",") : "");
+const deserializeDeck = value => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value) return [];
+  return value.split(",").map(Number)
+    .filter(index => Number.isInteger(index) && CARD_CATALOG[index])
+    .map(index => CARD_CATALOG[index]);
+};
+const serializePendingEvents = events => (Array.isArray(events) ? events
+  .filter(event => event?.id && Number.isFinite(event.triggerMonth))
+  .map(event => `${event.id}|${event.triggerMonth}`)
+  .join(",") : "");
+const deserializePendingEvents = value => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value) return [];
+  return value.split(",").map(item => {
+    const [id, monthRaw] = item.split("|");
+    const source = CHAINS[id] || EXTREMUM_EVENTS[id];
+    const triggerMonth = Number(monthRaw);
+    return source && Number.isFinite(triggerMonth)
+      ? { ...source, triggerMonth }
+      : null;
+  }).filter(Boolean);
+};
+const compactSnapshot = snapshot => {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  return {
+    stats: snapshot.stats,
+    months: snapshot.months,
+    cardIdx: snapshot.cardIdx,
+    deckOrder: serializeDeck(snapshot.deck),
+    catalogVersion: CATALOG_VERSION,
+    pendingEvents: serializePendingEvents(snapshot.pendingEvents),
+  };
+};
+const compactSave = payload => {
+  const { deck, pendingEvents, reviveSnapshot, ...rest } = payload || {};
+  const compact = { ...rest };
+  // В gameover достаточно снапшота для ревайва; дублировать текущую колоду
+  // бессмысленно и это может вытолкнуть запись за лимит CloudStorage.
+  if (payload?.phase !== "gameover" && deck) {
+    compact.deckOrder = serializeDeck(deck);
+    compact.catalogVersion = CATALOG_VERSION;
+  }
+  if (pendingEvents) compact.pendingEvents = serializePendingEvents(pendingEvents);
+  if (reviveSnapshot) compact.reviveSnapshot = compactSnapshot(reviveSnapshot);
+  return compact;
+};
+const saveRun = payload => {
+  try {
+    telegramStorage.setItem("varon_save", JSON.stringify(compactSave(payload)));
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 // Колода без рекламных карт «Наружу» — для безопасного режима (модерация, чувствительные показы).
 const SAFE_CARDS = ALL_CARDS.filter(c => c.cta !== "naruzhu");
 // Маппинг card_id → карта для админ-панели (серверная аналитика хранит только
 // card_id-хэши; текст карт сопоставляем на клиенте, где данные и так есть).
 const CARDS_BY_ID = Object.fromEntries(ALL_CARDS.map(c => [cardKey(c), c]));
-// Строит колоду с учётом безопасного режима: в нём VPN-карты не попадают в игру.
-const buildDeck = (safe) => shuffle(safe ? SAFE_CARDS : ALL_CARDS);
+// Строит колоду с учётом безопасного режима. Партнёрские карты не появляются
+// в первых 12 решениях и распределяются по партии, а не собираются случайным
+// рекламным кластером.
+const buildDeck = (safe) => {
+  const core = shuffle(SAFE_CARDS);
+  if (safe) return core;
+  const partner = shuffle(ALL_CARDS.filter(card => card.cta === "naruzhu"));
+  const result = [];
+  let partnerIndex = 0;
+  core.forEach((card, index) => {
+    result.push(card);
+    if (index >= 11 && (index - 11) % 14 === 0 && partner[partnerIndex]) {
+      result.push(partner[partnerIndex]);
+      partnerIndex += 1;
+    }
+  });
+  return [...result, ...partner.slice(partnerIndex)];
+};
 const APP_PHASES = new Set(["onboarding", "card", "gameover", "victory", "election", "constitution", "second_chance"]);
+const PHASE_LABELS = {
+  onboarding: "Начало правления",
+  card: "Новое решение",
+  gameover: "Правление завершено",
+  victory: "Финал правления",
+  election: "Президентские выборы",
+  constitution: "Конституционный предел",
+  second_chance: "Чрезвычайное решение",
+};
 const getInitialPhase = () => {
   const phase = new URLSearchParams(location.search).get("p");
   return APP_PHASES.has(phase) ? phase : "onboarding";
@@ -105,7 +208,7 @@ export default function ThePresident() {
 
   const [stats, setStats]               = useState({ oligarchs:50, army:50, people:50, west:50 });
   const [months, setMonths]             = useState(1);
-  const [deck, setDeck]                 = useState(() => shuffle(ALL_CARDS));
+  const [deck, setDeck]                 = useState(() => buildDeck(false));
   const [cardIdx, setCardIdx]           = useState(0);
   const [pendingEvents, setPendingEvents] = useState([]);
   const [phase, setPhase]               = useState(getInitialPhase);
@@ -135,6 +238,7 @@ export default function ThePresident() {
   const [hasUsedVpnRevive, setHasUsedVpnRevive] = useState(false);
   const [reviveAvailable, setReviveAvailable]   = useState(false);
   const [difficulty, setDifficulty]             = useState("normal");
+  const [achievementToast, setAchievementToast] = useState(null);
   // Безопасный режим: скрывает всю рекламу VPN «Наружу» (промокоды, CTA, ревайв, оффер-карты).
   const [safeMode, setSafeMode]                 = useState(false);
   // Внутриигровая панель аналитики для админа @deprav.
@@ -161,7 +265,37 @@ export default function ThePresident() {
       
       let savedRun = null;
       try { savedRun = validateSave(JSON.parse(data["varon_save"] || "null")); } catch {}
+      if (savedRun?.deckOrder && savedRun.catalogVersion !== CATALOG_VERSION) savedRun = null;
       if (APP_PHASES.has(forcedPhase)) savedRun = null;
+
+      // Миграция компактного сейва обратно в игровые объекты. Старый формат
+      // с `deck` и массивом pendingEvents поддерживается без преобразований.
+      if (savedRun) {
+        const restoredDeck = Array.isArray(savedRun.deck) && savedRun.deck.length
+          ? savedRun.deck
+          : deserializeDeck(savedRun.deckOrder);
+        const restoredPending = deserializePendingEvents(savedRun.pendingEvents);
+        const restoredRevive = savedRun.reviveSnapshot
+          && (!savedRun.reviveSnapshot.deckOrder || savedRun.reviveSnapshot.catalogVersion === CATALOG_VERSION)
+          ? {
+              ...savedRun.reviveSnapshot,
+              deck: Array.isArray(savedRun.reviveSnapshot.deck) && savedRun.reviveSnapshot.deck.length
+                ? savedRun.reviveSnapshot.deck
+                : deserializeDeck(savedRun.reviveSnapshot.deckOrder),
+              pendingEvents: deserializePendingEvents(savedRun.reviveSnapshot.pendingEvents),
+            }
+          : null;
+        if (restoredDeck.length || (savedRun.phase === "gameover" && restoredRevive?.deck?.length)) {
+          savedRun = {
+            ...savedRun,
+            deck: restoredDeck,
+            pendingEvents: restoredPending,
+            reviveSnapshot: restoredRevive,
+          };
+        } else {
+          savedRun = null;
+        }
+      }
 
       track(EVENTS.APP_OPEN, { is_returning: !!savedRun });
       if (savedRun) track(EVENTS.RUN_RESUMED, { month: savedRun.months, phase: savedRun.phase });
@@ -172,6 +306,9 @@ export default function ThePresident() {
         setCardIdx(savedRun.cardIdx || 0);
         setPendingEvents(savedRun.pendingEvents || []);
         setPhase(savedRun.phase || "card");
+        setIsCrisis(!!savedRun.isCrisis);
+        setCrisisCard(savedRun.crisisCard || null);
+        setDecisionLog(Array.isArray(savedRun.decisionLog) ? savedRun.decisionLog : []);
         setTermsCompleted(savedRun.termsCompleted || 0);
         setVictoryEndingId(savedRun.victoryEndingId || null);
         setHasUsedSecondChance(savedRun.hasUsedSecondChance || false);
@@ -318,6 +455,7 @@ export default function ThePresident() {
   // Снапшот для VPN-ревайва, восстановленный из сейва при возобновлении партии
   // на экране проигрыша (historyRef живёт только в памяти и после перезагрузки пуст).
   const resumeReviveRef = useRef(null);
+  const achievementToastTimerRef = useRef(null);
 
   const haptic = useCallback((type = "light") => {
     const tg = window.Telegram?.WebApp;
@@ -338,9 +476,19 @@ export default function ThePresident() {
       telegramStorage.setItem("varon_ach", JSON.stringify(next));
       track(EVENTS.ACHIEVEMENT_UNLOCKED, { achievement_id: id });
       hapticNotify("success");
+      const definition = ACHIEVEMENTS_DEF.find(item => item.id === id);
+      if (definition) {
+        setAchievementToast(definition);
+        if (achievementToastTimerRef.current) clearTimeout(achievementToastTimerRef.current);
+        achievementToastTimerRef.current = setTimeout(() => setAchievementToast(null), 4200);
+      }
       return next;
     });
   }, [hapticNotify]);
+
+  useEffect(() => () => {
+    if (achievementToastTimerRef.current) clearTimeout(achievementToastTimerRef.current);
+  }, []);
 
   const unlockSurvivalAchievements = useCallback((nextMonth) => {
     if (nextMonth >= 13) unlockAchievement("survive_12");
@@ -361,6 +509,8 @@ export default function ThePresident() {
       const emptyResult = {
         id: "", name: presidentName || nameInput || "Президент",
         score: 0, difficulty, outcome, rank: 0, isRecord: false, isTopTen: false,
+        reason: meta.reason || "",
+        killerKey: meta.killerKey || "",
       };
       setLastResult(emptyResult);
       return emptyResult;
@@ -586,7 +736,7 @@ export default function ThePresident() {
       return;
     }
     try {
-      telegramStorage.setItem("varon_save", JSON.stringify({
+      saveRun({
         stats: finalStats,
         months: finalMonth,
         deck,
@@ -602,11 +752,14 @@ export default function ThePresident() {
         lastResult: resultEntry,
         reviveAvailable: true,
         reviveSnapshot,
-      }));
+        decisionLog,
+        isCrisis: false,
+        crisisCard: null,
+      });
     } catch { /* Save failure should not block the game-over screen. */ }
-  }, [deck, cardIdx, pendingEvents, hasUsedSecondChance, hasUsedVpnRevive, termsCompleted, difficulty, safeMode]);
+  }, [deck, cardIdx, pendingEvents, hasUsedSecondChance, hasUsedVpnRevive, termsCompleted, difficulty, safeMode, decisionLog]);
 
-  const handleDeathOrRescue = useCallback((death, nextStats, nextMonth, nextPendingEvents = pendingEvents) => {
+  const handleDeathOrRescue = useCallback((death, nextStats, nextMonth, nextPendingEvents = pendingEvents, nextTerms = termsCompleted) => {
     hapticNotify("error");
     const score = nextMonth - 1;
 
@@ -687,7 +840,7 @@ export default function ThePresident() {
       setPhase("second_chance");
 
       try {
-        telegramStorage.setItem("varon_save", JSON.stringify({
+        saveRun({
           stats: nextStats,
           months: nextMonth,
           deck,
@@ -703,13 +856,16 @@ export default function ThePresident() {
             targetStats: nextStats,
             targetMonth: nextMonth
           },
-          termsCompleted,
+          termsCompleted: nextTerms,
           difficulty,
-          phase: "second_chance"
-        }));
+          phase: "second_chance",
+          decisionLog,
+          isCrisis: false,
+          crisisCard: null,
+        });
       } catch { /* Save failure should not interrupt the current run. */ }
     }
-  }, [hasUsedSecondChance, hasUsedVpnRevive, deck, cardIdx, pendingEvents, termsCompleted, difficulty, hapticNotify, persistGameOver, recordResult]);
+  }, [hasUsedSecondChance, hasUsedVpnRevive, deck, cardIdx, pendingEvents, termsCompleted, difficulty, hapticNotify, persistGameOver, recordResult, decisionLog]);
 
   const completeVictory = useCallback((endObj, score, reason = "victory", terms = termsCompleted) => {
     hapticNotify("success");
@@ -754,11 +910,12 @@ export default function ThePresident() {
       setHovered(null);
       setPhase("card");
       try {
-        telegramStorage.setItem("varon_save", JSON.stringify({
+        saveRun({
           stats, months, deck, cardIdx, pendingEvents,
           hasUsedSecondChance, hasUsedVpnRevive, rescueCard,
-          termsCompleted, difficulty, phase: "card",
-        }));
+          termsCompleted, difficulty, phase: "card", isCrisis: false, crisisCard: null,
+          decisionLog,
+        });
       } catch { /* Save failure should not interrupt the current run. */ }
       return;
     }
@@ -777,7 +934,7 @@ export default function ThePresident() {
         setIsCrisis(false);
 
         try {
-          telegramStorage.setItem("varon_save", JSON.stringify({
+          saveRun({
             stats: ns,
             months: rescueCard.targetMonth,
             deck,
@@ -788,8 +945,11 @@ export default function ThePresident() {
             rescueCard: null,
             termsCompleted,
             difficulty,
-            phase: "card"
-          }));
+            phase: "card",
+            isCrisis: false,
+            crisisCard: null,
+            decisionLog,
+          });
         } catch { /* Save failure should not interrupt the current run. */ }
       } else {
         hapticNotify("error");
@@ -845,21 +1005,25 @@ export default function ThePresident() {
       setTimeout(() => setFlashParams({}), 600);
       setStats(ns);
 
-      const newMonth = months + 1;
+      // Выборы происходят в начале нового 48-месячного цикла и сами по себе
+      // не должны «съедать» ещё один месяц. Карта уже перевела состояние на
+      // месяц 49/97, поэтому сохраняем этот номер без +1.
+      const newMonth = months;
       setMonths(newMonth);
       unlockSurvivalAchievements(newMonth);
 
-      setDecisionLog(prev => [...prev.slice(-6), {
+      const nextDecisionLog = [...decisionLog.slice(-6), {
         month: months,
         label: tacticLabel,
-      }]);
+      }];
+      setDecisionLog(nextDecisionLog);
 
       const newTerms = termsCompleted + 1;
       setTermsCompleted(newTerms);
 
       const death = checkDeath(ns);
       if (death) {
-        handleDeathOrRescue(death, ns, newMonth);
+        handleDeathOrRescue(death, ns, newMonth, pendingEvents, newTerms);
         return;
       }
 
@@ -871,7 +1035,7 @@ export default function ThePresident() {
         setPhase("constitution");
         setIsCrisis(false);
         try {
-          telegramStorage.setItem("varon_save", JSON.stringify({
+          saveRun({
             stats: ns,
             months: newMonth,
             deck,
@@ -882,8 +1046,11 @@ export default function ThePresident() {
             rescueCard,
             termsCompleted: newTerms,
             difficulty,
-            phase: "constitution"
-          }));
+            phase: "constitution",
+            isCrisis: false,
+            crisisCard: null,
+            decisionLog: nextDecisionLog,
+          });
         } catch { /* Save failure should not interrupt the current run. */ }
         return;
       }
@@ -892,7 +1059,7 @@ export default function ThePresident() {
       setIsCrisis(false);
 
       try {
-        telegramStorage.setItem("varon_save", JSON.stringify({
+        saveRun({
           stats: ns,
           months: newMonth,
           deck,
@@ -903,8 +1070,11 @@ export default function ThePresident() {
           rescueCard,
           termsCompleted: newTerms,
           difficulty,
-          phase: "card"
-        }));
+          phase: "card",
+          isCrisis: false,
+          crisisCard: null,
+          decisionLog: nextDecisionLog,
+        });
       } catch { /* Save failure should not interrupt the current run. */ }
       return;
     }
@@ -944,10 +1114,11 @@ export default function ThePresident() {
       setMonths(newMonth);
       unlockSurvivalAchievements(newMonth);
 
-      setDecisionLog(prev => [...prev.slice(-6), {
+      const nextDecisionLog = [...decisionLog.slice(-6), {
         month: months,
         label: currentCard[side].label,
-      }]);
+      }];
+      setDecisionLog(nextDecisionLog);
 
       const chainId    = getTriggeredChain(currentCard, side);
       const newPending = [...pendingEvents];
@@ -955,7 +1126,8 @@ export default function ThePresident() {
         newPending.push({ ...CHAINS[chainId], triggerMonth: newMonth + CHAINS[chainId].delay });
         track(EVENTS.CHAIN_TRIGGERED, { chain_id: chainId });
       }
-      if (chainId === "ds_arc_4_soft_end") unlockAchievement("naruzhu_open");
+      // Достижение открывается по факту показа финальной карты цепочки, а не
+      // в момент постановки события в очередь (иначе игрок мог не увидеть её).
 
       // Наказание за экстремум: фракция у потолка пытается перехватить власть.
       const extremum = getExtremumEvent(ns, newPending);
@@ -987,41 +1159,64 @@ export default function ThePresident() {
       const nextDeck = chainCard
         ? [chainCard, ...deck.slice(currentDeckIdx + 1), ...deck.slice(0, currentDeckIdx + 1)]
         : deck;
-      const nextCardIdx = chainCard ? 0 : nextIdx;
+      const electionDue = newMonth % 48 === 1 && newMonth > 1;
+      const crisisDue = !electionDue && newMonth % 12 === 1 && newMonth > 1;
+      const nextCrisis = crisisDue
+        ? CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)]
+        : null;
+      // Если одновременно с цепочкой наступил кризис, оставляем цепочку
+      // первой после кризисной карты: индекс конца колоды даст wrap-around на
+      // 0 следующим ходом и не потеряет отложенное событие.
+      const nextCardIdx = chainCard && crisisDue ? nextDeck.length - 1 : (chainCard ? 0 : nextIdx);
       if (chainCard) setDeck(nextDeck);
       setCardIdx(nextCardIdx);
 
-      try {
-        telegramStorage.setItem("varon_save", JSON.stringify({
-          stats: ns,
-          months: newMonth,
-          deck: nextDeck,
-          cardIdx: nextCardIdx,
-          pendingEvents: newPending,
-          hasUsedSecondChance,
-          hasUsedVpnRevive,
-          rescueCard,
-          termsCompleted,
-          difficulty,
-          phase: "card"
-        }));
-      } catch { /* Save failure should not interrupt the current run. */ }
-
-      if (chainCard) {
-        return;
-      }
-
-      if (newMonth % 48 === 1 && newMonth > 1) { setPhase("election"); return; }
-
-      if (newMonth % 12 === 1 && newMonth > 1) {
+      if (electionDue) {
+        setPhase("election");
+        setIsCrisis(false);
+        setCrisisCard(null);
+      } else if (crisisDue) {
         hapticNotify("warning");
         setIsCrisis(true);
-        const crisis = CRISIS_CARDS[Math.floor(Math.random() * CRISIS_CARDS.length)];
-        setCrisisCard(crisis);
-        track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(crisis), month: newMonth });
+        setCrisisCard(nextCrisis);
+        track(EVENTS.CRISIS_SHOWN, { card_id: cardKey(nextCrisis), month: newMonth });
+      } else {
+        setIsCrisis(false);
+        setCrisisCard(null);
       }
+
+      if (chainCard?.text?.includes("топ-20 стран по цифровой свободе")) {
+        unlockAchievement("naruzhu_open");
+      }
+
+      saveRun({
+        stats: ns,
+        months: newMonth,
+        deck: nextDeck,
+        cardIdx: nextCardIdx,
+        pendingEvents: newPending,
+        hasUsedSecondChance,
+        hasUsedVpnRevive,
+        rescueCard,
+        termsCompleted,
+        difficulty,
+        phase: electionDue ? "election" : "card",
+        isCrisis: crisisDue,
+        crisisCard: nextCrisis,
+        decisionLog: nextDecisionLog,
+      });
+
+      // После двух полных сроков игрок получает шанс на тематический финал.
+      // Порог отделён от конституционной развилки: сначала игрок видит
+      // несколько ходов эндшпиля, затем состояние шкал определяет концовку.
+      if (termsCompleted >= 2 && newMonth >= 121 && !chainCard) {
+        completeVictory(getVictoryEnding(ns, newMonth - 1), newMonth - 1, "overtime_survival", termsCompleted);
+        return;
+      }
+      // Цепочка уже помещена в начало колоды; специальная фаза (если есть)
+      // должна пройти перед её показом, поэтому здесь всегда завершаем ход.
     }, 350);
-  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty, persistGameOver, recordResult]);
+  }, [phase, currentCard, stats, months, applyFx, termsCompleted, pendingEvents, cardIdx, hasUsedSecondChance, hasUsedVpnRevive, rescueCard, handleDeathOrRescue, completeVictory, deck, hapticNotify, unlockAchievement, unlockSurvivalAchievements, isCrisis, difficulty, persistGameOver, recordResult, decisionLog]);
 
   const onTouchStart = e => {
     touchStart.current = e.touches[0].clientX;
@@ -1076,13 +1271,13 @@ export default function ThePresident() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (phase !== "card" || choosing.current) return;
+      if (showHub || phase !== "card" || choosing.current) return;
       if (e.key === "ArrowLeft") choose("left", "key");
       else if (e.key === "ArrowRight") choose("right", "key");
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, choose]);
+  }, [phase, choose, showHub]);
 
   // Аналитика просмотров экранов (фаз).
   useEffect(() => {
@@ -1207,11 +1402,11 @@ export default function ThePresident() {
   };
 
   const copyPromo = async () => {
-    if (!promoCode?.code) return;
+    if (!promoCode?.code) return false;
     const copied = await copyText(promoCode.code);
     track(EVENTS.PROMO_COPIED, { promo: promoCode.code, success: copied });
     haptic(copied ? "light" : "medium");
-    if (copied) openNaruzhu("promo_copy");
+    return copied;
   };
 
   // VPN-ревайв: открывает размеченную ссылку, откатывает последние 2 решения.
@@ -1244,7 +1439,7 @@ export default function ThePresident() {
     setIsCrisis(false);
     setPromoCode(null);
     try {
-      telegramStorage.setItem("varon_save", JSON.stringify({
+      saveRun({
         stats: snap.stats,
         months: snap.months,
         deck: snap.deck,
@@ -1256,7 +1451,10 @@ export default function ThePresident() {
         termsCompleted,
         difficulty,
         phase: "card",
-      }));
+        isCrisis: false,
+        crisisCard: null,
+        decisionLog,
+      });
     } catch { /* no-op */ }
     setPhase("card");
   };
@@ -1300,7 +1498,7 @@ export default function ThePresident() {
   const refTag     = `ref_${hashStr(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest")}`;
   // Deep-link в мини-апп с меткой источника — для учёта входящих переходов из share.
   const BOT_LINK   = appendUtm("https://t.me/varonia_bot", { startapp: refTag });
-  const SHARE_SIGNATURE = "Варония - президентский симулятор, где возможно всё.";
+  const SHARE_SIGNATURE = "Варония — президентский симулятор, где возможно всё.";
   // Открывает системный share Telegram с переданным сообщением и размеченной ссылкой.
   const openShare = (msg, kind) => {
     const url = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(msg)}`;
@@ -1309,8 +1507,14 @@ export default function ThePresident() {
   };
 
   const shareGameOver = () => {
+    const voluntary = lastResult?.reason === "election_skip" || lastResult?.reason === "second_chance_declined";
+    if (voluntary) {
+      const msg = `Вы добровольно завершили правление на отметке ${tenure} мес. Иногда самый безопасный ход — выйти вовремя.${LEADERBOARD_SHARE_LINE}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
+      openShare(msg, "gameover_voluntary");
+      return;
+    }
     const killerParam = PARAMS.find(p => stats[p.key] <= 0 || stats[p.key] >= 100);
-    const key    = killerParam?.key || "people";
+    const key    = lastResult?.killerKey || killerParam?.key || "people";
     const isHigh = stats[key] >= 100;
     const text   = SHARE_DEATH[key]?.[isHigh ? "high" : "low"] || `${tenure} мес. у власти в Варонии.`;
     const msg    = `${text}${LEADERBOARD_SHARE_LINE}${PROMO_LINE}\n\n${SHARE_SIGNATURE}\n${BOT_LINK}`;
@@ -1342,8 +1546,10 @@ export default function ThePresident() {
 
   return (
     <>
-      <div className="app-shell" style={{ background: WOOD_BG }}>
+      <main className="app-shell" style={{ background: WOOD_BG }}>
         <div className="top-line" />
+        <div className="sr-only" role="status" aria-live="polite">{PHASE_LABELS[phase]}</div>
+        <AchievementToast achievement={achievementToast} />
 
         {/* ── ХЭДЕР ── */}
         <Topbar
@@ -1358,7 +1564,7 @@ export default function ThePresident() {
 
         {/* ── ШКАЛЫ ── */}
         <div className="stats-panel">
-          {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]} preview={difficulty === "hardcore" ? 0 : (previewFxReal ? (previewFxReal[p.key] || 0) : 0)}/>)}
+          {PARAMS.map(p => <StatPill key={p.key} param={p} value={stats[p.key]} flash={!!flashParams[p.key]} showValue={difficulty !== "hardcore"} preview={difficulty === "hardcore" ? 0 : (previewFxReal ? (previewFxReal[p.key] || 0) : 0)}/>)}
         </div>
 
         {/* ════════════════════════════════ ОНБОРДИНГ ════════════════════════════════ */}
@@ -1419,7 +1625,7 @@ export default function ThePresident() {
 
         {/* ════════════════════════════════ ВЫБОРЫ ════════════════════════════════ */}
         {phase === "election" && (
-          <ElectionScreen peopleStat={stats.people} onChoose={choose} />
+          <ElectionScreen peopleStat={stats.people} showValues={difficulty !== "hardcore"} onChoose={choose} />
         )}
 
         {/* ════════════════════════════════ КОНСТИТУЦИЯ ════════════════════════════════ */}
@@ -1492,7 +1698,7 @@ export default function ThePresident() {
             cardsById={CARDS_BY_ID}
           />
         )}
-      </div>
+      </main>
     </>
   );
 }

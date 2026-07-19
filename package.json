@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "audit:content": "node scripts/content-audit.mjs",
+    "audit:balance": "node scripts/balance-audit.mjs",
+    "audit": "npm run audit:content && npm run audit:balance",
     "admin:start": "node admin-server/server.mjs",
     "preview": "vite preview",
     "prepare": "husky"

@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ACHIEVEMENTS_DEF } from "../data/achievements.js";
 import { ENDINGS } from "../data/endings.js";
-import { copyText } from "../lib/clipboard.js";
 import { discountFor } from "../lib/promo.js";
+import { copyText } from "../lib/clipboard.js";
 import { trackOutbound, appendUtm, hashStr } from "../lib/analytics.js";
 import LeaderboardList from "./LeaderboardList.jsx";
+import PromoCard from "./PromoCard.jsx";
+import { formatCount, formatMonths } from "../lib/text.js";
 
 const NARUZHU_YELLOW = "#FFD60A";
 const SHARE_BOT_URL = "https://t.me/varonia_bot";
-const SHARE_SIGNATURE = "Варония - президентский симулятор, где возможно всё.";
+const SHARE_SIGNATURE = "Варония — президентский симулятор, где возможно всё.";
 
 const NARUZHU_FEATURES = [
   "YouTube, Instagram, Wikipedia без блокировок",
@@ -32,23 +34,44 @@ export default function HubOverlay({
 }) {
   const promoCode = discountFor(bestScore);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const dialogRef = useRef(null);
   const endingsCount = Object.keys(ENDINGS).length;
-  const dossierStatus = `${achievements.length} достиж. · ${unlockedEndings.length}/${endingsCount} финалов`;
+  const dossierStatus = `${formatCount(achievements.length, "достижение", "достижения", "достижений")} · ${unlockedEndings.length}/${endingsCount} финалов`;
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const dialog = dialogRef.current;
+    const focusableSelector = "button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex='-1'])";
+    dialog?.querySelector(focusableSelector)?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = [...dialog.querySelectorAll(focusableSelector)];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [onClose]);
 
   const toggleDossier = () => {
     setIsDossierOpen(open => !open);
     haptic("light");
-  };
-
-  const copyPromo = async () => {
-    const copied = await copyText(promoCode.code);
-    haptic(copied ? "light" : "medium");
-    if (copied) onOpenNaruzhu?.();
-  };
-
-  const openNaruzhu = (e) => {
-    e.stopPropagation();
-    onOpenNaruzhu?.();
   };
 
   const shareReferral = () => {
@@ -64,7 +87,14 @@ export default function HubOverlay({
 
   return (
     <div className="hub-overlay" onClick={onClose}>
-      <div className="hub-card" onClick={e => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className="hub-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Досье президента"
+        onClick={e => e.stopPropagation()}
+      >
         <button onClick={onClose} className="hub-close" aria-label="Закрыть">×</button>
 
         <div className="hub-card-body">
@@ -78,7 +108,7 @@ export default function HubOverlay({
             <div className="hub-dossier-record">
               <div>
                 <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", letterSpacing: 1 }}>ВАШ РЕКОРД</div>
-                <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{bestScore} <span style={{ fontSize: 10 }}>МЕС.</span></div>
+                <div className="font-typewriter" style={{ fontSize: 20, fontWeight: 700, color: "#d4af37", marginTop: 2 }}>{formatMonths(bestScore, { short: true, uppercase: true })}</div>
               </div>
               <div className="hub-dossier-status">
                 <span>{dossierStatus}</span>
@@ -140,8 +170,8 @@ export default function HubOverlay({
           {!safeMode && (
           <>
           <div className="hub-naruzhu-pitch">
-            <div className="font-typewriter" style={{ fontSize: 12, color: NARUZHU_YELLOW, letterSpacing: 1.5, marginBottom: 8, fontWeight: 700 }}>
-              VPN НАРУЖУ — ВЫХОД ИЗ ВАРОНИИ
+            <div className="hub-naruzhu-title">
+              VPN «НАРУЖУ» · ВНЕШНИЙ КАНАЛ
             </div>
             {NARUZHU_FEATURES.map((feat, i) => (
               <div key={i} className="hub-feature-row">
@@ -151,50 +181,28 @@ export default function HubOverlay({
             ))}
           </div>
 
-          <div className="hub-promo-box">
-            <div className="font-typewriter" style={{ fontSize: 10, color: "#caa23a", letterSpacing: 1, marginBottom: 4 }}>
-              Вы продержались {bestScore} мес.
-            </div>
-            <div className="font-typewriter" style={{ fontSize: 12, color: "#d4af37", letterSpacing: 1.2, fontWeight: 700 }}>
-              Получите скидку {promoCode.percent}%
-            </div>
-            <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e", marginTop: 4 }}>
-              Попробуйте 7 дней бесплатно
-            </div>
-            <div
-              className="hub-promo-code"
-              onClick={copyPromo}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copyPromo(); } }}
-              role="button"
-              tabIndex={0}
-            >
-              {promoCode.code}
-            </div>
-            <div className="font-typewriter" style={{ fontSize: 10, color: "#b89a5e" }}>
-              Копировать · Активация на{" "}
-              <span
-                onClick={openNaruzhu}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNaruzhu(e); } }}
-                role="button"
-                tabIndex={0}
-                style={{ color: NARUZHU_YELLOW, textDecoration: "underline", cursor: "pointer" }}
-              >
-                vepen.online
-              </span>
-            </div>
-          </div>
+          <PromoCard
+            months={bestScore}
+            promoCode={promoCode}
+            onCopy={async () => {
+              const copied = await copyText(promoCode.code);
+              haptic(copied ? "light" : "medium");
+              return copied;
+            }}
+            onOpen={onOpenNaruzhu}
+          />
           </>
           )}
 
           {referralCount > 0 && (
             <div className="font-typewriter" style={{ fontSize: 11, color: "#b89a5e", textAlign: "center", letterSpacing: 0.5 }}>
-              Вы поделились приглашением {referralCount} {shareCountLabel(referralCount)}
+              Окно приглашения открыто {referralCount} {shareCountLabel(referralCount)}
             </div>
           )}
 
           {!safeMode && (
             <button onClick={onOpenNaruzhu} className="btn-hub-cta">
-              ПОКИНУТЬ ВАРОНИЮ С НАРУЖУ
+              ОТКРЫТЬ ВНЕШНИЙ КАНАЛ «НАРУЖУ»
             </button>
           )}
 

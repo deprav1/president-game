@@ -1,16 +1,16 @@
 import { getAsset } from "../lib/assets.js";
 
-const FELT_BG = "radial-gradient(circle at 50% 22%,#17120a 0%,#0d0904 48%,#050403 100%)";
+const FELT_BG = "radial-gradient(circle at 50% 22%, #17120a 0%, #0d0904 48%, #050403 100%)";
 
 // Экран конституционного предела после двух сроков.
 export default function ConstitutionScreen({ onChoose }) {
   return (
-    <div className="screen-scroll-container" style={{ background: FELT_BG }}>
-      <div className="card-paper-container">
-        <div className="card-header-bar gold">
-          <div className="font-typewriter" style={{ fontSize: 13, fontWeight: 800, letterSpacing: 2, color: "#f5e6c8" }}>
+    <div className="screen-scroll-container decision-screen" style={{ background: FELT_BG }}>
+      <div className="card-paper-container decision-panel">
+        <div className="card-header-bar gold decision-header decision-header-centered">
+          <h1 className="decision-header-title">
             КОНСТИТУЦИОННЫЙ ПРЕДЕЛ
-          </div>
+          </h1>
         </div>
 
         <div className="card-content-area padded-bottom">
@@ -23,20 +23,19 @@ export default function ConstitutionScreen({ onChoose }) {
             />
           </div>
 
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: "#e0d8c8", fontWeight: 500, textAlign: "center", marginBottom: 14 }}>
-            Согласно Конституции Варонии, после двух сроков вы больше не можете занимать пост президента.
-            Элиты ждут сигнала, народ спорит о будущем, силовики молчат слишком громко.
+          <p className="decision-intro">
+            Согласно Конституции Варонии, после двух сроков вы больше не можете занимать пост президента. Элиты ждут сигнала, народ спорит о будущем, силовики молчат слишком громко. Остаться можно — но каждый следующий ход будет усиливать давление системы.
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <button onClick={() => onChoose("leave")} className="btn-gold" style={{ flexDirection: "column", padding: "10px 12px" }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.3 }}>УЙТИ ПО КОНСТИТУЦИИ</div>
-              <div style={{ fontSize: 10, marginTop: 2, textTransform: "none", fontWeight: 400 }}>Передать власть и смотреть, как страна учится жить без вас</div>
+            <button onClick={() => onChoose("leave")} className="btn-gold decision-choice">
+              <div className="decision-choice-title">УЙТИ ПО КОНСТИТУЦИИ</div>
+              <div className="decision-choice-effect">Передать власть и проверить, умеет ли страна жить без вас</div>
             </button>
 
-            <button onClick={() => onChoose("stay")} className="btn-velvet" style={{ flexDirection: "column", padding: "10px 12px" }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.3, color: "#f5c6c6" }}>ОСТАТЬСЯ У ВЛАСТИ</div>
-              <div style={{ fontSize: 10, marginTop: 2, textTransform: "none", fontWeight: 400, color: "#f5e6c8aa" }}>Сделать вид, что основной закон просто устал</div>
+            <button onClick={() => onChoose("stay")} className="btn-velvet decision-choice">
+              <div className="decision-choice-title">ОСТАТЬСЯ У ВЛАСТИ</div>
+              <div className="decision-choice-effect">Сделать вид, что основной закон просто устал; открыть эндшпиль</div>
             </button>
           </div>
         </div>

@@ -2,9 +2,9 @@ import { getAsset } from "../lib/assets.js";
 
 // Уровни сложности (порядок = как в gameHelpers.DIFFICULTIES).
 const DIFFICULTY_OPTIONS = [
-  { key: "easy",     label: "Лёгкий",  hint: "Спокойная партия — ошибки почти не наказываются." },
-  { key: "normal",   label: "Обычный", hint: "Классический баланс Варонии." },
-  { key: "hardcore", label: "Хардкор", hint: "Без цифр влияния. Давление растёт с каждым годом." },
+  { key: "easy",     label: "Учебный",  hint: "Мягкие последствия и видимые значения влияния." },
+  { key: "normal",   label: "Обычный",  hint: "Полный баланс Варонии: решения быстро меняют расклад." },
+  { key: "hardcore", label: "Хардкор", hint: "Значения скрыты, а давление усиливается с каждым годом." },
 ];
 
 // Экран онбординга: досье, правила, выбор сложности, ввод имени / продолжение срока.
@@ -17,7 +17,7 @@ export default function OnboardingScreen({
     <div className="screen-scroll-container onboarding-screen">
       <div className="card-paper-container">
         <div className="onboarding-title-bar">
-          <div className="onboarding-title">Добро пожаловать в <span>ВАРОНИЮ</span></div>
+          <h1 className="onboarding-title">Добро пожаловать в <span>ВАРОНИЮ</span></h1>
         </div>
         <div className="card-content-area">
           <div className="story-image-frame">
@@ -30,8 +30,11 @@ export default function OnboardingScreen({
           </div>
 
           <p className="onboarding-rules-copy">
-            Удержитесь у власти сколько сможете. Свайпайте карточку для принятия решения, не позволяйте одной из четырех сторон слишком ослабнуть или окрепнуть.
+            Держите четыре силы между крайностями: слабость и чрезмерное влияние одинаково опасны.
           </p>
+          <div className="onboarding-rule-note">
+            <span>СВАЙП</span> или <span>ТАП</span> по решению · два срока до финала
+          </div>
         </div>
         <div className="onboarding-actions">
           <div className="difficulty-select" role="group" aria-label="Сложность">
@@ -64,15 +67,11 @@ export default function OnboardingScreen({
                 type="text"
                 maxLength={24}
                 placeholder="Ваше имя (необязательно)"
+                aria-label="Имя президента"
                 value={nameInput}
                 onChange={e => onNameInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && onNameSubmit()}
-                style={{
-                  width: "100%", padding: "10px 14px",
-                  background: "#0a0a0a", border: "1px solid rgba(212,175,55,0.2)",
-                  borderRadius: 8, fontSize: 13, fontFamily: "var(--font-serif)",
-                  color: "#e0d8c8", outline: "none", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
-                }}
+                className="onboarding-name-input"
               />
               <button onClick={onNameSubmit} className="btn-velvet">
                 ПРИСТУПИТЬ К ОБЯЗАННОСТЯМ
@@ -90,15 +89,12 @@ export default function OnboardingScreen({
             tabIndex={0}
             className="naruzhu-footer-cta"
           >
-            <div className="naruzhu-footer-kicker">VPN НАРУЖУ</div>
+            <div className="naruzhu-footer-kicker">VPN «НАРУЖУ»</div>
             <div className="naruzhu-footer-copy">Свободный интернет за пределами Варонии</div>
           </div>
         )}
 
-        <div className="font-typewriter" style={{
-          position: "absolute", bottom: 4, right: 8,
-          fontSize: 10, color: "#ece0c422", letterSpacing: 1, pointerEvents: "none",
-        }}>
+        <div className="app-version font-typewriter">
           v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev"}
         </div>
       </div>

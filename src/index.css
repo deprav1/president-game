@@ -7,7 +7,9 @@
 html, body {
   height: 100%;
   overflow: hidden;
-  background: #0d0800;
+  width: 100%;
+  min-width: 0;
+  background: #050505;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -15,9 +17,20 @@ html, body {
 
 #root {
   height: 100%;
-  width: 100%;
-  max-width: 480px;
+  width: min(100%, 460px);
+  max-width: 460px;
+  min-width: 0;
   box-shadow: 0 0 30px rgba(0,0,0,0.9);
   position: relative;
-  background: #1a0f00;
+  background: #050505;
+  overflow: hidden;
+  color-scheme: dark;
+}
+
+/* Keep native controls inside the same type system as the game UI. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
